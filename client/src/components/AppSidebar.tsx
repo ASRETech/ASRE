@@ -4,7 +4,7 @@ import {
   Map, Target, LayoutDashboard, Users, FileText,
   DollarSign, BookOpen, Heart, Shield, Settings,
   Zap, BarChart3, UsersRound, GraduationCap,
-  Handshake, Star, UserPlus,
+  Handshake, Star, UserPlus, Award,
 } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
 
@@ -31,7 +31,8 @@ const NAV_ITEMS = [
     items: [
       { label: 'Team OS', icon: UsersRound, path: '/team' },
       { label: 'Recruiting', icon: UserPlus, path: '/recruiting' },
-      { label: 'Coach Portal', icon: GraduationCap, path: '/coach' },
+      { label: 'Coach Hub', icon: GraduationCap, path: '/coach' },
+      { label: 'Certification', icon: Award, path: '/certification' },
     ],
   },
   {

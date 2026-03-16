@@ -9,7 +9,8 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, Bell, Calendar, Building2, Shield, Zap, Save, Check, Palette } from 'lucide-react';
+import { User, Bell, Calendar, Building2, Shield, Zap, Save, Check, Palette, Crown } from 'lucide-react';
+import { SubscriptionCard } from '@/components/SubscriptionCard';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
 
@@ -58,8 +59,14 @@ export default function SettingsPage() {
             <TabsTrigger value="calendar" className="text-xs"><Calendar className="w-3 h-3 mr-1" /> Calendar</TabsTrigger>
             <TabsTrigger value="brokerage" className="text-xs"><Building2 className="w-3 h-3 mr-1" /> Brokerage</TabsTrigger>
             <TabsTrigger value="notifications" className="text-xs"><Bell className="w-3 h-3 mr-1" /> Notifications</TabsTrigger>
+            <TabsTrigger value="subscription" className="text-xs"><Crown className="w-3 h-3 mr-1" /> Subscription</TabsTrigger>
             <TabsTrigger value="integrations" className="text-xs"><Zap className="w-3 h-3 mr-1" /> Integrations</TabsTrigger>
           </TabsList>
+
+          {/* ====== SUBSCRIPTION TAB ====== */}
+          <TabsContent value="subscription" className="space-y-6">
+            <SubscriptionCard />
+          </TabsContent>
 
           {/* ====== PROFILE TAB ====== */}
           <TabsContent value="profile" className="space-y-6">

@@ -19,6 +19,8 @@ import {
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { CurrentLevel } from '@/components/CurrentLevel';
+import { CommitmentsWidget } from '@/components/CommitmentsWidget';
 
 interface FocusItem {
   name: string;
@@ -384,6 +386,12 @@ export default function Dashboard() {
               </div>
             </div>
           </Card>
+
+          {/* MREA Level Progress (Phase 6) */}
+          <CurrentLevel />
+
+          {/* Coaching Commitments (Phase 6) */}
+          <CommitmentsWidget />
 
           {/* Compliance */}
           <Card className="p-5">

@@ -40,6 +40,9 @@ export const agentProfiles = mysqlTable("agent_profiles", {
   isOnboarded: boolean("isOnboarded").default(false).notNull(),
   // Phase 4 additions
   coachMode: boolean("coachMode").default(false).notNull(),
+  assignedCoachId: int("assignedCoachId"),
+  isAssociateCoach: boolean("isAssociateCoach").default(false).notNull(),
+  coachBio: text("coachBio"),
   googleBusinessUrl: varchar("googleBusinessUrl", { length: 512 }),
   reviewRequestTemplate: text("reviewRequestTemplate"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -418,3 +421,130 @@ export const brokerageConfig = mysqlTable("brokerage_config", {
 
 export type BrokerageConfig = typeof brokerageConfig.$inferSelect;
 export type InsertBrokerageConfig = typeof brokerageConfig.$inferInsert;
+
+// ═══════════════════════════════════════════════════════════════════
+// PHASE 6 — COACHING BUSINESS INFRASTRUCTURE
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Subscriptions (Stripe-backed tiers)
+ */
+export const subscriptions = mysqlTable("subscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  tier: mysqlEnum("tier", ["self_guided", "group", "one_on_one", "enterprise"]).default("self_guided").notNull(),
+  status: mysqlEnum("subStatus", ["trialing", "active", "past_due", "cancelled"]).default("trialing").notNull(),
+  monthlyPriceCents: int("monthlyPriceCents").default(9700).notNull(),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 128 }),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 128 }),
+  currentPeriodEnd: timestamp("currentPeriodEnd"),
+  trialEndsAt: timestamp("trialEndsAt"),
+  cancelAtPeriodEnd: boolean("cancelAtPeriodEnd").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertSubscription = typeof subscriptions.$inferInsert;
+
+/**
+ * Coaching sessions (1:1 or group)
+ */
+export const coachingSessions = mysqlTable("coaching_sessions", {
+  id: int("id").autoincrement().primaryKey(),
+  sessionId: varchar("sessionId", { length: 32 }).notNull().unique(),
+  coachId: int("coachId").notNull(),
+  agentId: int("agentId"),
+  cohortId: varchar("cohortId", { length: 32 }),
+  type: mysqlEnum("sessionType", ["one_on_one", "group_monthly", "group_checkin"]).notNull(),
+  scheduledAt: timestamp("scheduledAt").notNull(),
+  completedAt: timestamp("completedAt"),
+  durationMinutes: int("durationMinutes"),
+  coachNotes: text("coachNotes"),
+  clientSummary: text("clientSummary"),
+  rating: int("rating"),
+  preBriefSentAt: timestamp("preBriefSentAt"),
+  zoomLink: varchar("zoomLink", { length: 512 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CoachingSession = typeof coachingSessions.$inferSelect;
+export type InsertCoachingSession = typeof coachingSessions.$inferInsert;
+
+/**
+ * Coaching commitments (action items from sessions)
+ */
+export const coachingCommitments = mysqlTable("coaching_commitments", {
+  id: int("id").autoincrement().primaryKey(),
+  commitmentId: varchar("commitmentId", { length: 32 }).notNull().unique(),
+  sessionId: varchar("sessionId", { length: 32 }).notNull(),
+  agentId: int("agentId").notNull(),
+  coachId: int("coachId").notNull(),
+  text: text("text").notNull(),
+  linkedDeliverableId: varchar("linkedDeliverableId", { length: 32 }),
+  dueDate: timestamp("dueDate"),
+  isComplete: boolean("isComplete").default(false).notNull(),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CoachingCommitment = typeof coachingCommitments.$inferSelect;
+export type InsertCoachingCommitment = typeof coachingCommitments.$inferInsert;
+
+/**
+ * Coaching cohorts (group coaching groups)
+ */
+export const coachingCohorts = mysqlTable("coaching_cohorts", {
+  id: int("id").autoincrement().primaryKey(),
+  cohortId: varchar("cohortId", { length: 32 }).notNull().unique(),
+  coachId: int("coachId").notNull(),
+  name: varchar("name", { length: 256 }).notNull(),
+  type: mysqlEnum("cohortType", ["foundation", "growth", "scale"]).default("foundation").notNull(),
+  targetLevelMin: int("targetLevelMin").default(1).notNull(),
+  targetLevelMax: int("targetLevelMax").default(2).notNull(),
+  maxSize: int("maxSize").default(20).notNull(),
+  status: mysqlEnum("cohortStatus", ["forming", "active", "completed"]).default("forming").notNull(),
+  zoomLink: varchar("zoomLink", { length: 512 }),
+  slackChannelUrl: varchar("slackChannelUrl", { length: 512 }),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type CoachingCohort = typeof coachingCohorts.$inferSelect;
+export type InsertCoachingCohort = typeof coachingCohorts.$inferInsert;
+
+/**
+ * Cohort members
+ */
+export const cohortMembers = mysqlTable("cohort_members", {
+  id: int("id").autoincrement().primaryKey(),
+  cohortId: varchar("cohortId", { length: 32 }).notNull(),
+  agentId: int("agentId").notNull(),
+  status: mysqlEnum("memberStatus", ["active", "paused", "graduated", "removed"]).default("active").notNull(),
+  joinedAt: timestamp("joinedAt").defaultNow().notNull(),
+});
+
+export type CohortMember = typeof cohortMembers.$inferSelect;
+export type InsertCohortMember = typeof cohortMembers.$inferInsert;
+
+/**
+ * Certifications (coach certification program)
+ */
+export const certifications = mysqlTable("certifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  status: mysqlEnum("certStatus", ["not_started", "in_progress", "assessment_pending", "certified", "expired", "revoked"]).default("not_started").notNull(),
+  moduleProgress: json("moduleProgress"),
+  assessmentScheduledAt: timestamp("assessmentScheduledAt"),
+  certifiedAt: timestamp("certifiedAt"),
+  certifiedBy: int("certifiedBy"),
+  renewalDueAt: timestamp("renewalDueAt"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Certification = typeof certifications.$inferSelect;
+export type InsertCertification = typeof certifications.$inferInsert;

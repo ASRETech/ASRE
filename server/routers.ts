@@ -4,6 +4,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { invokeLLM } from "./_core/llm";
+import { ENV } from "./_core/env";
 import * as db from "./db";
 import { nanoid } from "nanoid";
 
@@ -23,7 +24,8 @@ export const appRouter = router({
   // ============================================================
   profile: router({
     get: protectedProcedure.query(async ({ ctx }) => {
-      return db.getAgentProfile(ctx.user.id);
+      const profile = await db.getAgentProfile(ctx.user.id);
+      return profile ?? null;
     }),
     upsert: protectedProcedure
       .input(z.object({
@@ -513,6 +515,242 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
     myCoachComments: protectedProcedure.query(async ({ ctx }) => {
       return db.getAgentCoachComments(ctx.user.id);
     }),
+
+    // ── Cohort management (Phase 6) ──────────────────────────────
+    createCohort: protectedProcedure
+      .input(z.object({
+        name: z.string(),
+        type: z.enum(['foundation', 'growth', 'scale']),
+        targetLevelMin: z.number(),
+        targetLevelMax: z.number(),
+        maxSize: z.number().default(20),
+        zoomLink: z.string().optional(),
+        slackChannelUrl: z.string().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.upsertAgentProfile({ userId: ctx.user.id, coachMode: true });
+        await db.createCohort({
+          ...input,
+          coachId: ctx.user.id,
+          cohortId: nanoid(12),
+          status: 'forming',
+        });
+        return { success: true };
+      }),
+
+    myCohorts: protectedProcedure.query(async ({ ctx }) => {
+      const cohorts = await db.getCoachCohorts(ctx.user.id);
+      return Promise.all(cohorts.map(async (c) => {
+        const members = await db.getCohortMembers(c.cohortId);
+        const memberData = await Promise.all(
+          members
+            .filter(m => m.status === 'active')
+            .map(async (m) => {
+              const profile = await db.getAgentProfile(m.agentId);
+              const deliverables = await db.getUserDeliverables(m.agentId);
+              const leads = await db.getUserLeads(m.agentId);
+              const commitments = await db.getAgentCommitments(m.agentId, 10);
+              const completedCommitments = commitments.filter(c => c.isComplete).length;
+              const recentLeads = leads.filter(
+                l => new Date(l.createdAt).getTime() > Date.now() - 30 * 24 * 60 * 60 * 1000
+              ).length;
+              const healthScore = Math.min(100,
+                Math.min(30, recentLeads * 3) +
+                Math.min(40, deliverables.filter(d => d.isComplete).length * 3) +
+                30
+              );
+              return {
+                agentId: m.agentId,
+                profile,
+                healthScore,
+                currentLevel: profile?.currentLevel ?? 1,
+                deliverablesComplete: deliverables.filter(d => d.isComplete).length,
+                deliverablesTotal: deliverables.length,
+                commitmentRate: commitments.length > 0
+                  ? Math.round((completedCommitments / commitments.length) * 100)
+                  : null,
+                pipelineCount: leads.filter(
+                  l => !['Closed', 'Dead', 'Nurture'].includes(l.stage ?? '')
+                ).length,
+              };
+            })
+        );
+        return { ...c, members: memberData };
+      }));
+    }),
+
+    inviteToCohort: protectedProcedure
+      .input(z.object({
+        cohortId: z.string(),
+        agentEmail: z.string().email(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const agent = await db.getUserByEmail(input.agentEmail);
+        if (!agent) throw new Error('No AgentOS user found with that email');
+        await db.addCohortMember({
+          cohortId: input.cohortId,
+          agentId: agent.id,
+          status: 'active',
+        });
+        return { success: true };
+      }),
+
+    removeCohortMember: protectedProcedure
+      .input(z.object({ cohortId: z.string(), agentId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.updateCohortMemberStatus(
+          input.cohortId, input.agentId, 'removed'
+        );
+        return { success: true };
+      }),
+
+    // ── Sessions (Phase 6) ───────────────────────────────────────
+    scheduleSession: protectedProcedure
+      .input(z.object({
+        agentId: z.number().optional(),
+        cohortId: z.string().optional(),
+        type: z.enum(['one_on_one', 'group_monthly', 'group_checkin']),
+        scheduledAt: z.string(),
+        zoomLink: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.createSession({
+          sessionId: nanoid(12),
+          coachId: ctx.user.id,
+          agentId: input.agentId,
+          cohortId: input.cohortId,
+          type: input.type,
+          scheduledAt: new Date(input.scheduledAt),
+          zoomLink: input.zoomLink,
+        });
+        return { success: true };
+      }),
+
+    upcomingSessions: protectedProcedure.query(async ({ ctx }) => {
+      return db.getCoachUpcomingSessions(ctx.user.id);
+    }),
+
+    allSessions: protectedProcedure.query(async ({ ctx }) => {
+      return db.getCoachAllSessions(ctx.user.id);
+    }),
+
+    saveSessionNotes: protectedProcedure
+      .input(z.object({
+        sessionId: z.string(),
+        coachNotes: z.string().optional(),
+        clientSummary: z.string().optional(),
+        commitments: z.array(z.object({
+          agentId: z.number(),
+          text: z.string(),
+          linkedDeliverableId: z.string().optional(),
+          dueDate: z.string().optional(),
+        })).default([]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.updateSession(input.sessionId, {
+          coachNotes: input.coachNotes,
+          clientSummary: input.clientSummary,
+          completedAt: new Date(),
+        });
+        for (const c of input.commitments) {
+          await db.createCommitment({
+            commitmentId: nanoid(12),
+            sessionId: input.sessionId,
+            agentId: c.agentId,
+            coachId: ctx.user.id,
+            text: c.text,
+            linkedDeliverableId: c.linkedDeliverableId,
+            dueDate: c.dueDate ? new Date(c.dueDate) : undefined,
+          });
+        }
+        return { success: true };
+      }),
+
+    // ── Pre-session brief (Phase 6) ─────────────────────────────
+    generatePreBrief: protectedProcedure
+      .input(z.object({
+        sessionId: z.string(),
+        sendEmail: z.boolean().default(false),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const session = await db.getSession(input.sessionId);
+        if (!session?.agentId) throw new Error('Session not found or is a group session');
+        const agentId = session.agentId;
+
+        const [profile, deliverables, leads, commitments] = await Promise.all([
+          db.getAgentProfile(agentId),
+          db.getUserDeliverables(agentId),
+          db.getUserLeads(agentId),
+          db.getAgentCommitments(agentId, 5),
+        ]);
+
+        const completedCommits = commitments.filter(c => c.isComplete).length;
+        const healthScore = Math.min(100,
+          Math.min(30, leads.filter(
+            l => new Date(l.createdAt).getTime() > Date.now() - 30*24*60*60*1000
+          ).length * 3) +
+          Math.min(40, deliverables.filter(d => d.isComplete).length * 3) +
+          30
+        );
+
+        const aiResponse = await invokeLLM({
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert real estate business coach. Generate ONE powerful coaching question for an agent based on their data. Under 30 words. Make it thought-provoking, not surface-level.',
+            },
+            {
+              role: 'user',
+              content: `Agent at MREA Level ${profile?.currentLevel}. Health score: ${healthScore}/100. Completed ${completedCommits}/${commitments.length} last commitments. Incomplete deliverable: ${deliverables.find(d => !d.isComplete)?.title || 'none'}. Pipeline: ${leads.filter(l => !['Closed','Dead','Nurture'].includes(l.stage ?? '')).length} active leads.`,
+            },
+          ],
+        });
+
+        const coachingQuestion = aiResponse.choices[0]?.message?.content || '';
+
+        const brief = {
+          agentName: profile?.name || 'Agent',
+          currentLevel: profile?.currentLevel ?? 1,
+          healthScore,
+          deliverablesComplete: deliverables.filter(d => d.isComplete).length,
+          deliverablesTotal: deliverables.length,
+          activePipeline: leads.filter(l => !['Closed','Dead','Nurture'].includes(l.stage ?? '')).length,
+          lastCommitments: commitments.map(c => ({ text: c.text, isComplete: c.isComplete })),
+          coachingQuestion,
+          sessionDate: session.scheduledAt,
+        };
+
+        return brief;
+      }),
+
+    // ── Agent-side commitment endpoints (Phase 6) ────────────────
+    myCommitments: protectedProcedure.query(async ({ ctx }) => {
+      return db.getAgentCommitments(ctx.user.id, 20);
+    }),
+
+    completeCommitment: protectedProcedure
+      .input(z.object({ commitmentId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.markCommitmentComplete(input.commitmentId, ctx.user.id);
+        return { success: true };
+      }),
+
+    mySessions: protectedProcedure.query(async ({ ctx }) => {
+      return db.getAgentSessions(ctx.user.id, 20);
+    }),
+
+    rateSession: protectedProcedure
+      .input(z.object({ sessionId: z.string(), rating: z.number().min(1).max(10) }))
+      .mutation(async ({ ctx, input }) => {
+        await db.updateSession(input.sessionId, { rating: input.rating });
+        return { success: true };
+      }),
+
+    myCohort: protectedProcedure.query(async ({ ctx }) => {
+      const cohort = await db.getAgentActiveCohort(ctx.user.id);
+      return cohort ?? null;
+    }),
   }),
 
   // ============================================================
@@ -833,6 +1071,152 @@ Be warm, professional, and informative. Include next steps when applicable.`,
         await db.upsertCalendarToken({ ...input, userId: ctx.user.id });
         return { success: true };
       }),
+  }),
+
+  // ============================================================
+  // SUBSCRIPTIONS (Phase 6)
+  // ============================================================
+  subscriptions: router({
+    get: protectedProcedure.query(async ({ ctx }) => {
+      let sub = await db.getSubscription(ctx.user.id);
+      if (!sub) {
+        await db.createSubscription({
+          userId: ctx.user.id,
+          tier: 'self_guided',
+          status: 'trialing',
+          trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+          monthlyPriceCents: 9700,
+        });
+        sub = await db.getSubscription(ctx.user.id);
+      }
+      return sub;
+    }),
+
+    createCheckout: protectedProcedure
+      .input(z.object({
+        tier: z.enum(['self_guided', 'group', 'one_on_one']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        // Stripe checkout - gracefully handle missing Stripe config
+        try {
+          const Stripe = (await import('stripe')).default;
+          const stripe = new Stripe(ENV.stripeSecretKey);
+
+          const PRICE_IDS: Record<string, string> = {
+            self_guided: ENV.stripePriceSelfGuided,
+            group: ENV.stripePriceGroup,
+            one_on_one: ENV.stripePriceOneOnOne,
+          };
+
+          const sub = await db.getSubscription(ctx.user.id);
+          let customerId = sub?.stripeCustomerId;
+
+          if (!customerId) {
+            const profile = await db.getAgentProfile(ctx.user.id);
+            const user = await db.getUserById(ctx.user.id);
+            const customer = await stripe.customers.create({
+              email: user?.email || undefined,
+              name: profile?.name || undefined,
+              metadata: { userId: String(ctx.user.id) },
+            });
+            customerId = customer.id;
+            await db.updateSubscription(ctx.user.id, {
+              stripeCustomerId: customerId,
+            });
+          }
+
+          const session = await stripe.checkout.sessions.create({
+            customer: customerId,
+            mode: 'subscription',
+            line_items: [{ price: PRICE_IDS[input.tier], quantity: 1 }],
+            success_url: `${ENV.appUrl}/settings?tab=subscription&upgraded=true`,
+            cancel_url: `${ENV.appUrl}/settings?tab=subscription`,
+            metadata: { userId: String(ctx.user.id), tier: input.tier },
+          });
+
+          return { checkoutUrl: session.url };
+        } catch (err: any) {
+          throw new Error('Stripe not configured yet. Contact admin to set up payment processing.');
+        }
+      }),
+
+    cancel: protectedProcedure.mutation(async ({ ctx }) => {
+      const sub = await db.getSubscription(ctx.user.id);
+      if (!sub?.stripeSubscriptionId) throw new Error('No active subscription');
+      try {
+        const Stripe = (await import('stripe')).default;
+        const stripe = new Stripe(ENV.stripeSecretKey);
+        await stripe.subscriptions.update(sub.stripeSubscriptionId, {
+          cancel_at_period_end: true,
+        });
+        await db.updateSubscription(ctx.user.id, { cancelAtPeriodEnd: true });
+        return { success: true };
+      } catch (err: any) {
+        throw new Error('Could not cancel subscription. Contact support.');
+      }
+    }),
+  }),
+
+  // ============================================================
+  // CERTIFICATIONS (Phase 6)
+  // ============================================================
+  certifications: router({
+    get: protectedProcedure.query(async ({ ctx }) => {
+      const cert = await db.getCoachCertification(ctx.user.id);
+      return cert ?? null;
+    }),
+
+    start: protectedProcedure.mutation(async ({ ctx }) => {
+      await db.upsertCoachCertification(ctx.user.id, {
+        status: 'in_progress',
+        moduleProgress: { m1: false, m2: false, m3: false, m4: false, m5: false },
+      });
+      return { success: true };
+    }),
+
+    completeModule: protectedProcedure
+      .input(z.object({ module: z.enum(['m1','m2','m3','m4','m5']) }))
+      .mutation(async ({ ctx, input }) => {
+        const cert = await db.getCoachCertification(ctx.user.id);
+        const progress: any = (cert?.moduleProgress as any) ?? {};
+        progress[input.module] = true;
+        const allDone = ['m1','m2','m3','m4','m5'].every(m => progress[m]);
+        await db.upsertCoachCertification(ctx.user.id, {
+          moduleProgress: progress,
+          status: allDone ? 'assessment_pending' : 'in_progress',
+        });
+        return { success: true };
+      }),
+
+    scheduleAssessment: protectedProcedure
+      .input(z.object({ proposedDate: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.upsertCoachCertification(ctx.user.id, {
+          assessmentScheduledAt: new Date(input.proposedDate),
+        });
+        return { success: true };
+      }),
+
+    certify: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.upsertCoachCertification(input.userId, {
+          status: 'certified',
+          certifiedAt: new Date(),
+          certifiedBy: ctx.user.id,
+          renewalDueAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        });
+        await db.upsertAgentProfile({
+          userId: input.userId,
+          coachMode: true,
+          isAssociateCoach: true,
+        });
+        return { success: true };
+      }),
+
+    listCandidates: protectedProcedure.query(async () => {
+      return db.getCertificationCandidates();
+    }),
   }),
 });
 

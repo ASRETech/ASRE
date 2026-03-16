@@ -28,6 +28,7 @@ import Recruiting from "./pages/Recruiting";
 import ClientPortal from "./pages/ClientPortal";
 import Referrals from "./pages/Referrals";
 import Reviews from "./pages/Reviews";
+import Certification from "./pages/Certification";
 function AppRoutes() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -84,6 +85,9 @@ function AppRoutes() {
       </Route>
       <Route path="/reviews">
         <DashboardLayout><Reviews /></DashboardLayout>
+      </Route>
+      <Route path="/certification">
+        <DashboardLayout><Certification /></DashboardLayout>
       </Route>
       <Route path="/settings">
         <DashboardLayout><SettingsPage /></DashboardLayout>

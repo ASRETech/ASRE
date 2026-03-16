@@ -1,4 +1,4 @@
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, asc, gt, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser, users,
@@ -563,4 +563,240 @@ export async function upsertBrokerageConfig(data: Partial<InsertBrokerageConfig>
   } else {
     await db.insert(brokerageConfig).values(data as InsertBrokerageConfig);
   }
+}
+
+// ============================================================
+// SUBSCRIPTIONS (Phase 6)
+// ============================================================
+import {
+  subscriptions, InsertSubscription,
+  coachingSessions, InsertCoachingSession,
+  coachingCommitments, InsertCoachingCommitment,
+  coachingCohorts, InsertCoachingCohort,
+  cohortMembers, InsertCohortMember,
+  certifications, InsertCertification,
+} from "../drizzle/schema";
+
+export async function getSubscription(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createSubscription(data: InsertSubscription) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(subscriptions).values(data);
+}
+
+export async function updateSubscription(
+  userId: number,
+  data: Partial<InsertSubscription>
+) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(subscriptions)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(subscriptions.userId, userId));
+}
+
+export async function getSubscriptionByStripeCustomer(stripeCustomerId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(subscriptions).where(eq(subscriptions.stripeCustomerId, stripeCustomerId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+// ============================================================
+// COACHING SESSIONS (Phase 6)
+// ============================================================
+export async function createSession(data: InsertCoachingSession) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(coachingSessions).values(data);
+}
+
+export async function getSession(sessionId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(coachingSessions).where(eq(coachingSessions.sessionId, sessionId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateSession(sessionId: string, updates: Partial<InsertCoachingSession>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(coachingSessions).set({ ...updates, updatedAt: new Date() }).where(eq(coachingSessions.sessionId, sessionId));
+}
+
+export async function getCoachUpcomingSessions(coachId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(coachingSessions)
+    .where(and(eq(coachingSessions.coachId, coachId), gt(coachingSessions.scheduledAt, new Date())))
+    .orderBy(asc(coachingSessions.scheduledAt))
+    .limit(20);
+}
+
+export async function getAgentSessions(agentId: number, limit = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(coachingSessions)
+    .where(eq(coachingSessions.agentId, agentId))
+    .orderBy(desc(coachingSessions.scheduledAt))
+    .limit(limit);
+}
+
+export async function getCoachAllSessions(coachId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(coachingSessions)
+    .where(eq(coachingSessions.coachId, coachId))
+    .orderBy(desc(coachingSessions.scheduledAt))
+    .limit(50);
+}
+
+// ============================================================
+// COACHING COMMITMENTS (Phase 6)
+// ============================================================
+export async function getAgentCommitments(agentId: number, limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(coachingCommitments)
+    .where(eq(coachingCommitments.agentId, agentId))
+    .orderBy(desc(coachingCommitments.createdAt))
+    .limit(limit);
+}
+
+export async function createCommitment(data: InsertCoachingCommitment) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(coachingCommitments).values(data);
+}
+
+export async function markCommitmentComplete(commitmentId: string, agentId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(coachingCommitments)
+    .set({ isComplete: true, completedAt: new Date() })
+    .where(and(
+      eq(coachingCommitments.commitmentId, commitmentId),
+      eq(coachingCommitments.agentId, agentId)
+    ));
+}
+
+// ============================================================
+// COACHING COHORTS (Phase 6)
+// ============================================================
+export async function getCoachCohorts(coachId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(coachingCohorts).where(eq(coachingCohorts.coachId, coachId)).orderBy(desc(coachingCohorts.createdAt));
+}
+
+export async function createCohort(data: InsertCoachingCohort) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(coachingCohorts).values(data);
+}
+
+export async function getCohort(cohortId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(coachingCohorts).where(eq(coachingCohorts.cohortId, cohortId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateCohort(cohortId: string, updates: Partial<InsertCoachingCohort>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(coachingCohorts).set(updates).where(eq(coachingCohorts.cohortId, cohortId));
+}
+
+// ============================================================
+// COHORT MEMBERS (Phase 6)
+// ============================================================
+export async function getCohortMembers(cohortId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(cohortMembers).where(eq(cohortMembers.cohortId, cohortId));
+}
+
+export async function addCohortMember(data: InsertCohortMember) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(cohortMembers).values(data);
+}
+
+export async function updateCohortMemberStatus(
+  cohortId: string, agentId: number,
+  status: 'active' | 'paused' | 'graduated' | 'removed'
+) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(cohortMembers)
+    .set({ status })
+    .where(and(eq(cohortMembers.cohortId, cohortId), eq(cohortMembers.agentId, agentId)));
+}
+
+export async function getAgentActiveCohort(agentId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(cohortMembers)
+    .where(and(eq(cohortMembers.agentId, agentId), eq(cohortMembers.status, 'active')));
+  if (result.length === 0) return null;
+  return getCohort(result[0].cohortId);
+}
+
+// ============================================================
+// CERTIFICATIONS (Phase 6)
+// ============================================================
+export async function getCoachCertification(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(certifications).where(eq(certifications.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function upsertCoachCertification(
+  userId: number,
+  data: Partial<InsertCertification>
+) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await getCoachCertification(userId);
+  if (existing) {
+    await db.update(certifications).set({ ...data, updatedAt: new Date() }).where(eq(certifications.userId, userId));
+  } else {
+    await db.insert(certifications).values({
+      userId,
+      status: 'in_progress',
+      moduleProgress: { m1: false, m2: false, m3: false, m4: false, m5: false },
+      ...data,
+    } as InsertCertification);
+  }
+}
+
+export async function getCertificationCandidates() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(certifications).where(eq(certifications.status, 'assessment_pending'));
+}
+
+// ============================================================
+// HELPER: getUserByEmail (Phase 6)
+// ============================================================
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
 }

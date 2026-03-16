@@ -22,6 +22,20 @@
       "when": 1773668624217,
       "tag": "0002_breezy_nemesis",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1773673813138,
+      "tag": "0003_demonic_dreadnoughts",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1773674212896,
+      "tag": "0004_mighty_mephisto",
+      "breakpoints": true
     }
   ]
 }

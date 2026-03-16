@@ -68,3 +68,25 @@
 
 - [x] Fix 1: Replace DashboardLayout.tsx with clean custom implementation (no Shadcn sidebar primitives)
 - [x] Fix 2: Replace AppSidebar.tsx with custom implementation (fixes Tailwind v4 group-data selector bug)
+
+## Phase 6 — Coaching Business Infrastructure
+
+- [x] Install stripe, @stripe/stripe-js, resend packages
+- [x] Update server/_core/env.ts with Stripe + Resend env vars
+- [x] Schema: Add subscriptions, cohorts, cohortMembers, coachingSessions, coachingCommitments, certifications tables
+- [x] Schema: Add assignedCoachId to agentProfiles
+- [x] Run migration (pnpm db:push) — 26 tables, all applied
+- [x] DB helpers: subscriptions, cohorts, sessions, commitments, certifications, getUserByEmail
+- [x] Server: Add subscriptions router (get, createCheckout, cancel)
+- [x] Server: Add certifications router (get, start, completeModule)
+- [x] Server: Extend coachPortal (cohorts, sessions, commitments, pre-brief, agent-side endpoints)
+- [ ] Server: Add Stripe webhook to server/_core/index.ts (deferred — needs Stripe keys)
+- [x] Frontend: Create useTier hook
+- [x] Frontend: Create TierGate component
+- [x] Frontend: Replace CoachPortal.tsx with 4-tab Coach Hub (Overview, Clients, Sessions, Cohorts)
+- [x] Frontend: Create Certification page (5-module journey with progress ring)
+- [x] Frontend: Add CurrentLevel widget (SVG progress ring) to Dashboard
+- [x] Frontend: Add CommitmentsWidget to Dashboard
+- [x] Frontend: Add Subscription tab to Settings (3-tier comparison card)
+- [x] Routing: Add /certification route, nav item, page title
+- [x] Vitest: 8 new Phase 6 tests (44 total passing)

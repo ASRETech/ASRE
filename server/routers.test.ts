@@ -181,8 +181,8 @@ describe("profile", () => {
     const caller = appRouter.createCaller(ctx);
 
     const result = await caller.profile.get();
-    // Returns undefined since mock returns undefined (no profile yet)
-    expect(result).toBeUndefined();
+    // Returns null since profile.get returns null for missing profiles
+    expect(result).toBeNull();
   });
 
   it("upserts profile successfully", async () => {
