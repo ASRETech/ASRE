@@ -20,8 +20,8 @@ import Library from "./pages/Library";
 import CultureOS from "./pages/CultureOS";
 import Compliance from "./pages/Compliance";
 import SettingsPage from "./pages/Settings";
-
 function AppRoutes() {
+  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path="/" component={() => <Redirect to="/onboarding" />} />

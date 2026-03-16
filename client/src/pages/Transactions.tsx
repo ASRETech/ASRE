@@ -58,10 +58,10 @@ export default function Transactions() {
   };
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Summary strip */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
           <Card className="p-4">
             <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Active Transactions</div>
             <div className="font-mono text-2xl font-bold text-foreground">{activeCount}</div>
@@ -147,7 +147,7 @@ export default function Transactions() {
 
         {/* Transaction Detail Drawer */}
         <Sheet open={!!selectedTxn} onOpenChange={() => setSelectedTxn(null)}>
-          <SheetContent className="w-[480px] sm:max-w-[480px] overflow-y-auto">
+          <SheetContent className="w-full sm:w-[480px] sm:max-w-[480px] overflow-y-auto">
             <SheetHeader>
               <SheetTitle className="font-display">{selectedTxn?.propertyAddress}</SheetTitle>
               <SheetDescription>{selectedTxn?.clientName} — {selectedTxn?.type.toUpperCase()}</SheetDescription>

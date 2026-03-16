@@ -71,13 +71,13 @@ export default function Dashboard() {
   const totalExpenses = financials.filter(f => f.type === 'expense').reduce((s, f) => s + f.amount, 0);
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Journey context banner */}
         <Link href="/level">
-          <div className="mb-6 p-3 rounded-xl bg-[#DC143C]/[0.04] border border-[#DC143C]/10 flex items-center justify-between cursor-pointer hover:bg-[#DC143C]/[0.06] transition-colors">
+          <div className="mb-6 p-3 rounded-xl bg-[#DC143C]/[0.04] border border-[#DC143C]/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 cursor-pointer hover:bg-[#DC143C]/[0.06] transition-colors">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[#DC143C]/10 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-[#DC143C]/10 flex items-center justify-center shrink-0">
                 <MapPin className="w-4 h-4 text-[#DC143C]" />
               </div>
               <div>
@@ -85,11 +85,11 @@ export default function Dashboard() {
                 <span className="text-xs font-medium text-foreground">{levelData?.name}</span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground font-mono">
+            <div className="flex items-center gap-2 ml-11 sm:ml-0">
+              <span className="text-xs text-muted-foreground font-mono truncate max-w-[200px] sm:max-w-none">
                 Next: {levelData?.deliverables.find(d => !state.deliverables.find(dd => dd.id === d.id)?.isComplete)?.title || 'All complete'}
               </span>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
             </div>
           </div>
         </Link>
@@ -164,7 +164,7 @@ export default function Dashboard() {
         </div>
 
         {/* Middle Row — 3 columns */}
-        <div className="grid lg:grid-cols-[1fr_280px_280px] gap-4 mb-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-[1fr_280px_280px] gap-4 mb-6">
           {/* Pipeline Snapshot */}
           <Card className="p-5">
             <div className="flex items-center justify-between mb-4">
@@ -246,7 +246,7 @@ export default function Dashboard() {
         </div>
 
         {/* Bottom Row — 3 cards */}
-        <div className="grid lg:grid-cols-3 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Cash Flow */}
           <Card className="p-5">
             <div className="flex items-center gap-2 mb-4">

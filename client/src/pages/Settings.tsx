@@ -15,7 +15,7 @@ export default function SettingsPage() {
   const user = state.user;
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Profile */}
         <Card className="p-6">

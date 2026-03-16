@@ -112,20 +112,20 @@ export default function Pipeline() {
   };
 
   return (
-    <div className="p-6 lg:p-8 h-[calc(100vh-48px)] flex flex-col">
+    <div className="p-4 sm:p-6 lg:p-8 h-[calc(100vh-48px)] flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="relative">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 shrink-0">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-initial">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search leads..."
-              className="pl-9 w-64 h-9 text-sm"
+              className="pl-9 w-full sm:w-64 h-9 text-sm"
             />
           </div>
-          <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5 shrink-0">
             <button
               onClick={() => setViewMode('kanban')}
               className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${viewMode === 'kanban' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'}`}
@@ -140,7 +140,7 @@ export default function Pipeline() {
             </button>
           </div>
         </div>
-        <Button onClick={() => setShowAddLead(true)} className="bg-[#DC143C] hover:bg-[#DC143C]/90 text-white h-9 text-sm">
+        <Button onClick={() => setShowAddLead(true)} className="bg-[#DC143C] hover:bg-[#DC143C]/90 text-white h-9 text-sm w-full sm:w-auto">
           <Plus className="w-4 h-4 mr-1.5" />
           Add Lead
         </Button>
@@ -264,7 +264,7 @@ export default function Pipeline() {
 
       {/* Lead Detail Drawer */}
       <Sheet open={!!selectedLead} onOpenChange={() => setSelectedLead(null)}>
-        <SheetContent className="w-[420px] sm:max-w-[420px]">
+        <SheetContent className="w-full sm:w-[420px] sm:max-w-[420px]">
           <SheetHeader>
             <SheetTitle className="font-display">
               {selectedLead?.firstName} {selectedLead?.lastName}

@@ -84,7 +84,7 @@ export default function Compliance() {
   const logs = state.complianceLogs;
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-5xl mx-auto">
         {/* Status banner */}
         <Card className="p-4 mb-6 flex items-center justify-between">

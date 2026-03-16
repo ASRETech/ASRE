@@ -77,7 +77,7 @@ export default function CultureOS() {
   };
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-5xl mx-auto">
         <Tabs defaultValue="mission" className="space-y-4">
           <TabsList className="bg-muted/50">

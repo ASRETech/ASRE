@@ -79,7 +79,7 @@ export default function Financials() {
   const effectiveHourly = netIncome / (hoursPerWeek * weeksWorked);
 
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-6xl mx-auto">
         {/* KPI Strip */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -104,10 +104,10 @@ export default function Financials() {
         </div>
 
         <Tabs defaultValue="calculator" className="space-y-4">
-          <TabsList className="bg-muted/50">
-            <TabsTrigger value="calculator" className="text-xs">Commission Calculator</TabsTrigger>
-            <TabsTrigger value="profitfirst" className="text-xs">Profit First</TabsTrigger>
-            <TabsTrigger value="pnl" className="text-xs">P&L Statement</TabsTrigger>
+          <TabsList className="bg-muted/50 w-full sm:w-auto flex">
+            <TabsTrigger value="calculator" className="text-xs flex-1 sm:flex-initial">Calculator</TabsTrigger>
+            <TabsTrigger value="profitfirst" className="text-xs flex-1 sm:flex-initial">Profit First</TabsTrigger>
+            <TabsTrigger value="pnl" className="text-xs flex-1 sm:flex-initial">P&L</TabsTrigger>
           </TabsList>
 
           {/* Commission Calculator */}
@@ -135,7 +135,7 @@ export default function Financials() {
                       <span>$100K</span><span>$2M</span>
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">Commission %</Label>
                       <Input

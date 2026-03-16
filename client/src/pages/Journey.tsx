@@ -31,7 +31,7 @@ export default function Journey() {
   };
 
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto">
       {/* Header with journey context */}
       <div className="mb-8">
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
@@ -47,9 +47,9 @@ export default function Journey() {
       {/* Journey Path */}
       <div className="relative">
         {/* Vertical progress spine */}
-        <div className="absolute left-[27px] top-0 bottom-0 w-0.5 bg-border" />
+        <div className="absolute left-[19px] sm:left-[27px] top-0 bottom-0 w-0.5 bg-border" />
         <div
-          className="absolute left-[27px] top-0 w-0.5 bg-[#DC143C] transition-all duration-1000 ease-out rounded-full"
+          className="absolute left-[19px] sm:left-[27px] top-0 w-0.5 bg-[#DC143C] transition-all duration-1000 ease-out rounded-full"
           style={{ height: `${((currentLevel - 0.5) / 7) * 100}%` }}
         />
 
@@ -69,10 +69,10 @@ export default function Journey() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.08, duration: 0.3 }}
               >
-                <div className="flex gap-4">
+                <div className="flex gap-3 sm:gap-4">
                   {/* Level node */}
                   <div className="relative z-10 shrink-0">
-                    <div className={`w-14 h-14 rounded-xl flex items-center justify-center font-mono text-lg font-bold transition-all ${
+                    <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center font-mono text-base sm:text-lg font-bold transition-all ${
                       isCurrent
                         ? 'bg-[#DC143C] text-white shadow-lg shadow-[#DC143C]/25'
                         : isComplete
@@ -138,7 +138,7 @@ export default function Journey() {
                     {/* Deliverable preview for current level */}
                     {isCurrent && (
                       <div className="mt-4 pt-3 border-t border-border/50">
-                        <div className="grid grid-cols-2 gap-1.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                           {level.deliverables.slice(0, 4).map((d) => {
                             const del = deliverables.find(dd => dd.id === d.id);
                             return (

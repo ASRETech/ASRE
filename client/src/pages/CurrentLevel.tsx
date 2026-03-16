@@ -1,5 +1,7 @@
 // Screen 3: Current Level — ACTIVE DELIVERABLES
 // Design: "Command Center" — Split panel: level context left, deliverable checklist right
+// Now with interactive builder modals for each deliverable
+import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { LEVELS } from '@/lib/store';
 import { Card } from '@/components/ui/card';
@@ -7,10 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
-import { Check, ChevronRight, Award, ArrowRight, Sparkles } from 'lucide-react';
+import { Check, ChevronRight, Award, ArrowRight, Sparkles, Wrench } from 'lucide-react';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { BUILDER_REGISTRY } from '@/components/DeliverableBuilders';
 
 export default function CurrentLevel() {
   const { state, dispatch } = useApp();
@@ -21,6 +24,9 @@ export default function CurrentLevel() {
   const totalCount = levelDeliverables.length;
   const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
   const allComplete = completedCount === totalCount && totalCount > 0;
+
+  // Builder modal state
+  const [activeBuilder, setActiveBuilder] = useState<string | null>(null);
 
   const handleToggle = (id: string) => {
     dispatch({ type: 'TOGGLE_DELIVERABLE', payload: id });
@@ -39,18 +45,31 @@ export default function CurrentLevel() {
     }
   };
 
+  const handleBuildClick = (deliverableId: string, moduleRoute: string) => {
+    // If there's a builder modal for this deliverable, open it
+    if (BUILDER_REGISTRY[deliverableId]) {
+      setActiveBuilder(deliverableId);
+    } else {
+      // Otherwise navigate to the module route
+      window.location.href = moduleRoute;
+    }
+  };
+
+  // Render active builder modal
+  const ActiveBuilderComponent = activeBuilder ? BUILDER_REGISTRY[activeBuilder] : null;
+
   return (
-    <div className="p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Advance banner */}
         {allComplete && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 rounded-xl bg-[#DC143C]/10 border border-[#DC143C]/20 flex items-center justify-between"
+            className="mb-6 p-4 rounded-xl bg-[#DC143C]/10 border border-[#DC143C]/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#DC143C]/20 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-[#DC143C]/20 flex items-center justify-center shrink-0">
                 <Award className="w-5 h-5 text-[#DC143C]" />
               </div>
               <div>
@@ -59,7 +78,7 @@ export default function CurrentLevel() {
               </div>
             </div>
             {currentLevel < 7 && (
-              <Button onClick={handleAdvance} className="bg-[#DC143C] hover:bg-[#DC143C]/90 text-white">
+              <Button onClick={handleAdvance} className="bg-[#DC143C] hover:bg-[#DC143C]/90 text-white w-full sm:w-auto">
                 Advance to Level {currentLevel + 1}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
@@ -70,9 +89,9 @@ export default function CurrentLevel() {
         <div className="grid lg:grid-cols-[340px_1fr] gap-6">
           {/* Left panel: Level context */}
           <div className="space-y-4">
-            <Card className="p-6">
+            <Card className="p-5 sm:p-6">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-[#DC143C] flex items-center justify-center font-mono text-xl font-bold text-white">
+                <div className="w-12 h-12 rounded-xl bg-[#DC143C] flex items-center justify-center font-mono text-xl font-bold text-white shrink-0">
                   {currentLevel}
                 </div>
                 <div>
@@ -138,6 +157,7 @@ export default function CurrentLevel() {
               {levelData?.deliverables.map((d, index) => {
                 const deliverable = levelDeliverables.find(dd => dd.id === d.id);
                 const isComplete = deliverable?.isComplete ?? false;
+                const hasBuilder = !!BUILDER_REGISTRY[d.id];
 
                 return (
                   <motion.div
@@ -146,23 +166,27 @@ export default function CurrentLevel() {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
                   >
-                    <Card className={`p-4 transition-all duration-200 ${
+                    <Card className={`p-3 sm:p-4 transition-all duration-200 ${
                       isComplete ? 'bg-emerald-500/[0.03] border-emerald-500/20' : 'hover:border-border/80'
                     }`}>
                       <div className="flex items-start gap-3">
                         <Checkbox
                           checked={isComplete}
                           onCheckedChange={() => handleToggle(d.id)}
-                          className="mt-0.5 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
+                          className="mt-0.5 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 shrink-0"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
+                          <div className="flex flex-wrap items-center gap-2 mb-0.5">
                             <span className={`text-sm font-medium ${isComplete ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
                               {d.title}
                             </span>
                             {isComplete ? (
                               <Badge variant="outline" className="text-emerald-500 border-emerald-500/30 text-[10px] px-1.5 py-0 h-4 font-mono">
                                 DONE
+                              </Badge>
+                            ) : hasBuilder ? (
+                              <Badge variant="outline" className="text-[#DC143C] border-[#DC143C]/30 text-[10px] px-1.5 py-0 h-4 font-mono">
+                                INTERACTIVE
                               </Badge>
                             ) : (
                               <Badge variant="outline" className="text-muted-foreground text-[10px] px-1.5 py-0 h-4 font-mono">
@@ -171,14 +195,30 @@ export default function CurrentLevel() {
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground">{d.description}</p>
-                        </div>
-                        {!isComplete && (
-                          <Link href={d.moduleRoute}>
-                            <Button variant="ghost" size="sm" className="text-[#DC143C] hover:text-[#DC143C]/80 hover:bg-[#DC143C]/5 text-xs h-8 px-3">
-                              Build This
-                              <ChevronRight className="w-3.5 h-3.5 ml-1" />
+                          {/* Mobile: build button below text */}
+                          {!isComplete && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-[#DC143C] hover:text-[#DC143C]/80 hover:bg-[#DC143C]/5 text-xs h-8 px-3 mt-2 sm:hidden"
+                              onClick={() => handleBuildClick(d.id, d.moduleRoute)}
+                            >
+                              {hasBuilder ? <Wrench className="w-3.5 h-3.5 mr-1" /> : <ChevronRight className="w-3.5 h-3.5 mr-1" />}
+                              {hasBuilder ? 'Build This' : 'Go to Module'}
                             </Button>
-                          </Link>
+                          )}
+                        </div>
+                        {/* Desktop: build button right-aligned */}
+                        {!isComplete && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-[#DC143C] hover:text-[#DC143C]/80 hover:bg-[#DC143C]/5 text-xs h-8 px-3 hidden sm:flex shrink-0"
+                            onClick={() => handleBuildClick(d.id, d.moduleRoute)}
+                          >
+                            {hasBuilder ? <Wrench className="w-3.5 h-3.5 mr-1" /> : <ChevronRight className="w-3.5 h-3.5 mr-1" />}
+                            {hasBuilder ? 'Build This' : 'Go to Module'}
+                          </Button>
                         )}
                       </div>
                     </Card>
@@ -189,6 +229,14 @@ export default function CurrentLevel() {
           </div>
         </div>
       </div>
+
+      {/* Render active builder modal */}
+      {ActiveBuilderComponent && (
+        <ActiveBuilderComponent
+          open={!!activeBuilder}
+          onClose={() => setActiveBuilder(null)}
+        />
+      )}
     </div>
   );
 }
