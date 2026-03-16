@@ -82,6 +82,40 @@ vi.mock("./db", () => ({
   upsertCultureDoc: vi.fn().mockResolvedValue(undefined),
   insertCoachingLog: vi.fn().mockResolvedValue(undefined),
   getUserCoachingLogs: vi.fn().mockResolvedValue([]),
+  // Phase 4 mocks
+  getCalendarToken: vi.fn().mockResolvedValue(undefined),
+  upsertCalendarToken: vi.fn().mockResolvedValue(undefined),
+  getCoachRelationships: vi.fn().mockResolvedValue([]),
+  getCoachRelationshipByToken: vi.fn().mockResolvedValue(undefined),
+  getCoachRelationshipForPair: vi.fn().mockResolvedValue(undefined),
+  updateCoachRelationship: vi.fn().mockResolvedValue(undefined),
+  getAgentCoachComments: vi.fn().mockResolvedValue([]),
+  getUserRecruits: vi.fn().mockResolvedValue([]),
+  insertRecruit: vi.fn().mockResolvedValue(undefined),
+  updateRecruit: vi.fn().mockResolvedValue(undefined),
+  deleteRecruit: vi.fn().mockResolvedValue(undefined),
+  getTransactionComms: vi.fn().mockResolvedValue([]),
+  getTransactionCommsPublic: vi.fn().mockResolvedValue([]),
+  getTransaction: vi.fn().mockResolvedValue(undefined),
+  getTransactionPublic: vi.fn().mockResolvedValue(undefined),
+  getPortalToken: vi.fn().mockResolvedValue(undefined),
+  getReferralPartners: vi.fn().mockResolvedValue([]),
+  updateReferralPartner: vi.fn().mockResolvedValue(undefined),
+  getReferralExchanges: vi.fn().mockResolvedValue([]),
+  getUserReviews: vi.fn().mockResolvedValue([]),
+  updateReview: vi.fn().mockResolvedValue(undefined),
+  getFinancialEntriesByYear: vi.fn().mockResolvedValue([]),
+  getBrokerageConfig: vi.fn().mockResolvedValue(undefined),
+  upsertBrokerageConfig: vi.fn().mockResolvedValue(undefined),
+  createCoachComment: vi.fn().mockResolvedValue(undefined),
+  createCoachRelationship: vi.fn().mockResolvedValue("test-token-123"),
+  createPortalLink: vi.fn().mockResolvedValue(undefined),
+  createPortalToken: vi.fn().mockResolvedValue("portal-token-123"),
+  createReferralExchange: vi.fn().mockResolvedValue(undefined),
+  createReferralPartner: vi.fn().mockResolvedValue(undefined),
+  createReview: vi.fn().mockResolvedValue(undefined),
+  createTransactionComm: vi.fn().mockResolvedValue(undefined),
+  incrementPartnerCount: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock the LLM module
@@ -362,5 +396,122 @@ describe("coaching", () => {
 
     const result = await caller.coaching.history({ limit: 10 });
     expect(Array.isArray(result)).toBe(true);
+  });
+});
+
+// Phase 4 Tests
+
+describe("coachPortal", () => {
+  it("requires auth for listing agents", async () => {
+    const ctx = createUnauthContext();
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.coachPortal.myAgents()).rejects.toThrow();
+  });
+
+  it("lists agents for authenticated coach", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.coachPortal.myAgents();
+    expect(Array.isArray(result)).toBe(true);
+  });
+});
+
+describe("recruits", () => {
+  it("requires auth for listing recruits", async () => {
+    const ctx = createUnauthContext();
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.recruits.list()).rejects.toThrow();
+  });
+
+  it("lists recruits for authenticated user", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.recruits.list();
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it("creates a recruit", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.recruits.create({
+      recruitId: "rec-001",
+      name: "Sarah Johnson",
+      stage: "identified",
+    });
+    expect(result).toEqual({ success: true });
+  });
+
+  it("updates a recruit", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.recruits.update({
+      recruitId: "rec-001",
+      updates: { stage: "contacted", notes: "Had coffee meeting" },
+    });
+    expect(result).toEqual({ success: true });
+  });
+
+  it("deletes a recruit", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.recruits.delete({ recruitId: "rec-001" });
+    expect(result).toEqual({ success: true });
+  });
+});
+
+describe("referrals", () => {
+  it("lists partners", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.referrals.partners.list();
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it("lists exchanges", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.referrals.exchanges.list({});
+    expect(Array.isArray(result)).toBe(true);
+  });
+});
+
+describe("reviews", () => {
+  it("requires auth for listing reviews", async () => {
+    const ctx = createUnauthContext();
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.reviews.list()).rejects.toThrow();
+  });
+
+  it("lists reviews for authenticated user", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.reviews.list();
+    expect(Array.isArray(result)).toBe(true);
+  });
+});
+
+describe("brokerageConfig", () => {
+  it("requires auth for getting config", async () => {
+    const ctx = createUnauthContext();
+    const caller = appRouter.createCaller(ctx);
+    await expect(caller.brokerageConfig.get()).rejects.toThrow();
+  });
+
+  it("gets brokerage config", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.brokerageConfig.get();
+    expect(result).toBeUndefined();
+  });
+
+  it("upserts brokerage config", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+    const result = await caller.brokerageConfig.upsert({
+      brokerageName: "Keller Williams",
+      framework: "MREA",
+      brandColor: "#B5121B",
+    });
+    expect(result).toEqual({ success: true });
   });
 });

@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser, users,
@@ -11,6 +11,17 @@ import {
   complianceLogs, InsertComplianceLog,
   cultureDocs, InsertCultureDoc,
   aiCoachingLogs, InsertAICoachingLog,
+  // Phase 4
+  calendarTokens, InsertCalendarToken,
+  coachRelationships, InsertCoachRelationship,
+  coachComments, InsertCoachComment,
+  recruits, InsertRecruit,
+  transactionComms, InsertTransactionComm,
+  clientPortalTokens, InsertClientPortalToken,
+  referralPartners, InsertReferralPartner,
+  referralExchanges, InsertReferralExchange,
+  reviews, InsertReview,
+  brokerageConfig, InsertBrokerageConfig,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -107,14 +118,14 @@ export async function getAgentProfile(userId: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function upsertAgentProfile(data: InsertAgentProfile) {
+export async function upsertAgentProfile(data: Partial<InsertAgentProfile> & { userId: number }) {
   const db = await getDb();
   if (!db) return;
   const existing = await getAgentProfile(data.userId);
   if (existing) {
     await db.update(agentProfiles).set(data).where(eq(agentProfiles.userId, data.userId));
   } else {
-    await db.insert(agentProfiles).values(data);
+    await db.insert(agentProfiles).values(data as InsertAgentProfile);
   }
 }
 
@@ -184,6 +195,28 @@ export async function getUserTransactions(userId: number) {
   return db.select().from(transactions).where(eq(transactions.userId, userId)).orderBy(desc(transactions.createdAt));
 }
 
+export async function getTransaction(userId: number, transactionId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(transactions)
+    .where(and(eq(transactions.userId, userId), eq(transactions.transactionId, transactionId)))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getTransactionPublic(transactionId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select({
+    propertyAddress: transactions.propertyAddress,
+    clientName: transactions.clientName,
+    status: transactions.status,
+    closeDate: transactions.closeDate,
+    type: transactions.type,
+  }).from(transactions).where(eq(transactions.transactionId, transactionId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
 export async function insertTransaction(data: InsertTransaction) {
   const db = await getDb();
   if (!db) return;
@@ -209,6 +242,16 @@ export async function insertFinancialEntry(data: InsertFinancialEntry) {
   const db = await getDb();
   if (!db) return;
   await db.insert(financialEntries).values(data);
+}
+
+export async function getFinancialEntriesByYear(userId: number, year: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(financialEntries)
+    .where(and(
+      eq(financialEntries.userId, userId),
+      sql`YEAR(${financialEntries.createdAt}) = ${year}`
+    ));
 }
 
 // ============================================================
@@ -281,4 +324,243 @@ export async function getUserCoachingLogs(userId: number, limit = 20) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(aiCoachingLogs).where(eq(aiCoachingLogs.userId, userId)).orderBy(desc(aiCoachingLogs.createdAt)).limit(limit);
+}
+
+// ============================================================
+// CALENDAR TOKENS (Phase 4)
+// ============================================================
+export async function getCalendarToken(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(calendarTokens).where(eq(calendarTokens.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function upsertCalendarToken(data: InsertCalendarToken) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await getCalendarToken(data.userId);
+  if (existing) {
+    await db.update(calendarTokens).set(data).where(eq(calendarTokens.userId, data.userId));
+  } else {
+    await db.insert(calendarTokens).values(data);
+  }
+}
+
+// ============================================================
+// COACH RELATIONSHIPS (Phase 4)
+// ============================================================
+export async function createCoachRelationship(data: Partial<InsertCoachRelationship> & { agentId: number }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(coachRelationships).values(data as InsertCoachRelationship);
+}
+
+export async function getCoachRelationshipByToken(token: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(coachRelationships).where(eq(coachRelationships.inviteToken, token)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateCoachRelationship(id: number, updates: Partial<InsertCoachRelationship>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(coachRelationships).set(updates).where(eq(coachRelationships.id, id));
+}
+
+export async function getCoachRelationships(coachId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(coachRelationships).where(eq(coachRelationships.coachId, coachId));
+}
+
+export async function getCoachRelationshipForPair(coachId: number, agentId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(coachRelationships)
+    .where(and(eq(coachRelationships.coachId, coachId), eq(coachRelationships.agentId, agentId)))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getAgentCoaches(agentId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(coachRelationships).where(eq(coachRelationships.agentId, agentId));
+}
+
+// ============================================================
+// COACH COMMENTS (Phase 4)
+// ============================================================
+export async function createCoachComment(data: InsertCoachComment) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(coachComments).values(data);
+}
+
+export async function getAgentCoachComments(agentId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(coachComments).where(eq(coachComments.agentId, agentId)).orderBy(desc(coachComments.createdAt));
+}
+
+// ============================================================
+// RECRUITS (Phase 4)
+// ============================================================
+export async function getUserRecruits(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(recruits).where(eq(recruits.userId, userId)).orderBy(desc(recruits.createdAt));
+}
+
+export async function insertRecruit(data: InsertRecruit) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(recruits).values(data);
+}
+
+export async function updateRecruit(userId: number, recruitId: string, updates: Partial<InsertRecruit>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(recruits).set(updates).where(and(eq(recruits.userId, userId), eq(recruits.recruitId, recruitId)));
+}
+
+export async function deleteRecruit(userId: number, recruitId: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(recruits).where(and(eq(recruits.userId, userId), eq(recruits.recruitId, recruitId)));
+}
+
+// ============================================================
+// TRANSACTION COMMS (Phase 4)
+// ============================================================
+export async function getTransactionComms(userId: number, transactionId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(transactionComms)
+    .where(and(eq(transactionComms.userId, userId), eq(transactionComms.transactionId, transactionId)))
+    .orderBy(desc(transactionComms.sentAt));
+}
+
+export async function getTransactionCommsPublic(transactionId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: transactionComms.id,
+    milestone: transactionComms.milestone,
+    channel: transactionComms.channel,
+    messageBody: transactionComms.messageBody,
+    sentAt: transactionComms.sentAt,
+  }).from(transactionComms).where(eq(transactionComms.transactionId, transactionId)).orderBy(desc(transactionComms.sentAt));
+}
+
+export async function createTransactionComm(data: InsertTransactionComm) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(transactionComms).values(data);
+}
+
+// ============================================================
+// CLIENT PORTAL TOKENS (Phase 4)
+// ============================================================
+export async function createPortalToken(data: InsertClientPortalToken) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(clientPortalTokens).values(data);
+}
+
+export async function getPortalToken(token: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(clientPortalTokens).where(eq(clientPortalTokens.token, token)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+// ============================================================
+// REFERRAL PARTNERS (Phase 4)
+// ============================================================
+export async function getReferralPartners(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(referralPartners).where(eq(referralPartners.userId, userId)).orderBy(desc(referralPartners.lifetimeGCIGenerated));
+}
+
+export async function createReferralPartner(data: InsertReferralPartner) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(referralPartners).values(data);
+}
+
+export async function updateReferralPartner(userId: number, partnerId: string, updates: Partial<InsertReferralPartner>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(referralPartners).set(updates).where(and(eq(referralPartners.userId, userId), eq(referralPartners.partnerId, partnerId)));
+}
+
+export async function incrementPartnerCount(userId: number, partnerId: string, field: 'referralsSentCount' | 'referralsReceivedCount') {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(referralPartners)
+    .set({ [field]: sql`${referralPartners[field]} + 1` })
+    .where(and(eq(referralPartners.userId, userId), eq(referralPartners.partnerId, partnerId)));
+}
+
+// ============================================================
+// REFERRAL EXCHANGES (Phase 4)
+// ============================================================
+export async function getReferralExchanges(userId: number, partnerId?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(referralExchanges.userId, userId)];
+  if (partnerId) conditions.push(eq(referralExchanges.partnerId, partnerId));
+  return db.select().from(referralExchanges).where(and(...conditions)).orderBy(desc(referralExchanges.referralDate));
+}
+
+export async function createReferralExchange(data: InsertReferralExchange) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(referralExchanges).values(data);
+}
+
+// ============================================================
+// REVIEWS (Phase 4)
+// ============================================================
+export async function getUserReviews(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(reviews).where(eq(reviews.userId, userId)).orderBy(desc(reviews.createdAt));
+}
+
+export async function createReview(data: InsertReview) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(reviews).values(data);
+}
+
+export async function updateReview(userId: number, reviewId: string, updates: Partial<InsertReview>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(reviews).set(updates).where(and(eq(reviews.userId, userId), eq(reviews.reviewId, reviewId)));
+}
+
+// ============================================================
+// BROKERAGE CONFIG (Phase 4)
+// ============================================================
+export async function getBrokerageConfig(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(brokerageConfig).where(eq(brokerageConfig.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function upsertBrokerageConfig(data: Partial<InsertBrokerageConfig> & { userId: number }) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await getBrokerageConfig(data.userId);
+  if (existing) {
+    await db.update(brokerageConfig).set(data).where(eq(brokerageConfig.userId, data.userId));
+  } else {
+    await db.insert(brokerageConfig).values(data as InsertBrokerageConfig);
+  }
 }

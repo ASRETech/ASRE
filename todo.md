@@ -46,3 +46,20 @@
 - [x] Change 4: DashboardLayout.tsx — add Analytics + Team OS to PAGE_TITLES
 - [x] Change 5: CultureOS.tsx — add server persistence with debounced trpc.culture.upsert
 - [x] Change 6: TeamOS.tsx — replace OrgChartTab with 7-level MREA progression
+
+## Phase 4 — 8 New Features
+
+- [x] Schema: Add all new tables + modify existing tables + run migration
+- [x] DB helpers: All query functions for new tables
+- [x] Server routes: All new routers (calendar, coachPortal, recruits, transactionComms, referrals, reviews, financials additions, brokerageConfig)
+- [x] Feature 2: Google Calendar Sync — Settings card
+- [x] Feature 3: Coach Portal — CoachPortal + CoachAccept pages
+- [x] Feature 4: Recruiting Pipeline — Recruiting page with kanban + GWC assessment
+- [x] Feature 5: Transaction Comms + Client Portal — Comms tab + ClientPortal public page
+- [x] Feature 6: Referral Partner Network — Referrals page (two-panel)
+- [x] Feature 7: Review Management — Reviews page + AI request/response generation
+- [x] Feature 8: Financial Integration — Receipt Capture + Tax Export tabs
+- [x] Feature 11: Multi-Brokerage Config — Settings card + brand color CSS variable + getLevelName
+- [x] Sidebar: Final nav state with all new icons and items
+- [x] Routes + PAGE_TITLES: All new routes registered
+- [x] Vitest: Tests for new server routes (36 passing)

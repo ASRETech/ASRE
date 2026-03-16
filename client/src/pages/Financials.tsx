@@ -10,8 +10,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import {
   DollarSign, Calculator, PieChart, TrendingUp,
-  ArrowUpRight, ArrowDownRight, Target, BarChart3
+  ArrowUpRight, ArrowDownRight, Target, BarChart3,
+  Receipt, FileDown, Upload, Loader2, Camera, Trash2, Tag
 } from 'lucide-react';
+import { trpc } from '@/lib/trpc';
+import { toast } from 'sonner';
+import { nanoid } from 'nanoid';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -112,6 +119,8 @@ export default function Financials() {
             <TabsTrigger value="pnl" className="text-xs flex-1 sm:flex-initial">P&L</TabsTrigger>
             <TabsTrigger value="model" className="text-xs flex-1 sm:flex-initial">Economic Model</TabsTrigger>
             <TabsTrigger value="forecast" className="text-xs flex-1 sm:flex-initial">90-Day Forecast</TabsTrigger>
+            <TabsTrigger value="receipts" className="text-xs flex-1 sm:flex-initial">Receipts</TabsTrigger>
+            <TabsTrigger value="taxexport" className="text-xs flex-1 sm:flex-initial">Tax Export</TabsTrigger>
           </TabsList>
 
           {/* Commission Calculator */}
@@ -315,6 +324,16 @@ export default function Financials() {
           {/* 90-Day Cash Flow Forecast */}
           <TabsContent value="forecast">
             <ForecastTab financials={financials} gciGoal={state.user?.incomeGoal ?? 250000} />
+          </TabsContent>
+
+          {/* Receipt Capture */}
+          <TabsContent value="receipts">
+            <ReceiptCaptureTab />
+          </TabsContent>
+
+          {/* Tax Export */}
+          <TabsContent value="taxexport">
+            <TaxExportTab />
           </TabsContent>
         </Tabs>
       </div>
@@ -528,6 +547,299 @@ function ForecastTab({ financials, gciGoal }: { financials: any[]; gciGoal: numb
           <Progress value={Math.min(100, Math.round((forecast.reduce((s, f) => s + f.projectedIncome, 0) / (monthlyTarget * 3)) * 100))} className="h-2.5" />
         </div>
       </Card>
+    </div>
+  );
+}
+
+
+// ─── Receipt Capture Tab ──────────────────────────────────────────────
+const EXPENSE_CATEGORIES = [
+  'Advertising', 'Car/Truck Expenses', 'Commission/Fees', 'Insurance',
+  'Legal/Professional', 'Office Expense', 'Supplies', 'Travel', 'Meals',
+  'Education', 'MLS Dues', 'Lockbox Fees', 'Photography', 'Staging',
+  'Signs', 'Technology', 'Other'
+];
+
+function ReceiptCaptureTab() {
+  const [receiptText, setReceiptText] = useState('');
+  const [addOpen, setAddOpen] = useState(false);
+  const [manualForm, setManualForm] = useState({ category: 'Other', description: '', amount: 0, date: new Date().toISOString().split('T')[0] });
+
+  const financialsQuery = trpc.financials.list.useQuery();
+  const categorizeMutation = trpc.financials.categorizeReceipt.useMutation({
+    onSuccess: (data) => {
+      setManualForm({
+        category: data.category || 'Other',
+        description: `${data.vendor || ''} - ${data.description || ''}`,
+        amount: data.amount || 0,
+        date: data.date || new Date().toISOString().split('T')[0],
+      });
+      toast.success('Receipt categorized by AI');
+    },
+  });
+  const createMutation = trpc.financials.create.useMutation({
+    onSuccess: () => {
+      financialsQuery.refetch();
+      setAddOpen(false);
+      setManualForm({ category: 'Other', description: '', amount: 0, date: new Date().toISOString().split('T')[0] });
+      setReceiptText('');
+      toast.success('Expense recorded');
+    },
+  });
+
+  const expenses = ((financialsQuery.data || []) as any[]).filter(e => e.type === 'expense');
+  const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+
+  // Group by category
+  const byCategory = useMemo(() => {
+    const groups: Record<string, { count: number; total: number }> = {};
+    expenses.forEach(e => {
+      const cat = e.category || 'Other';
+      if (!groups[cat]) groups[cat] = { count: 0, total: 0 };
+      groups[cat].count++;
+      groups[cat].total += e.amount || 0;
+    });
+    return Object.entries(groups).sort((a, b) => b[1].total - a[1].total);
+  }, [expenses]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h3 className="font-display text-sm font-bold">Receipt Capture</h3>
+          <p className="text-xs text-muted-foreground">{expenses.length} expenses — ${totalExpenses.toLocaleString()} total</p>
+        </div>
+        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="bg-[#DC143C] hover:bg-[#B01030] text-white text-xs h-8">
+              <Receipt className="w-3 h-3 mr-1" /> Add Expense
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader><DialogTitle className="font-display">Add Expense</DialogTitle></DialogHeader>
+            <div className="space-y-3 pt-2">
+              {/* AI Categorization */}
+              <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
+                <Label className="text-xs font-semibold mb-1 block">AI Receipt Scanner</Label>
+                <Textarea
+                  value={receiptText}
+                  onChange={(e) => setReceiptText(e.target.value)}
+                  placeholder="Paste or type receipt text here... e.g. 'Staples - $47.99 - office supplies - 03/15/2026'"
+                  className="text-sm min-h-[60px] mb-2"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs w-full"
+                  disabled={!receiptText || categorizeMutation.isPending}
+                  onClick={() => categorizeMutation.mutate({ receiptText })}
+                >
+                  {categorizeMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Camera className="w-3 h-3 mr-1" />}
+                  Auto-Categorize with AI
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Category</Label>
+                  <Select value={manualForm.category} onValueChange={(v) => setManualForm(f => ({ ...f, category: v }))}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {EXPENSE_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs">Date</Label>
+                  <Input type="date" value={manualForm.date} onChange={(e) => setManualForm(f => ({ ...f, date: e.target.value }))} className="h-8 text-xs" />
+                </div>
+              </div>
+              <div><Label className="text-xs">Description</Label><Input value={manualForm.description} onChange={(e) => setManualForm(f => ({ ...f, description: e.target.value }))} className="h-8 text-sm" /></div>
+              <div><Label className="text-xs">Amount ($)</Label><Input type="number" value={manualForm.amount} onChange={(e) => setManualForm(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))} className="h-8 text-sm font-mono" /></div>
+              <Button
+                className="w-full bg-[#DC143C] hover:bg-[#B01030] text-white text-xs"
+                disabled={!manualForm.amount}
+                onClick={() => createMutation.mutate({
+                  type: 'expense',
+                  category: manualForm.category,
+                  description: manualForm.description,
+                  amount: manualForm.amount,
+                  date: manualForm.date,
+                  receiptText: receiptText || undefined,
+                  autoCategory: categorizeMutation.data?.category || undefined,
+                })}
+              >
+                Save Expense
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Category breakdown */}
+      {byCategory.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+          {byCategory.map(([cat, data]) => (
+            <Card key={cat} className="p-3">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Tag className="w-3 h-3 text-muted-foreground" />
+                <span className="text-[10px] text-muted-foreground truncate">{cat}</span>
+              </div>
+              <div className="font-mono text-sm font-bold">${data.total.toLocaleString()}</div>
+              <div className="text-[10px] text-muted-foreground">{data.count} entries</div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Recent expenses */}
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/30">
+                <th className="text-left p-3 text-xs font-medium text-muted-foreground">Date</th>
+                <th className="text-left p-3 text-xs font-medium text-muted-foreground">Description</th>
+                <th className="text-left p-3 text-xs font-medium text-muted-foreground hidden sm:table-cell">Category</th>
+                <th className="text-right p-3 text-xs font-medium text-muted-foreground">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {expenses.length === 0 ? (
+                <tr><td colSpan={4} className="p-8 text-center text-muted-foreground text-sm">No expenses recorded yet.</td></tr>
+              ) : (
+                expenses.slice(0, 20).map((e: any, i: number) => (
+                  <tr key={e.id || i} className="border-b hover:bg-muted/20">
+                    <td className="p-3 text-xs text-muted-foreground whitespace-nowrap">{e.date ? new Date(e.date).toLocaleDateString() : '—'}</td>
+                    <td className="p-3 text-sm">{e.description || '—'}</td>
+                    <td className="p-3 hidden sm:table-cell"><Badge variant="outline" className="text-[9px]">{e.category || 'Other'}</Badge></td>
+                    <td className="p-3 text-right font-mono font-medium">${(e.amount || 0).toLocaleString()}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ─── Tax Export Tab ──────────────────────────────────────────────────
+function TaxExportTab() {
+  const currentYear = new Date().getFullYear();
+  const [year, setYear] = useState(currentYear);
+
+  const taxQuery = trpc.financials.taxExport.useQuery({ year });
+  const entries = (taxQuery.data || []) as any[];
+
+  const income = entries.filter(e => e.type === 'income');
+  const expenses = entries.filter(e => e.type === 'expense');
+  const totalIncome = income.reduce((s, e) => s + (e.amount || 0), 0);
+  const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+  const netProfit = totalIncome - totalExpenses;
+
+  // Group expenses by category for Schedule C
+  const scheduleC = useMemo(() => {
+    const groups: Record<string, number> = {};
+    expenses.forEach(e => {
+      const cat = e.category || 'Other';
+      groups[cat] = (groups[cat] || 0) + (e.amount || 0);
+    });
+    return Object.entries(groups).sort((a, b) => b[1] - a[1]);
+  }, [expenses]);
+
+  const exportCSV = () => {
+    const headers = ['Date', 'Type', 'Category', 'Description', 'Amount'];
+    const rows = entries.map(e => [
+      e.date ? new Date(e.date).toLocaleDateString() : '',
+      e.type,
+      e.category || '',
+      (e.description || '').replace(/,/g, ';'),
+      e.amount || 0,
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `agentos-tax-export-${year}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${entries.length} entries for ${year}`);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h3 className="font-display text-sm font-bold">Tax Export — Schedule C</h3>
+          <p className="text-xs text-muted-foreground">{entries.length} entries for {year}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v))}>
+            <SelectTrigger className="h-8 text-xs w-24"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {[currentYear, currentYear - 1, currentYear - 2].map(y => (
+                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button size="sm" variant="outline" className="text-xs h-8" onClick={exportCSV} disabled={entries.length === 0}>
+            <FileDown className="w-3 h-3 mr-1" /> Export CSV
+          </Button>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Card className="p-4 text-center">
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Gross Income</div>
+          <div className="font-mono text-xl font-bold text-green-600">${totalIncome.toLocaleString()}</div>
+          <div className="text-[10px] text-muted-foreground">{income.length} entries</div>
+        </Card>
+        <Card className="p-4 text-center">
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Expenses</div>
+          <div className="font-mono text-xl font-bold text-red-500">${totalExpenses.toLocaleString()}</div>
+          <div className="text-[10px] text-muted-foreground">{expenses.length} entries</div>
+        </Card>
+        <Card className="p-4 text-center">
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Net Profit</div>
+          <div className={`font-mono text-xl font-bold ${netProfit >= 0 ? 'text-[#DC143C]' : 'text-red-500'}`}>${netProfit.toLocaleString()}</div>
+          <div className="text-[10px] text-muted-foreground">Schedule C Line 31</div>
+        </Card>
+      </div>
+
+      {/* Schedule C Category Breakdown */}
+      <Card className="p-4">
+        <h4 className="font-display text-xs font-bold mb-3 uppercase tracking-wider text-muted-foreground">Schedule C Expense Categories</h4>
+        {scheduleC.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">No expenses recorded for {year}.</p>
+        ) : (
+          <div className="space-y-2">
+            {scheduleC.map(([cat, amount]) => {
+              const pct = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
+              return (
+                <div key={cat} className="flex items-center gap-3">
+                  <div className="w-32 sm:w-40 text-xs truncate">{cat}</div>
+                  <div className="flex-1">
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div className="h-full bg-[#DC143C] rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                  <div className="font-mono text-xs font-medium w-20 text-right">${amount.toLocaleString()}</div>
+                  <div className="text-[10px] text-muted-foreground w-10 text-right">{pct.toFixed(0)}%</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      {/* Disclaimer */}
+      <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20 text-xs text-muted-foreground">
+        <strong className="text-amber-600">Disclaimer:</strong> This export is for informational purposes only. Consult a licensed CPA or tax professional for official tax filing. AgentOS does not provide tax advice.
+      </div>
     </div>
   );
 }

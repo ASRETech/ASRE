@@ -22,6 +22,12 @@ import Compliance from "./pages/Compliance";
 import SettingsPage from "./pages/Settings";
 import Analytics from "./pages/Analytics";
 import TeamOS from "./pages/TeamOS";
+import CoachPortal from "./pages/CoachPortal";
+import CoachAccept from "./pages/CoachAccept";
+import Recruiting from "./pages/Recruiting";
+import ClientPortal from "./pages/ClientPortal";
+import Referrals from "./pages/Referrals";
+import Reviews from "./pages/Reviews";
 function AppRoutes() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -60,6 +66,24 @@ function AppRoutes() {
       </Route>
       <Route path="/team">
         <DashboardLayout><TeamOS /></DashboardLayout>
+      </Route>
+      <Route path="/coach">
+        <DashboardLayout><CoachPortal /></DashboardLayout>
+      </Route>
+      <Route path="/coach/accept/:token">
+        <CoachAccept />
+      </Route>
+      <Route path="/recruiting">
+        <DashboardLayout><Recruiting /></DashboardLayout>
+      </Route>
+      <Route path="/portal/:token">
+        <ClientPortal />
+      </Route>
+      <Route path="/referrals">
+        <DashboardLayout><Referrals /></DashboardLayout>
+      </Route>
+      <Route path="/reviews">
+        <DashboardLayout><Reviews /></DashboardLayout>
       </Route>
       <Route path="/settings">
         <DashboardLayout><SettingsPage /></DashboardLayout>

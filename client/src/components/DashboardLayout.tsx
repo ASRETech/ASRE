@@ -17,6 +17,10 @@ const PAGE_TITLES: Record<string, string> = {
   '/library': 'Knowledge Library',
   '/culture': 'Culture OS',
   '/compliance': 'Compliance',
+  '/coach': 'Coach Portal',
+  '/recruiting': 'Recruiting Pipeline',
+  '/referrals': 'Referral Network',
+  '/reviews': 'Reviews',
   '/settings': 'Settings',
 };
 

@@ -15,6 +15,13 @@
       "when": 1773627482752,
       "tag": "0001_stormy_abomination",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1773668624217,
+      "tag": "0002_breezy_nemesis",
+      "breakpoints": true
     }
   ]
 }

@@ -29,6 +29,10 @@ import {
   Zap,
   BarChart3,
   UsersRound,
+  GraduationCap,
+  Handshake,
+  Star,
+  UserPlus,
 } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
 
@@ -46,6 +50,12 @@ const NAV_ITEMS = [
   ]},
   { section: 'Team', items: [
     { label: 'Team OS', icon: UsersRound, path: '/team' },
+    { label: 'Recruiting', icon: UserPlus, path: '/recruiting' },
+    { label: 'Coach Portal', icon: GraduationCap, path: '/coach' },
+  ]},
+  { section: 'Growth', items: [
+    { label: 'Referrals', icon: Handshake, path: '/referrals' },
+    { label: 'Reviews', icon: Star, path: '/reviews' },
   ]},
   { section: 'Foundation', items: [
     { label: 'Knowledge Library', icon: BookOpen, path: '/library' },

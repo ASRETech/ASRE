@@ -5,6 +5,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { invokeLLM } from "./_core/llm";
 import * as db from "./db";
+import { nanoid } from "nanoid";
 
 export const appRouter = router({
   system: systemRouter,
@@ -26,6 +27,8 @@ export const appRouter = router({
     }),
     upsert: protectedProcedure
       .input(z.object({
+        name: z.string().optional(),
+        phone: z.string().optional(),
         brokerage: z.string().optional(),
         marketCenter: z.string().optional(),
         state: z.string().optional(),
@@ -38,6 +41,9 @@ export const appRouter = router({
         diagnosticAnswers: z.any().optional(),
         topProblems: z.any().optional(),
         isOnboarded: z.boolean().optional(),
+        coachMode: z.boolean().optional(),
+        googleBusinessUrl: z.string().optional(),
+        reviewRequestTemplate: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         await db.upsertAgentProfile({ ...input, userId: ctx.user.id });
@@ -143,11 +149,18 @@ export const appRouter = router({
     list: protectedProcedure.query(async ({ ctx }) => {
       return db.getUserTransactions(ctx.user.id);
     }),
+    get: protectedProcedure
+      .input(z.object({ transactionId: z.string() }))
+      .query(async ({ ctx, input }) => {
+        return db.getTransaction(ctx.user.id, input.transactionId);
+      }),
     create: protectedProcedure
       .input(z.object({
         transactionId: z.string(),
         propertyAddress: z.string(),
         clientName: z.string().optional(),
+        clientEmail: z.string().optional(),
+        clientPhone: z.string().optional(),
         type: z.enum(["buyer", "seller", "dual"]).optional(),
         status: z.enum(["pre-contract", "under-contract", "clear-to-close", "closed", "cancelled"]).optional(),
         salePrice: z.number().optional(),
@@ -165,6 +178,8 @@ export const appRouter = router({
         updates: z.object({
           propertyAddress: z.string().optional(),
           clientName: z.string().optional(),
+          clientEmail: z.string().optional(),
+          clientPhone: z.string().optional(),
           status: z.enum(["pre-contract", "under-contract", "clear-to-close", "closed", "cancelled"]).optional(),
           salePrice: z.number().optional(),
           commission: z.number().optional(),
@@ -192,10 +207,58 @@ export const appRouter = router({
         description: z.string().optional(),
         amount: z.number(),
         date: z.string(),
+        receiptUrl: z.string().optional(),
+        receiptText: z.string().optional(),
+        autoCategory: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         await db.insertFinancialEntry({ ...input, userId: ctx.user.id });
         return { success: true };
+      }),
+    categorizeReceipt: protectedProcedure
+      .input(z.object({ receiptText: z.string() }))
+      .mutation(async ({ input }) => {
+        const response = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: `You are a real estate business expense categorizer. Given receipt text, extract the vendor, amount, date, and assign an IRS Schedule C category for a real estate agent. Categories: Advertising, Car/Truck Expenses, Commission/Fees, Insurance, Legal/Professional, Office Expense, Supplies, Travel, Meals, Education, MLS Dues, Lockbox Fees, Photography, Staging, Signs, Technology, Other.
+
+Return JSON: { "vendor": string, "amount": number, "date": string, "category": string, "description": string }`,
+            },
+            { role: "user", content: input.receiptText },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "receipt_categorization",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  vendor: { type: "string" },
+                  amount: { type: "number" },
+                  date: { type: "string" },
+                  category: { type: "string" },
+                  description: { type: "string" },
+                },
+                required: ["vendor", "amount", "date", "category", "description"],
+                additionalProperties: false,
+              },
+            },
+          },
+        });
+        const content = response.choices[0]?.message?.content;
+        try {
+          return JSON.parse(typeof content === "string" ? content : "{}");
+        } catch {
+          return { vendor: "", amount: 0, date: "", category: "Other", description: content || "" };
+        }
+      }),
+    taxExport: protectedProcedure
+      .input(z.object({ year: z.number() }))
+      .query(async ({ ctx, input }) => {
+        return db.getFinancialEntriesByYear(ctx.user.id, input.year);
       }),
   }),
 
@@ -242,11 +305,8 @@ export const appRouter = router({
       return db.getUserComplianceLogs(ctx.user.id);
     }),
     scan: protectedProcedure
-      .input(z.object({
-        inputText: z.string(),
-      }))
+      .input(z.object({ inputText: z.string() }))
       .mutation(async ({ ctx, input }) => {
-        // AI-powered Fair Housing compliance scan
         const response = await invokeLLM({
           messages: [
             {
@@ -258,10 +318,7 @@ Return a JSON object with:
 - flaggedItems: array of objects with { text: string, reason: string, severity: "low" | "medium" | "high" }
 - summary: brief overall assessment`,
             },
-            {
-              role: "user",
-              content: input.inputText,
-            },
+            { role: "user", content: input.inputText },
           ],
           response_format: {
             type: "json_schema",
@@ -297,9 +354,8 @@ Return a JSON object with:
         const content = response.choices[0]?.message?.content;
         let parsed: any = null;
         try {
-          parsed = typeof content === "string" ? JSON.parse(content) : null;
+          parsed = JSON.parse(typeof content === "string" ? content : "{}");
         } catch {
-          // If LLM doesn't return valid JSON, return a safe default
           parsed = { result: "pass", flaggedItems: [], summary: content || "Unable to parse response" };
         }
 
@@ -380,6 +436,402 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
       .input(z.object({ limit: z.number().optional() }))
       .query(async ({ ctx, input }) => {
         return db.getUserCoachingLogs(ctx.user.id, input.limit || 20);
+      }),
+  }),
+
+  // ============================================================
+  // COACH PORTAL (Phase 4)
+  // ============================================================
+  coachPortal: router({
+    invite: protectedProcedure
+      .input(z.object({ inviteEmail: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const token = nanoid(32);
+        await db.createCoachRelationship({
+          agentId: ctx.user.id,
+          inviteToken: token,
+          inviteEmail: input.inviteEmail,
+          status: "pending",
+        });
+        return { token, inviteUrl: `/coach-accept?token=${token}` };
+      }),
+    acceptInvite: publicProcedure
+      .input(z.object({ token: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const rel = await db.getCoachRelationshipByToken(input.token);
+        if (!rel) return { success: false, error: "Invalid invite token" };
+        if (rel.status !== "pending") return { success: false, error: "Invite already used" };
+        if (!ctx.user) return { success: false, error: "Must be logged in" };
+        await db.updateCoachRelationship(rel.id, { coachId: ctx.user.id, status: "active" });
+        // Enable coach mode on the agent's profile
+        await db.upsertAgentProfile({ userId: rel.agentId, coachMode: true });
+        return { success: true };
+      }),
+    myAgents: protectedProcedure.query(async ({ ctx }) => {
+      const rels = await db.getCoachRelationships(ctx.user.id);
+      const agents = [];
+      for (const rel of rels) {
+        if (rel.status !== "active") continue;
+        const profile = await db.getAgentProfile(rel.agentId);
+        const delivs = await db.getUserDeliverables(rel.agentId);
+        agents.push({
+          relationshipId: rel.id,
+          agentId: rel.agentId,
+          profile,
+          deliverables: delivs,
+          status: rel.status,
+        });
+      }
+      return agents;
+    }),
+    agentDetail: protectedProcedure
+      .input(z.object({ agentId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        // Verify coach relationship
+        const rel = await db.getCoachRelationshipForPair(ctx.user.id, input.agentId);
+        if (!rel || rel.status !== "active") return null;
+        const profile = await db.getAgentProfile(input.agentId);
+        const delivs = await db.getUserDeliverables(input.agentId);
+        const comments = await db.getAgentCoachComments(input.agentId);
+        return { profile, deliverables: delivs, comments };
+      }),
+    addComment: protectedProcedure
+      .input(z.object({
+        agentId: z.number(),
+        deliverableId: z.string(),
+        comment: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.createCoachComment({
+          coachId: ctx.user.id,
+          agentId: input.agentId,
+          deliverableId: input.deliverableId,
+          comment: input.comment,
+        });
+        return { success: true };
+      }),
+    myCoachComments: protectedProcedure.query(async ({ ctx }) => {
+      return db.getAgentCoachComments(ctx.user.id);
+    }),
+  }),
+
+  // ============================================================
+  // RECRUITS (Phase 4)
+  // ============================================================
+  recruits: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserRecruits(ctx.user.id);
+    }),
+    create: protectedProcedure
+      .input(z.object({
+        recruitId: z.string(),
+        name: z.string(),
+        phone: z.string().optional(),
+        email: z.string().optional(),
+        currentBrokerage: z.string().optional(),
+        yearsLicensed: z.number().optional(),
+        annualVolume: z.number().optional(),
+        stage: z.enum(["identified", "contacted", "interviewing", "offered", "accepted", "onboarded"]).optional(),
+        gwcGet: z.enum(["yes", "maybe", "no"]).optional(),
+        gwcWant: z.enum(["yes", "maybe", "no"]).optional(),
+        gwcCapacity: z.enum(["yes", "maybe", "no"]).optional(),
+        cultureFitScore: z.number().optional(),
+        cultureFitNotes: z.string().optional(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.insertRecruit({ ...input, userId: ctx.user.id });
+        return { success: true };
+      }),
+    update: protectedProcedure
+      .input(z.object({
+        recruitId: z.string(),
+        updates: z.object({
+          name: z.string().optional(),
+          phone: z.string().optional(),
+          email: z.string().optional(),
+          currentBrokerage: z.string().optional(),
+          yearsLicensed: z.number().optional(),
+          annualVolume: z.number().optional(),
+          stage: z.enum(["identified", "contacted", "interviewing", "offered", "accepted", "onboarded"]).optional(),
+          gwcGet: z.enum(["yes", "maybe", "no"]).optional(),
+          gwcWant: z.enum(["yes", "maybe", "no"]).optional(),
+          gwcCapacity: z.enum(["yes", "maybe", "no"]).optional(),
+          cultureFitScore: z.number().optional(),
+          cultureFitNotes: z.string().optional(),
+          notes: z.string().optional(),
+        }),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.updateRecruit(ctx.user.id, input.recruitId, input.updates);
+        return { success: true };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ recruitId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteRecruit(ctx.user.id, input.recruitId);
+        return { success: true };
+      }),
+  }),
+
+  // ============================================================
+  // TRANSACTION COMMS (Phase 4)
+  // ============================================================
+  transactionComms: router({
+    list: protectedProcedure
+      .input(z.object({ transactionId: z.string() }))
+      .query(async ({ ctx, input }) => {
+        return db.getTransactionComms(ctx.user.id, input.transactionId);
+      }),
+    send: protectedProcedure
+      .input(z.object({
+        transactionId: z.string(),
+        milestone: z.string(),
+        channel: z.enum(["sms", "email"]),
+        messageBody: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.createTransactionComm({ ...input, userId: ctx.user.id, status: "sent" });
+        return { success: true };
+      }),
+    generateMessage: protectedProcedure
+      .input(z.object({
+        milestone: z.string(),
+        clientName: z.string(),
+        propertyAddress: z.string(),
+        channel: z.enum(["sms", "email"]),
+      }))
+      .mutation(async ({ input }) => {
+        const response = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: `You are a real estate transaction coordinator. Generate a professional ${input.channel === "sms" ? "SMS (under 160 chars)" : "email"} message for a client at the "${input.milestone}" milestone of their transaction.
+
+Client: ${input.clientName}
+Property: ${input.propertyAddress}
+
+Be warm, professional, and informative. Include next steps when applicable.`,
+            },
+            { role: "user", content: `Generate a ${input.channel} message for the "${input.milestone}" milestone.` },
+          ],
+        });
+        const content = response.choices[0]?.message?.content;
+        return { message: typeof content === "string" ? content : "" };
+      }),
+    createPortalLink: protectedProcedure
+      .input(z.object({
+        transactionId: z.string(),
+        clientEmail: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const token = nanoid(32);
+        await db.createPortalToken({
+          token,
+          transactionId: input.transactionId,
+          userId: ctx.user.id,
+          clientEmail: input.clientEmail,
+        });
+        return { token, portalUrl: `/client-portal?token=${token}` };
+      }),
+  }),
+
+  // ============================================================
+  // CLIENT PORTAL (Phase 4) — public access
+  // ============================================================
+  clientPortal: router({
+    view: publicProcedure
+      .input(z.object({ token: z.string() }))
+      .query(async ({ input }) => {
+        const portalToken = await db.getPortalToken(input.token);
+        if (!portalToken) return null;
+        const transaction = await db.getTransactionPublic(portalToken.transactionId);
+        const comms = await db.getTransactionCommsPublic(portalToken.transactionId);
+        return { transaction, communications: comms };
+      }),
+  }),
+
+  // ============================================================
+  // REFERRAL PARTNERS (Phase 4)
+  // ============================================================
+  referrals: router({
+    partners: router({
+      list: protectedProcedure.query(async ({ ctx }) => {
+        return db.getReferralPartners(ctx.user.id);
+      }),
+      create: protectedProcedure
+        .input(z.object({
+          partnerId: z.string(),
+          name: z.string(),
+          company: z.string().optional(),
+          role: z.string().optional(),
+          email: z.string().optional(),
+          phone: z.string().optional(),
+          tier: z.enum(["A", "B", "C"]).optional(),
+          notes: z.string().optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+          await db.createReferralPartner({ ...input, userId: ctx.user.id });
+          return { success: true };
+        }),
+      update: protectedProcedure
+        .input(z.object({
+          partnerId: z.string(),
+          updates: z.object({
+            name: z.string().optional(),
+            company: z.string().optional(),
+            role: z.string().optional(),
+            email: z.string().optional(),
+            phone: z.string().optional(),
+            tier: z.enum(["A", "B", "C"]).optional(),
+            notes: z.string().optional(),
+          }),
+        }))
+        .mutation(async ({ ctx, input }) => {
+          await db.updateReferralPartner(ctx.user.id, input.partnerId, input.updates);
+          return { success: true };
+        }),
+    }),
+    exchanges: router({
+      list: protectedProcedure
+        .input(z.object({ partnerId: z.string().optional() }))
+        .query(async ({ ctx, input }) => {
+          return db.getReferralExchanges(ctx.user.id, input.partnerId);
+        }),
+      create: protectedProcedure
+        .input(z.object({
+          partnerId: z.string(),
+          direction: z.enum(["sent", "received"]),
+          contactName: z.string().optional(),
+          estimatedGCI: z.number().optional(),
+          status: z.enum(["referred", "active", "closed", "lost"]).optional(),
+          notes: z.string().optional(),
+        }))
+        .mutation(async ({ ctx, input }) => {
+          await db.createReferralExchange({ ...input, userId: ctx.user.id });
+          const field = input.direction === "sent" ? "referralsSentCount" : "referralsReceivedCount";
+          await db.incrementPartnerCount(ctx.user.id, input.partnerId, field);
+          return { success: true };
+        }),
+    }),
+  }),
+
+  // ============================================================
+  // REVIEWS (Phase 4)
+  // ============================================================
+  reviews: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserReviews(ctx.user.id);
+    }),
+    create: protectedProcedure
+      .input(z.object({
+        reviewId: z.string(),
+        platform: z.enum(["google", "zillow", "realtor", "facebook", "other"]).optional(),
+        reviewerName: z.string().optional(),
+        rating: z.number().optional(),
+        reviewText: z.string().optional(),
+        reviewDate: z.string().optional(),
+        transactionId: z.string().optional(),
+        sourceUrl: z.string().optional(),
+        isPublic: z.boolean().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.createReview({ ...input, userId: ctx.user.id });
+        return { success: true };
+      }),
+    update: protectedProcedure
+      .input(z.object({
+        reviewId: z.string(),
+        updates: z.object({
+          responseText: z.string().optional(),
+          respondedAt: z.date().optional(),
+          isPublic: z.boolean().optional(),
+        }),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.updateReview(ctx.user.id, input.reviewId, input.updates);
+        return { success: true };
+      }),
+    generateResponse: protectedProcedure
+      .input(z.object({
+        reviewerName: z.string(),
+        rating: z.number(),
+        reviewText: z.string(),
+      }))
+      .mutation(async ({ input }) => {
+        const response = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: `You are a real estate agent responding to a client review. Write a professional, warm, and authentic response. For positive reviews, express genuine gratitude. For negative reviews, acknowledge concerns, take responsibility where appropriate, and offer to make things right. Keep it under 150 words.`,
+            },
+            {
+              role: "user",
+              content: `${input.reviewerName} left a ${input.rating}-star review: "${input.reviewText}"`,
+            },
+          ],
+        });
+        const content = response.choices[0]?.message?.content;
+        return { response: typeof content === "string" ? content : "" };
+      }),
+    requestReview: protectedProcedure
+      .input(z.object({
+        reviewId: z.string(),
+        channel: z.enum(["sms", "email"]),
+        clientName: z.string(),
+        propertyAddress: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.updateReview(ctx.user.id, input.reviewId, { requestSentAt: new Date(), requestChannel: input.channel });
+        return { success: true };
+      }),
+  }),
+
+  // ============================================================
+  // BROKERAGE CONFIG (Phase 4)
+  // ============================================================
+  brokerageConfig: router({
+    get: protectedProcedure.query(async ({ ctx }) => {
+      return db.getBrokerageConfig(ctx.user.id);
+    }),
+    upsert: protectedProcedure
+      .input(z.object({
+        brokerageName: z.string().optional(),
+        brandColor: z.string().optional(),
+        frameworkName: z.string().optional(),
+        level1Name: z.string().optional(),
+        level2Name: z.string().optional(),
+        level3Name: z.string().optional(),
+        level4Name: z.string().optional(),
+        level5Name: z.string().optional(),
+        level6Name: z.string().optional(),
+        level7Name: z.string().optional(),
+        valuesFramework: z.string().optional(),
+        showKWContent: z.boolean().optional(),
+        coachingProgramName: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.upsertBrokerageConfig({ ...input, userId: ctx.user.id });
+        return { success: true };
+      }),
+  }),
+
+  // ============================================================
+  // CALENDAR (Phase 4) — settings only, no actual Google sync
+  // ============================================================
+  calendar: router({
+    getToken: protectedProcedure.query(async ({ ctx }) => {
+      return db.getCalendarToken(ctx.user.id);
+    }),
+    upsertToken: protectedProcedure
+      .input(z.object({
+        provider: z.string().optional(),
+        calendarId: z.string().optional(),
+        syncEnabled: z.boolean().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.upsertCalendarToken({ ...input, userId: ctx.user.id });
+        return { success: true };
       }),
   }),
 });
