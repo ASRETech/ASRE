@@ -1,67 +1,54 @@
-// Design: "Command Center" — Near-black sidebar as the command rail
-// Journey-first navigation: My Journey and Current Level are primary
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarFooter,
-  SidebarRail,
-} from '@/components/ui/sidebar';
 import { useApp } from '@/contexts/AppContext';
 import { LEVELS } from '@/lib/store';
 import {
-  Map,
-  Target,
-  LayoutDashboard,
-  Users,
-  FileText,
-  DollarSign,
-  BookOpen,
-  Heart,
-  Shield,
-  Settings,
-  ChevronUp,
-  Zap,
-  BarChart3,
-  UsersRound,
-  GraduationCap,
-  Handshake,
-  Star,
-  UserPlus,
+  Map, Target, LayoutDashboard, Users, FileText,
+  DollarSign, BookOpen, Heart, Shield, Settings,
+  Zap, BarChart3, UsersRound, GraduationCap,
+  Handshake, Star, UserPlus,
 } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
 
 const NAV_ITEMS = [
-  { section: 'Journey', items: [
-    { label: 'My Journey', icon: Map, path: '/journey', accent: true },
-    { label: 'Current Level', icon: Target, path: '/level', accent: true },
-  ]},
-  { section: 'Operations', items: [
-    { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { label: 'Pipeline', icon: Users, path: '/pipeline' },
-    { label: 'Transactions', icon: FileText, path: '/transactions' },
-    { label: 'Financials', icon: DollarSign, path: '/financials' },
-    { label: 'Analytics', icon: BarChart3, path: '/analytics' },
-  ]},
-  { section: 'Team', items: [
-    { label: 'Team OS', icon: UsersRound, path: '/team' },
-    { label: 'Recruiting', icon: UserPlus, path: '/recruiting' },
-    { label: 'Coach Portal', icon: GraduationCap, path: '/coach' },
-  ]},
-  { section: 'Growth', items: [
-    { label: 'Referrals', icon: Handshake, path: '/referrals' },
-    { label: 'Reviews', icon: Star, path: '/reviews' },
-  ]},
-  { section: 'Foundation', items: [
-    { label: 'Knowledge Library', icon: BookOpen, path: '/library' },
-    { label: 'Culture OS', icon: Heart, path: '/culture' },
-    { label: 'Compliance', icon: Shield, path: '/compliance' },
-  ]},
+  {
+    section: 'JOURNEY',
+    items: [
+      { label: 'My Journey', icon: Map, path: '/journey', accent: true },
+      { label: 'Current Level', icon: Target, path: '/level', accent: true },
+    ],
+  },
+  {
+    section: 'OPERATIONS',
+    items: [
+      { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+      { label: 'Pipeline', icon: Users, path: '/pipeline' },
+      { label: 'Transactions', icon: FileText, path: '/transactions' },
+      { label: 'Financials', icon: DollarSign, path: '/financials' },
+      { label: 'Analytics', icon: BarChart3, path: '/analytics' },
+    ],
+  },
+  {
+    section: 'TEAM',
+    items: [
+      { label: 'Team OS', icon: UsersRound, path: '/team' },
+      { label: 'Recruiting', icon: UserPlus, path: '/recruiting' },
+      { label: 'Coach Portal', icon: GraduationCap, path: '/coach' },
+    ],
+  },
+  {
+    section: 'GROWTH',
+    items: [
+      { label: 'Referrals', icon: Handshake, path: '/referrals' },
+      { label: 'Reviews', icon: Star, path: '/reviews' },
+    ],
+  },
+  {
+    section: 'FOUNDATION',
+    items: [
+      { label: 'Knowledge Library', icon: BookOpen, path: '/library' },
+      { label: 'Culture OS', icon: Heart, path: '/culture' },
+      { label: 'Compliance', icon: Shield, path: '/compliance' },
+    ],
+  },
 ];
 
 export function AppSidebar() {
@@ -70,103 +57,172 @@ export function AppSidebar() {
   const user = state.user;
   const currentLevel = user?.currentLevel ?? 1;
   const levelData = LEVELS[currentLevel - 1];
-
-  // Calculate progress spine height based on level
   const progressPercent = ((currentLevel - 1) / 6) * 100;
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
-      <SidebarHeader className="p-4 pb-2">
-        <Link href="/journey" className="flex items-center gap-2.5 group-data-[collapsible=icon]:justify-center">
+    <div
+      className="flex flex-col h-full w-full"
+      style={{ background: 'oklch(0.075 0.01 250)' }}
+    >
+      {/* Logo */}
+      <div className="flex items-center gap-2.5 px-4 pt-5 pb-3 shrink-0">
+        <Link href="/journey" className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-[#DC143C] flex items-center justify-center shrink-0">
             <Zap className="w-4 h-4 text-white" />
           </div>
-          <div className="group-data-[collapsible=icon]:hidden">
-            <span className="font-display text-base font-bold text-white tracking-tight">AgentOS</span>
-          </div>
+          <span
+            className="text-base font-bold tracking-tight"
+            style={{ color: 'oklch(0.95 0.005 250)', fontFamily: 'var(--font-display)' }}
+          >
+            AgentOS
+          </span>
         </Link>
-      </SidebarHeader>
+      </div>
 
-      {/* Progress Spine — thin crimson line showing level progress */}
-      <div className="relative mx-4 mb-2 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:w-1">
-        <div className="h-1 rounded-full bg-white/10 overflow-hidden">
+      {/* Progress spine */}
+      <div className="px-4 pb-3 shrink-0">
+        <div
+          className="h-1 rounded-full overflow-hidden"
+          style={{ background: 'rgba(255,255,255,0.1)' }}
+        >
           <div
-            className="h-full rounded-full bg-[#DC143C] transition-all duration-1000 ease-out"
+            className="h-full rounded-full bg-[#DC143C] transition-all duration-700 ease-out"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
-        <div className="mt-1.5 flex items-center justify-between group-data-[collapsible=icon]:hidden">
-          <span className="text-[10px] font-mono text-sidebar-foreground/50">LVL {currentLevel}</span>
-          <span className="text-[10px] font-mono text-sidebar-foreground/50">{levelData?.name}</span>
+        <div className="mt-1.5 flex items-center justify-between">
+          <span
+            className="text-[10px] font-mono"
+            style={{ color: 'oklch(0.5 0.01 250)' }}
+          >
+            LVL {currentLevel}
+          </span>
+          <span
+            className="text-[10px] font-mono"
+            style={{ color: 'oklch(0.5 0.01 250)' }}
+          >
+            {levelData?.name}
+          </span>
         </div>
       </div>
 
-      <SidebarContent className="overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-sidebar-foreground/20">
+      {/* Nav — scrollable */}
+      <nav className="flex-1 overflow-y-auto px-2 pb-2"
+        style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}
+      >
         {NAV_ITEMS.map((group) => (
-          <SidebarGroup key={group.section}>
-            <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.15em] text-sidebar-foreground/40 font-medium">
+          <div key={group.section} className="mb-1">
+            {/* Section label */}
+            <div
+              className="px-2 pt-3 pb-1 text-[10px] font-medium tracking-[0.15em]"
+              style={{ color: 'oklch(0.4 0.01 250)' }}
+            >
               {group.section}
-            </SidebarGroupLabel>
-            <SidebarMenu>
+            </div>
+
+            {/* Section items */}
+            <ul className="flex flex-col gap-0.5">
               {group.items.map((item) => {
                 const isActive = location === item.path;
                 const Icon = item.icon;
                 return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={isActive}
-                      tooltip={item.label}
-                      className={
-                        isActive
-                          ? 'bg-[#DC143C]/15 text-[#DC143C] font-medium border-l-2 border-[#DC143C] rounded-l-none'
-                          : 'text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-white/5'
-                      }
-                    >
-                      <Link href={item.path}>
+                  <li key={item.path}>
+                    <Link href={item.path}>
+                      <div
+                        className={`
+                          flex items-center gap-2 px-2 py-2 rounded-md text-[13px]
+                          transition-colors duration-100 cursor-pointer
+                          ${isActive
+                            ? 'border-l-2 border-[#DC143C] rounded-l-none font-medium'
+                            : 'border-l-2 border-transparent'
+                          }
+                        `}
+                        style={{
+                          color: isActive
+                            ? '#DC143C'
+                            : 'oklch(0.7 0.005 250)',
+                          background: isActive
+                            ? 'rgba(220,20,60,0.12)'
+                            : 'transparent',
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isActive) {
+                            (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.05)';
+                            (e.currentTarget as HTMLDivElement).style.color = 'oklch(0.9 0.005 250)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isActive) {
+                            (e.currentTarget as HTMLDivElement).style.background = 'transparent';
+                            (e.currentTarget as HTMLDivElement).style.color = 'oklch(0.7 0.005 250)';
+                          }
+                        }}
+                      >
                         <Icon className="w-4 h-4 shrink-0" />
-                        <span className="text-[13px]">{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                        <span>{item.label}</span>
+                      </div>
+                    </Link>
+                  </li>
                 );
               })}
-            </SidebarMenu>
-          </SidebarGroup>
+            </ul>
+          </div>
         ))}
-      </SidebarContent>
+      </nav>
 
-      <SidebarFooter className="p-3">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              isActive={location === '/settings'}
-              tooltip="Settings"
-              className="text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-white/5"
-            >
-              <Link href="/settings">
-                <Settings className="w-4 h-4" />
-                <span className="text-[13px]">Settings</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+      {/* Footer */}
+      <div
+        className="shrink-0 px-3 pb-3 pt-2"
+        style={{ borderTop: '1px solid oklch(0.2 0.01 250)' }}
+      >
+        <Link href="/settings">
+          <div
+            className={`
+              flex items-center gap-2 px-2 py-2 rounded-md text-[13px]
+              transition-colors duration-100 cursor-pointer mb-2
+              ${location === '/settings'
+                ? 'border-l-2 border-[#DC143C] rounded-l-none font-medium'
+                : 'border-l-2 border-transparent'
+              }
+            `}
+            style={{
+              color: location === '/settings' ? '#DC143C' : 'oklch(0.5 0.01 250)',
+              background: location === '/settings' ? 'rgba(220,20,60,0.12)' : 'transparent',
+            }}
+          >
+            <Settings className="w-4 h-4 shrink-0" />
+            <span>Settings</span>
+          </div>
+        </Link>
+
         {user && (
-          <div className="mt-2 px-2 py-2 rounded-lg bg-white/5 group-data-[collapsible=icon]:hidden">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-[#DC143C]/20 flex items-center justify-center text-[11px] font-bold text-[#DC143C]">
-                {user.name?.charAt(0) || 'A'}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-sidebar-foreground truncate">{user.name}</p>
-                <p className="text-[10px] text-sidebar-foreground/50 truncate">{user.brokerage}</p>
-              </div>
+          <div
+            className="flex items-center gap-2 px-2 py-2 rounded-lg"
+            style={{ background: 'rgba(255,255,255,0.05)' }}
+          >
+            <div
+              className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+              style={{ background: 'rgba(220,20,60,0.2)', color: '#DC143C' }}
+            >
+              {user.name?.charAt(0) || 'A'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p
+                className="text-xs font-medium truncate"
+                style={{ color: 'oklch(0.88 0.005 250)' }}
+              >
+                {user.name}
+              </p>
+              <p
+                className="text-[10px] truncate"
+                style={{ color: 'oklch(0.4 0.01 250)' }}
+              >
+                {user.brokerage}
+              </p>
             </div>
           </div>
         )}
-      </SidebarFooter>
-      <SidebarRail />
-    </Sidebar>
+      </div>
+    </div>
   );
 }

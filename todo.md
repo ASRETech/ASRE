@@ -63,3 +63,8 @@
 - [x] Sidebar: Final nav state with all new icons and items
 - [x] Routes + PAGE_TITLES: All new routes registered
 - [x] Vitest: Tests for new server routes (36 passing)
+
+## Phase 5 — Sidebar + Layout Fix
+
+- [x] Fix 1: Replace DashboardLayout.tsx with clean custom implementation (no Shadcn sidebar primitives)
+- [x] Fix 2: Replace AppSidebar.tsx with custom implementation (fixes Tailwind v4 group-data selector bug)
