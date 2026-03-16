@@ -10,9 +10,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import {
   DollarSign, Calculator, PieChart, TrendingUp,
-  ArrowUpRight, ArrowDownRight
+  ArrowUpRight, ArrowDownRight, Target, BarChart3
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 
 export default function Financials() {
   const { state } = useApp();
@@ -104,10 +106,12 @@ export default function Financials() {
         </div>
 
         <Tabs defaultValue="calculator" className="space-y-4">
-          <TabsList className="bg-muted/50 w-full sm:w-auto flex">
+          <TabsList className="bg-muted/50 w-full sm:w-auto flex flex-wrap">
             <TabsTrigger value="calculator" className="text-xs flex-1 sm:flex-initial">Calculator</TabsTrigger>
             <TabsTrigger value="profitfirst" className="text-xs flex-1 sm:flex-initial">Profit First</TabsTrigger>
             <TabsTrigger value="pnl" className="text-xs flex-1 sm:flex-initial">P&L</TabsTrigger>
+            <TabsTrigger value="model" className="text-xs flex-1 sm:flex-initial">Economic Model</TabsTrigger>
+            <TabsTrigger value="forecast" className="text-xs flex-1 sm:flex-initial">90-Day Forecast</TabsTrigger>
           </TabsList>
 
           {/* Commission Calculator */}
@@ -302,8 +306,228 @@ export default function Financials() {
               </Card>
             </div>
           </TabsContent>
+
+          {/* Economic Model — MREA Reverse-Engineered Income */}
+          <TabsContent value="model">
+            <EconomicModelTab gciGoal={state.user?.incomeGoal ?? 250000} />
+          </TabsContent>
+
+          {/* 90-Day Cash Flow Forecast */}
+          <TabsContent value="forecast">
+            <ForecastTab financials={financials} gciGoal={state.user?.incomeGoal ?? 250000} />
+          </TabsContent>
         </Tabs>
       </div>
+    </div>
+  );
+}
+
+// ─── Economic Model (MREA Reverse-Engineered) ───────────────────────
+function EconomicModelTab({ gciGoal }: { gciGoal: number }) {
+  const [avgPrice, setAvgPrice] = useState(350000);
+  const [avgCommPct, setAvgCommPct] = useState(2.8);
+  const [splitPct, setSplitPct] = useState(75);
+  const [leadConvRate, setLeadConvRate] = useState(3);
+  const [apptConvRate, setApptConvRate] = useState(40);
+
+  const avgGCI = avgPrice * (avgCommPct / 100) * (splitPct / 100);
+  const txNeeded = avgGCI > 0 ? Math.ceil(gciGoal / avgGCI) : 0;
+  const apptsNeeded = apptConvRate > 0 ? Math.ceil(txNeeded / (apptConvRate / 100)) : 0;
+  const leadsNeeded = leadConvRate > 0 ? Math.ceil(txNeeded / (leadConvRate / 100)) : 0;
+  const monthlyLeads = Math.ceil(leadsNeeded / 12);
+  const weeklyContacts = Math.ceil(monthlyLeads / 4);
+  const dailyContacts = Math.ceil(weeklyContacts / 5);
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-6">
+        <h3 className="font-display text-lg font-semibold mb-2 flex items-center gap-2">
+          <Target className="w-5 h-5 text-[#DC143C]" /> MREA Economic Model
+        </h3>
+        <p className="text-sm text-muted-foreground mb-6">
+          Reverse-engineer your income goal into daily activities. Adjust the inputs to match your market.
+        </p>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+          {[
+            { label: 'GCI Goal', value: gciGoal, prefix: '$', readOnly: true },
+            { label: 'Avg Sale Price', value: avgPrice, setter: setAvgPrice, prefix: '$' },
+            { label: 'Avg Commission %', value: avgCommPct, setter: setAvgCommPct, suffix: '%', step: 0.1 },
+            { label: 'Agent Split %', value: splitPct, setter: setSplitPct, suffix: '%' },
+            { label: 'Lead-to-Close %', value: leadConvRate, setter: setLeadConvRate, suffix: '%' },
+            { label: 'Appt-to-Close %', value: apptConvRate, setter: setApptConvRate, suffix: '%' },
+          ].map(item => (
+            <div key={item.label}>
+              <Label className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 block">{item.label}</Label>
+              <div className="relative">
+                {item.prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{item.prefix}</span>}
+                <Input
+                  type="number"
+                  value={item.value}
+                  onChange={e => item.setter?.(parseFloat(e.target.value) || 0)}
+                  readOnly={item.readOnly}
+                  step={item.step || 1}
+                  className={`h-9 font-mono text-sm ${item.prefix ? 'pl-7' : ''} ${item.readOnly ? 'bg-muted/50' : ''}`}
+                />
+                {item.suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{item.suffix}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Results waterfall */}
+      <Card className="p-6">
+        <h4 className="font-display text-sm font-semibold mb-4">Reverse-Engineered Activity Plan</h4>
+        <div className="space-y-3">
+          {[
+            { label: 'Annual GCI Goal', value: `$${gciGoal.toLocaleString()}`, sub: 'Your target' },
+            { label: 'Avg GCI per Transaction', value: `$${avgGCI.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, sub: `${avgPrice.toLocaleString()} × ${avgCommPct}% × ${splitPct}%` },
+            { label: 'Transactions Needed', value: txNeeded.toString(), sub: `${gciGoal.toLocaleString()} ÷ ${avgGCI.toLocaleString(undefined, { maximumFractionDigits: 0 })}` },
+            { label: 'Appointments Needed', value: apptsNeeded.toString(), sub: `${txNeeded} ÷ ${apptConvRate}% close rate` },
+            { label: 'Total Leads Needed', value: leadsNeeded.toString(), sub: `${txNeeded} ÷ ${leadConvRate}% conversion` },
+            { label: 'Monthly Leads', value: monthlyLeads.toString(), sub: `${leadsNeeded} ÷ 12 months` },
+            { label: 'Weekly Contacts', value: weeklyContacts.toString(), sub: `${monthlyLeads} ÷ 4 weeks`, highlight: true },
+            { label: 'Daily Contacts (5-day week)', value: dailyContacts.toString(), sub: 'Your daily number', highlight: true },
+          ].map((row, i) => (
+            <motion.div
+              key={row.label}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className={`flex items-center justify-between p-3 rounded-lg border ${row.highlight ? 'bg-[#DC143C]/5 border-[#DC143C]/20' : 'bg-muted/30 border-border/50'}`}
+            >
+              <div>
+                <div className={`text-sm font-medium ${row.highlight ? 'text-[#DC143C]' : 'text-foreground'}`}>{row.label}</div>
+                <div className="text-[10px] text-muted-foreground">{row.sub}</div>
+              </div>
+              <div className={`font-mono text-lg font-bold ${row.highlight ? 'text-[#DC143C]' : 'text-foreground'}`}>{row.value}</div>
+            </motion.div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ─── 90-Day Cash Flow Forecast ───────────────────────────────────────
+function ForecastTab({ financials, gciGoal }: { financials: any[]; gciGoal: number }) {
+  const months = ['Month 1', 'Month 2', 'Month 3'];
+  const monthlyTarget = Math.round(gciGoal / 12);
+
+  // Simple forecast based on existing data patterns
+  const [forecast, setForecast] = useState(() => {
+    const totalIncome = financials.filter(f => f.type === 'income').reduce((s, f) => s + f.amount, 0);
+    const totalExpenses = financials.filter(f => f.type === 'expense').reduce((s, f) => s + f.amount, 0);
+    const avgMonthlyIncome = totalIncome > 0 ? Math.round(totalIncome / 3) : monthlyTarget;
+    const avgMonthlyExpense = totalExpenses > 0 ? Math.round(totalExpenses / 3) : Math.round(monthlyTarget * 0.3);
+
+    return months.map((m, i) => ({
+      month: m,
+      projectedIncome: Math.round(avgMonthlyIncome * (1 + i * 0.05)),
+      projectedExpenses: avgMonthlyExpense,
+      pendingDeals: Math.round(2 + i * 0.5),
+    }));
+  });
+
+  const updateForecast = (index: number, field: string, value: number) => {
+    setForecast(prev => prev.map((f, i) => i === index ? { ...f, [field]: value } : f));
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-6">
+        <h3 className="font-display text-lg font-semibold mb-2 flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-[#DC143C]" /> 90-Day Cash Flow Forecast
+        </h3>
+        <p className="text-sm text-muted-foreground mb-6">
+          Project your income and expenses for the next 90 days. Edit values to model different scenarios.
+        </p>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[500px]">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left text-xs text-muted-foreground uppercase tracking-wider py-2 font-medium">Period</th>
+                <th className="text-center text-xs text-muted-foreground uppercase tracking-wider py-2 font-medium">Projected Income</th>
+                <th className="text-center text-xs text-muted-foreground uppercase tracking-wider py-2 font-medium">Projected Expenses</th>
+                <th className="text-center text-xs text-muted-foreground uppercase tracking-wider py-2 font-medium">Net Cash Flow</th>
+                <th className="text-center text-xs text-muted-foreground uppercase tracking-wider py-2 font-medium">Pending Deals</th>
+              </tr>
+            </thead>
+            <tbody>
+              {forecast.map((f, i) => {
+                const net = f.projectedIncome - f.projectedExpenses;
+                return (
+                  <tr key={f.month} className="border-b border-border/50">
+                    <td className="py-3 text-sm font-medium text-foreground">{f.month}</td>
+                    <td className="py-3 text-center">
+                      <Input
+                        type="number"
+                        value={f.projectedIncome}
+                        onChange={e => updateForecast(i, 'projectedIncome', parseInt(e.target.value) || 0)}
+                        className="w-28 h-8 text-center font-mono text-sm mx-auto"
+                      />
+                    </td>
+                    <td className="py-3 text-center">
+                      <Input
+                        type="number"
+                        value={f.projectedExpenses}
+                        onChange={e => updateForecast(i, 'projectedExpenses', parseInt(e.target.value) || 0)}
+                        className="w-28 h-8 text-center font-mono text-sm mx-auto"
+                      />
+                    </td>
+                    <td className={`py-3 text-center font-mono text-sm font-bold ${net >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      ${net.toLocaleString()}
+                    </td>
+                    <td className="py-3 text-center">
+                      <Input
+                        type="number"
+                        value={f.pendingDeals}
+                        onChange={e => updateForecast(i, 'pendingDeals', parseInt(e.target.value) || 0)}
+                        className="w-16 h-8 text-center font-mono text-sm mx-auto"
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Summary */}
+        <div className="grid sm:grid-cols-3 gap-4 mt-6">
+          <div className="p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20 text-center">
+            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total Projected Income</div>
+            <div className="font-mono text-xl font-bold text-emerald-500">
+              ${forecast.reduce((s, f) => s + f.projectedIncome, 0).toLocaleString()}
+            </div>
+          </div>
+          <div className="p-4 rounded-lg bg-red-500/5 border border-red-500/20 text-center">
+            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total Projected Expenses</div>
+            <div className="font-mono text-xl font-bold text-red-500">
+              ${forecast.reduce((s, f) => s + f.projectedExpenses, 0).toLocaleString()}
+            </div>
+          </div>
+          <div className="p-4 rounded-lg bg-[#DC143C]/5 border border-[#DC143C]/20 text-center">
+            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Net 90-Day Cash Flow</div>
+            <div className="font-mono text-xl font-bold text-[#DC143C]">
+              ${(forecast.reduce((s, f) => s + f.projectedIncome, 0) - forecast.reduce((s, f) => s + f.projectedExpenses, 0)).toLocaleString()}
+            </div>
+          </div>
+        </div>
+
+        {/* vs Goal */}
+        <div className="mt-4">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-muted-foreground">90-Day Income vs. Quarterly Goal</span>
+            <span className="font-mono text-xs text-foreground">
+              ${forecast.reduce((s, f) => s + f.projectedIncome, 0).toLocaleString()} / ${(monthlyTarget * 3).toLocaleString()}
+            </span>
+          </div>
+          <Progress value={Math.min(100, Math.round((forecast.reduce((s, f) => s + f.projectedIncome, 0) / (monthlyTarget * 3)) * 100))} className="h-2.5" />
+        </div>
+      </Card>
     </div>
   );
 }

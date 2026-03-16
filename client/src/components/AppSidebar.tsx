@@ -27,6 +27,9 @@ import {
   Settings,
   ChevronUp,
   Zap,
+  Megaphone,
+  BarChart3,
+  UsersRound,
 } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
 
@@ -40,6 +43,11 @@ const NAV_ITEMS = [
     { label: 'Pipeline', icon: Users, path: '/pipeline' },
     { label: 'Transactions', icon: FileText, path: '/transactions' },
     { label: 'Financials', icon: DollarSign, path: '/financials' },
+    { label: 'Marketing', icon: Megaphone, path: '/marketing' },
+    { label: 'Analytics', icon: BarChart3, path: '/analytics' },
+  ]},
+  { section: 'Team', items: [
+    { label: 'Team OS', icon: UsersRound, path: '/team' },
   ]},
   { section: 'Foundation', items: [
     { label: 'Knowledge Library', icon: BookOpen, path: '/library' },

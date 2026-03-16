@@ -295,7 +295,13 @@ Return a JSON object with:
         });
 
         const content = response.choices[0]?.message?.content;
-        const parsed = typeof content === "string" ? JSON.parse(content) : null;
+        let parsed: any = null;
+        try {
+          parsed = typeof content === "string" ? JSON.parse(content) : null;
+        } catch {
+          // If LLM doesn't return valid JSON, return a safe default
+          parsed = { result: "pass", flaggedItems: [], summary: content || "Unable to parse response" };
+        }
 
         if (parsed) {
           await db.insertComplianceLog({

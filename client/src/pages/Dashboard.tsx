@@ -1,23 +1,31 @@
 // Screen 4: Dashboard — OPERATIONAL PULSE
-// Design: "Command Center" — KPI strip + Today's Focus + Weekly Pulse
-// Not the main entry point — the Journey Map is. This is the operational pulse.
+// AI-powered Today's Focus + KPI strip + Weekly Pulse
+import { useState, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { trpc } from '@/lib/trpc';
 import { LEVELS } from '@/lib/store';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   DollarSign, Users, TrendingUp, Activity,
   Phone, Calendar, FileText, ChevronRight,
-  ArrowUpRight, ArrowDownRight, Target, MapPin,
-  Mail, Shield, BarChart3
+  ArrowUpRight, ArrowDownRight, MapPin,
+  Mail, Shield, BarChart3, RefreshCw, Loader2,
+  CheckSquare, Sparkles
 } from 'lucide-react';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
-const DASHBOARD_BG = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663267868321/DsnBpPCR9zPt6H566oZapB/dashboard-pattern-Vh5RUsVrNKbHjCPS2mDWtD.webp';
+interface FocusItem {
+  name: string;
+  action: string;
+  type: 'call' | 'email' | 'calendar' | 'task';
+  urgent: boolean;
+}
 
 export default function Dashboard() {
   const { state } = useApp();
@@ -27,6 +35,11 @@ export default function Dashboard() {
   const financials = state.financials;
   const currentLevel = user?.currentLevel ?? 1;
   const levelData = LEVELS[currentLevel - 1];
+
+  // AI Focus state
+  const [aiFocus, setAiFocus] = useState<FocusItem[]>([]);
+  const [focusLoading, setFocusLoading] = useState(false);
+  const coachMutation = trpc.coaching.ask.useMutation();
 
   // Calculate KPIs
   const gciThisMonth = financials
@@ -44,20 +57,62 @@ export default function Dashboard() {
     return d >= weekAgo;
   }).length;
 
-  // Business health score (simplified)
   const healthScore = Math.min(100, Math.round(
     (user?.operationalScore ?? 0) * 8 +
     Math.min(20, activePipelineCount * 2) +
     Math.min(20, (gciThisMonth / gciGoal) * 20)
   ));
 
-  // Today's focus items
-  const todaysFocus = [
-    { name: leads[0]?.firstName + ' ' + leads[0]?.lastName, action: 'Follow up call', type: 'call', urgent: true },
-    { name: leads[1]?.firstName + ' ' + leads[1]?.lastName, action: 'Send listing info', type: 'email', urgent: false },
-    { name: leads[2]?.firstName + ' ' + leads[2]?.lastName, action: 'Schedule showing', type: 'calendar', urgent: true },
-    { name: leads[3]?.firstName + ' ' + leads[3]?.lastName, action: 'Check in', type: 'call', urgent: false },
-  ].filter(f => f.name && f.name !== 'undefined undefined');
+  // Generate AI Focus items
+  const generateFocus = () => {
+    if (leads.length === 0 && transactions.length === 0) {
+      setAiFocus([
+        { name: 'Build your database', action: 'Add 5 contacts today', type: 'task', urgent: true },
+        { name: 'Lead generation', action: 'Set up 2 lead sources', type: 'task', urgent: true },
+        { name: 'Time blocking', action: 'Create weekly calendar', type: 'calendar', urgent: false },
+        { name: 'MREA Journey', action: 'Complete next deliverable', type: 'task', urgent: false },
+      ]);
+      return;
+    }
+    setFocusLoading(true);
+
+    const overdueLeads = leads
+      .filter(l => l.stage === 'New Lead' || l.stage === 'Contacted')
+      .slice(0, 3)
+      .map(l => `${l.firstName} ${l.lastName} (${l.source})`);
+
+    const closingSoon = transactions
+      .filter(t => t.closeDate && t.status !== 'closed' && t.status !== 'cancelled')
+      .map(t => `${t.propertyAddress} closing ${t.closeDate}`);
+
+    const prompt = `Generate exactly 4 prioritized tasks for today as a JSON array. Each task: {"name": "contact name or task context", "action": "specific action under 40 chars", "type": "call"|"email"|"calendar"|"task", "urgent": true|false}. Base on: Overdue leads: ${overdueLeads.join(', ') || 'none'}. Closing soon: ${closingSoon.join(', ') || 'none'}. Total pipeline: ${leads.length} leads. Return ONLY the JSON array, no markdown.`;
+
+    coachMutation.mutate(
+      { context: 'dashboard-focus', prompt, agentLevel: currentLevel },
+      {
+        onSuccess: (data) => {
+          try {
+            const cleaned = data.response.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(cleaned);
+            setAiFocus(Array.isArray(parsed) ? parsed.slice(0, 4) : []);
+          } catch {
+            setAiFocus(overdueLeads.slice(0, 4).map(name => ({
+              name, action: 'Follow up', type: 'call' as const, urgent: true
+            })));
+          }
+          setFocusLoading(false);
+        },
+        onError: () => {
+          setFocusLoading(false);
+          toast.error('Could not generate focus items');
+        },
+      }
+    );
+  };
+
+  useEffect(() => {
+    generateFocus();
+  }, [leads.length, transactions.length]);
 
   // Weekly pulse data
   const weeklyPulse = [
@@ -69,6 +124,13 @@ export default function Dashboard() {
 
   const totalIncome = financials.filter(f => f.type === 'income').reduce((s, f) => s + f.amount, 0);
   const totalExpenses = financials.filter(f => f.type === 'expense').reduce((s, f) => s + f.amount, 0);
+
+  const focusIcon = (type: string) => {
+    if (type === 'call') return Phone;
+    if (type === 'email') return Mail;
+    if (type === 'calendar') return Calendar;
+    return CheckSquare;
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
@@ -94,7 +156,7 @@ export default function Dashboard() {
           </div>
         </Link>
 
-        {/* KPI Strip — 4 cards */}
+        {/* KPI Strip */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {[
             {
@@ -128,15 +190,9 @@ export default function Dashboard() {
               icon: Activity,
               trend: healthScore >= 60 ? 'up' : 'down',
               trendValue: healthScore >= 60 ? 'Good' : 'Needs work',
-              isScore: true,
             },
           ].map((kpi, i) => (
-            <motion.div
-              key={kpi.label}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-            >
+            <motion.div key={kpi.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
               <Card className="p-4">
                 <div className="flex items-start justify-between mb-3">
                   <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
@@ -163,7 +219,7 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Middle Row — 3 columns */}
+        {/* Middle Row */}
         <div className="grid md:grid-cols-2 lg:grid-cols-[1fr_280px_280px] gap-4 mb-6">
           {/* Pipeline Snapshot */}
           <Card className="p-5">
@@ -192,36 +248,72 @@ export default function Dashboard() {
             </div>
           </Card>
 
-          {/* Today's Focus */}
+          {/* AI Today's Focus */}
           <Card className="p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-display text-sm font-semibold text-foreground">Today's Focus</h3>
-              <Badge variant="outline" className="text-[10px] font-mono h-5 px-2">AI</Badge>
+              <h3 className="font-display text-sm font-semibold text-foreground flex items-center gap-1.5">
+                Today's Focus
+              </h3>
+              <div className="flex items-center gap-1">
+                <Badge variant="outline" className="text-[10px] font-mono h-5 px-2 text-[#DC143C] border-[#DC143C]/20">
+                  <Sparkles className="w-2.5 h-2.5 mr-0.5" /> AI
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={generateFocus}
+                  disabled={focusLoading}
+                >
+                  <RefreshCw className={`w-3 h-3 ${focusLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
             </div>
             <div className="space-y-2">
-              {todaysFocus.map((item, i) => (
-                <div key={i} className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted/50 transition-colors group">
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                    item.urgent ? 'bg-[#DC143C]/10 text-[#DC143C]' : 'bg-muted text-muted-foreground'
-                  }`}>
-                    {item.type === 'call' ? <Phone className="w-3.5 h-3.5" /> :
-                     item.type === 'email' ? <Mail className="w-3.5 h-3.5" /> :
-                     <Calendar className="w-3.5 h-3.5" />}
+              {focusLoading ? (
+                [1, 2, 3, 4].map(i => (
+                  <div key={i} className="flex items-center gap-2.5 p-2">
+                    <Skeleton className="w-7 h-7 rounded-lg" />
+                    <div className="flex-1">
+                      <Skeleton className="h-3 w-24 mb-1" />
+                      <Skeleton className="h-2.5 w-32" />
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium text-foreground truncate">{item.name}</div>
-                    <div className="text-[10px] text-muted-foreground">{item.action}</div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => toast.info('Feature coming soon')}
-                  >
-                    <ChevronRight className="w-3 h-3" />
-                  </Button>
+                ))
+              ) : aiFocus.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  <Sparkles className="w-6 h-6 mx-auto mb-2 opacity-30" />
+                  <p className="text-xs">Add leads or transactions to get AI-powered focus items</p>
                 </div>
-              ))}
+              ) : (
+                aiFocus.map((item, i) => {
+                  const Icon = focusIcon(item.type);
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -5 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.08 }}
+                      className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted/50 transition-colors group"
+                    >
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                        item.urgent ? 'bg-[#DC143C]/10 text-[#DC143C]' : 'bg-muted text-muted-foreground'
+                      }`}>
+                        <Icon className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium text-foreground truncate">{item.name}</div>
+                        <div className="text-[10px] text-muted-foreground">{item.action}</div>
+                      </div>
+                      {item.urgent && (
+                        <Badge variant="outline" className="text-[8px] font-mono text-[#DC143C] border-[#DC143C]/20 h-4 px-1">
+                          URGENT
+                        </Badge>
+                      )}
+                    </motion.div>
+                  );
+                })
+              )}
             </div>
           </Card>
 
@@ -245,7 +337,7 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Bottom Row — 3 cards */}
+        {/* Bottom Row */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Cash Flow */}
           <Card className="p-5">

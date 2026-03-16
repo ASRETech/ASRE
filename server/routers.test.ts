@@ -318,6 +318,28 @@ describe("culture", () => {
   });
 });
 
+describe("compliance", () => {
+  it("scans text for fair housing issues via AI", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    const result = await caller.compliance.scan({
+      inputText: "Beautiful home in a family-friendly neighborhood",
+    });
+
+    expect(result).toHaveProperty("result");
+    expect(typeof result.result).toBe("string");
+  });
+
+  it("lists compliance logs", async () => {
+    const { ctx } = createAuthContext();
+    const caller = appRouter.createCaller(ctx);
+
+    const result = await caller.compliance.list();
+    expect(Array.isArray(result)).toBe(true);
+  });
+});
+
 describe("coaching", () => {
   it("returns AI coaching response", async () => {
     const { ctx } = createAuthContext();

@@ -16,11 +16,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Plus, Search, Phone, Mail, Calendar, Edit, ChevronRight,
-  User, Clock, DollarSign, Tag, X, ArrowRight
+  User, Clock, DollarSign, Tag, X, ArrowRight,
+  Sparkles, Loader2, Copy, RefreshCw
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { nanoid } from 'nanoid';
+import { trpc } from '@/lib/trpc';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const STAGE_COLORS: Record<string, string> = {
   'New Lead': 'bg-blue-500/10 text-blue-500 border-blue-500/20',
@@ -62,6 +65,41 @@ export default function Pipeline() {
     type: 'buyer' as Lead['type'], source: '', budget: '', timeline: '', notes: ''
   });
 
+  // AI Response state
+  const [aiResponse, setAiResponse] = useState('');
+  const [aiResponseLoading, setAiResponseLoading] = useState(false);
+  const [aiResponseLead, setAiResponseLead] = useState<Lead | null>(null);
+  const coachMutation = trpc.coaching.ask.useMutation();
+
+  const generateResponse = (lead: Lead) => {
+    setAiResponseLoading(true);
+    setAiResponseLead(lead);
+    setAiResponse('');
+    coachMutation.mutate({
+      context: 'lead-response',
+      prompt: `Write a warm, professional first response to a new real estate lead. Under 80 words. End with a clear CTA to schedule a quick call. No Fair Housing violations. No generic phrases like "Hope this finds you well."
+
+Lead details:
+- Name: ${lead.firstName} ${lead.lastName || ''}
+- Source: ${lead.source}
+- Type: ${lead.type} (buyer/seller)
+- Budget: ${lead.budget ? '$' + lead.budget.toLocaleString() : 'not specified'}
+- Notes: ${lead.notes || 'none'}
+
+Return ONLY the message text. Write in first person as the agent.`,
+      agentLevel: state.user?.currentLevel,
+    }, {
+      onSuccess: (data) => {
+        setAiResponse(data.response);
+        setAiResponseLoading(false);
+      },
+      onError: () => {
+        setAiResponseLoading(false);
+        toast.error('Could not generate response');
+      },
+    });
+  };
+
   const filteredLeads = state.leads.filter(l =>
     `${l.firstName} ${l.lastName}`.toLowerCase().includes(search.toLowerCase()) ||
     l.email.toLowerCase().includes(search.toLowerCase())
@@ -95,6 +133,8 @@ export default function Pipeline() {
     setShowAddLead(false);
     setNewLead({ firstName: '', lastName: '', email: '', phone: '', type: 'buyer', source: '', budget: '', timeline: '', notes: '' });
     toast.success('Lead added!', { description: `${lead.firstName} ${lead.lastName}` });
+    // Auto-generate AI response
+    generateResponse(lead);
   };
 
   const handleMoveStage = (leadId: string, newStage: string) => {
@@ -348,6 +388,41 @@ export default function Pipeline() {
                   placeholder="Add notes..."
                   className="text-sm min-h-[80px]"
                 />
+              </div>
+
+              {/* AI Response Generator */}
+              <div className="border-t border-border pt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-[#DC143C]" /> AI Response
+                  </Label>
+                  <Button
+                    onClick={() => generateResponse(selectedLead)}
+                    disabled={aiResponseLoading}
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[10px] px-2"
+                  >
+                    {aiResponseLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                  </Button>
+                </div>
+                {aiResponseLoading && aiResponseLead?.id === selectedLead.id ? (
+                  <div className="space-y-1.5"><Skeleton className="h-3 w-full" /><Skeleton className="h-3 w-4/5" /><Skeleton className="h-3 w-3/5" /></div>
+                ) : aiResponse && aiResponseLead?.id === selectedLead.id ? (
+                  <div className="relative">
+                    <div className="text-xs text-foreground bg-muted/30 rounded-lg p-3 leading-relaxed">{aiResponse}</div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute top-1 right-1 h-6 w-6 p-0"
+                      onClick={() => { navigator.clipboard.writeText(aiResponse); toast.success('Copied!'); }}
+                    >
+                      <Copy className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground">Click refresh to generate an AI response for this lead.</p>
+                )}
               </div>
             </div>
           )}
