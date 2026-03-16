@@ -27,7 +27,6 @@ import {
   Settings,
   ChevronUp,
   Zap,
-  Megaphone,
   BarChart3,
   UsersRound,
 } from 'lucide-react';
@@ -43,7 +42,6 @@ const NAV_ITEMS = [
     { label: 'Pipeline', icon: Users, path: '/pipeline' },
     { label: 'Transactions', icon: FileText, path: '/transactions' },
     { label: 'Financials', icon: DollarSign, path: '/financials' },
-    { label: 'Marketing', icon: Megaphone, path: '/marketing' },
     { label: 'Analytics', icon: BarChart3, path: '/analytics' },
   ]},
   { section: 'Team', items: [
@@ -93,7 +91,7 @@ export function AppSidebar() {
         </div>
       </div>
 
-      <SidebarContent>
+      <SidebarContent className="overflow-y-auto [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-sidebar-foreground/20">
         {NAV_ITEMS.map((group) => (
           <SidebarGroup key={group.section}>
             <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.15em] text-sidebar-foreground/40 font-medium">

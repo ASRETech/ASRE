@@ -1,6 +1,6 @@
 // Screen 9: Culture OS — MISSION / VISION / VALUES GUIDED BUILDERS
 // Now with AI Mission Statement generation via guided questions
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { trpc } from '@/lib/trpc';
 import { Card } from '@/components/ui/card';
@@ -46,6 +46,31 @@ export default function CultureOS() {
   });
   const [missionGenerating, setMissionGenerating] = useState(false);
   const coachMutation = trpc.coaching.ask.useMutation();
+  const cultureUpsert = trpc.culture.upsert.useMutation();
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  const persistCulture = useCallback((updates: {
+    missionStatement?: string;
+    visionStatement?: string;
+    coreValues?: string[];
+    teamCommitments?: string[];
+  }) => {
+    setSaveStatus('saving');
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      cultureUpsert.mutate(updates, {
+        onSuccess: () => {
+          setSaveStatus('saved');
+          setTimeout(() => setSaveStatus('idle'), 2000);
+        },
+        onError: () => {
+          setSaveStatus('idle');
+          toast.error('Could not save — changes are stored locally');
+        },
+      });
+    }, 1000);
+  }, []);
 
   const allMissionAnswered = Object.values(missionAnswers).every(a => a.trim().length > 5);
 
@@ -67,6 +92,7 @@ Return ONLY the mission statement. No explanation. No quotes. No preamble.`,
     }, {
       onSuccess: (data) => {
         dispatch({ type: 'UPDATE_CULTURE', payload: { missionStatement: data.response } });
+        persistCulture({ missionStatement: data.response });
         setMissionGenerating(false);
         toast.success('Mission statement generated');
       },
@@ -92,6 +118,7 @@ Return ONLY the mission statement. No explanation. No quotes. No preamble.`,
     }, {
       onSuccess: (data) => {
         dispatch({ type: 'UPDATE_CULTURE', payload: { visionStatement: data.response } });
+        persistCulture({ visionStatement: data.response });
         setVisionGenerating(false);
         toast.success('Vision statement generated');
       },
@@ -104,10 +131,12 @@ Return ONLY the mission statement. No explanation. No quotes. No preamble.`,
 
   const handleUpdateMission = (value: string) => {
     dispatch({ type: 'UPDATE_CULTURE', payload: { missionStatement: value } });
+    persistCulture({ missionStatement: value });
   };
 
   const handleUpdateVision = (value: string) => {
     dispatch({ type: 'UPDATE_CULTURE', payload: { visionStatement: value } });
+    persistCulture({ visionStatement: value });
   };
 
   const handleAddValue = (value: string) => {
@@ -116,29 +145,54 @@ Return ONLY the mission statement. No explanation. No quotes. No preamble.`,
       toast.error('Value already exists');
       return;
     }
-    dispatch({ type: 'UPDATE_CULTURE', payload: { coreValues: [...culture.coreValues, value.trim()] } });
+    const updated = [...culture.coreValues, value.trim()];
+    dispatch({ type: 'UPDATE_CULTURE', payload: { coreValues: updated } });
+    persistCulture({ coreValues: updated });
     setNewValue('');
     toast.success('Value added!');
   };
 
   const handleRemoveValue = (value: string) => {
-    dispatch({ type: 'UPDATE_CULTURE', payload: { coreValues: culture.coreValues.filter(v => v !== value) } });
+    const updated = culture.coreValues.filter(v => v !== value);
+    dispatch({ type: 'UPDATE_CULTURE', payload: { coreValues: updated } });
+    persistCulture({ coreValues: updated });
   };
 
   const handleAddCommitment = () => {
     if (!newCommitment.trim()) return;
-    dispatch({ type: 'UPDATE_CULTURE', payload: { teamCommitments: [...culture.teamCommitments, newCommitment.trim()] } });
+    const updated = [...culture.teamCommitments, newCommitment.trim()];
+    dispatch({ type: 'UPDATE_CULTURE', payload: { teamCommitments: updated } });
+    persistCulture({ teamCommitments: updated });
     setNewCommitment('');
     toast.success('Commitment added!');
   };
 
   const handleRemoveCommitment = (index: number) => {
-    dispatch({ type: 'UPDATE_CULTURE', payload: { teamCommitments: culture.teamCommitments.filter((_, i) => i !== index) } });
+    const updated = culture.teamCommitments.filter((_, i) => i !== index);
+    dispatch({ type: 'UPDATE_CULTURE', payload: { teamCommitments: updated } });
+    persistCulture({ teamCommitments: updated });
   };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-5xl mx-auto">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-display text-2xl font-bold text-foreground">Culture OS</h2>
+            <p className="text-sm text-muted-foreground">
+              Your North Star document — built through guided conversation.
+            </p>
+          </div>
+          {saveStatus !== 'idle' && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              {saveStatus === 'saving' ? (
+                <><Loader2 className="w-3 h-3 animate-spin" /> Saving...</>
+              ) : (
+                <><Check className="w-3 h-3 text-emerald-500" /> Saved</>
+              )}
+            </div>
+          )}
+        </div>
         <Tabs defaultValue="mission" className="space-y-4">
           <TabsList className="bg-muted/50 w-full sm:w-auto flex flex-wrap">
             <TabsTrigger value="mission" className="text-xs flex-1 sm:flex-initial">

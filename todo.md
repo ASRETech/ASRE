@@ -38,3 +38,11 @@
 - [x] App.tsx — register /marketing, /analytics, /team routes
 - [x] Culture OS — persist to server via trpc.culture.upsert (debounced)
 - [x] Current Level — level completion banner + advance level button
+
+## Phase 3 — 4 Changes Across 6 Files
+- [x] Change 1: Analytics.tsx — add h-auto to TabsList to fix wrapped tabs unclickable
+- [x] Change 2: AppSidebar.tsx — remove Marketing nav item + Megaphone import + add overflow scroll
+- [x] Change 3: App.tsx — remove Marketing route + import
+- [x] Change 4: DashboardLayout.tsx — add Analytics + Team OS to PAGE_TITLES
+- [x] Change 5: CultureOS.tsx — add server persistence with debounced trpc.culture.upsert
+- [x] Change 6: TeamOS.tsx — replace OrgChartTab with 7-level MREA progression

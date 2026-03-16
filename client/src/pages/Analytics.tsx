@@ -25,7 +25,7 @@ export default function Analytics() {
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-6xl mx-auto">
         <Tabs defaultValue="pulse" className="space-y-4">
-          <TabsList className="bg-muted/50 w-full sm:w-auto flex flex-wrap">
+          <TabsList className="bg-muted/50 w-full sm:w-auto flex flex-wrap h-auto">
             <TabsTrigger value="pulse" className="text-xs flex-1 sm:flex-initial">
               <Activity className="w-3.5 h-3.5 mr-1.5" /> Pulse
             </TabsTrigger>

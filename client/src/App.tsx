@@ -20,7 +20,6 @@ import Library from "./pages/Library";
 import CultureOS from "./pages/CultureOS";
 import Compliance from "./pages/Compliance";
 import SettingsPage from "./pages/Settings";
-import Marketing from "./pages/Marketing";
 import Analytics from "./pages/Analytics";
 import TeamOS from "./pages/TeamOS";
 function AppRoutes() {
@@ -55,9 +54,6 @@ function AppRoutes() {
       </Route>
       <Route path="/compliance">
         <DashboardLayout><Compliance /></DashboardLayout>
-      </Route>
-      <Route path="/marketing">
-        <DashboardLayout><Marketing /></DashboardLayout>
       </Route>
       <Route path="/analytics">
         <DashboardLayout><Analytics /></DashboardLayout>

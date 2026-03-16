@@ -12,6 +12,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/pipeline': 'Pipeline',
   '/transactions': 'Transactions',
   '/financials': 'Financials',
+  '/analytics': 'Analytics',
+  '/team': 'Team OS',
   '/library': 'Knowledge Library',
   '/culture': 'Culture OS',
   '/compliance': 'Compliance',

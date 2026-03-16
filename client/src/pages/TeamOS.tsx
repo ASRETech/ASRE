@@ -230,68 +230,371 @@ function OrgChartTab({ members }: { members: TeamMember[] }) {
   const { state } = useApp();
   const level = state.user?.currentLevel ?? 1;
 
-  // Level-adaptive org chart
-  const orgLevels = useMemo(() => {
-    if (level <= 2) {
-      return [
-        { title: 'Team Lead', roles: members.filter(m => ['Operations Manager', 'Marketing Manager'].includes(m.role)), placeholder: 'You' },
-        { title: 'Support', roles: members.filter(m => ['Executive Assistant', 'Transaction Coordinator', 'ISA'].includes(m.role)), placeholder: 'First Hire: EA' },
-        { title: 'Sales', roles: members.filter(m => ['Agent', 'Buyer Agent', 'Listing Specialist'].includes(m.role)), placeholder: 'Solo Agent' },
-      ];
+  const findMember = (role: string) =>
+    members.find(m => m.role === role)?.name || null;
+
+  const RoleBox = ({
+    role,
+    person,
+    isAgent = false,
+    isOpen = false,
+    functions = [],
+  }: {
+    role: string;
+    person?: string | null;
+    isAgent?: boolean;
+    isOpen?: boolean;
+    functions?: string[];
+  }) => (
+    <div className={`
+      flex flex-col items-center gap-1 p-3 rounded-xl border min-w-[120px] text-center
+      ${isAgent
+        ? 'bg-[#DC143C] border-[#DC143C] text-white shadow-lg shadow-[#DC143C]/20'
+        : isOpen
+          ? 'bg-muted/30 border-dashed border-border text-muted-foreground'
+          : 'bg-card border-border text-foreground'
+      }
+    `}>
+      <div className={`
+        w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold
+        ${isAgent ? 'bg-white/20 text-white' : 'bg-muted text-muted-foreground'}
+      `}>
+        {person
+          ? person.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+          : isOpen ? '+' : '?'
+        }
+      </div>
+      <div className={`text-[11px] font-semibold leading-tight ${isAgent ? 'text-white' : ''}`}>
+        {role}
+      </div>
+      {person && (
+        <div className={`text-[10px] ${isAgent ? 'text-white/70' : 'text-muted-foreground'}`}>
+          {person}
+        </div>
+      )}
+      {isOpen && !person && (
+        <div className="text-[10px] text-muted-foreground">Open Role</div>
+      )}
+      {functions.length > 0 && (
+        <div className="flex flex-wrap gap-1 justify-center mt-1">
+          {functions.map((f: string) => (
+            <span key={f} className="text-[9px] bg-white/20 rounded px-1 py-0.5">{f}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const Connector = ({ count = 1 }: { count?: number }) => (
+    <div className="flex justify-center items-center gap-8 my-1">
+      {count === 1 ? (
+        <div className="w-px h-6 bg-border" />
+      ) : (
+        <div className="flex gap-8">
+          {Array.from({ length: count }).map((_, i) => (
+            <div key={i} className="w-px h-6 bg-border" />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const OrgRow = ({ boxes }: { boxes: React.ReactNode[] }) => (
+    <div className="w-full">
+      {boxes.length > 1 && (
+        <div className="flex justify-center mb-1">
+          <div
+            className="h-px bg-border"
+            style={{ width: `${(boxes.length - 1) * 152}px` }}
+          />
+        </div>
+      )}
+      <div className="flex justify-center gap-4 flex-wrap">
+        {boxes}
+      </div>
+    </div>
+  );
+
+  const levelDescriptions: Record<number, string> = {
+    1: 'You are the business. Every function flows through you.',
+    2: 'Your EA handles admin — you focus on dollar-productive activities.',
+    3: "Your first Buyer's Agent multiplies your lead capacity.",
+    4: 'Multiple BAs running. You lead a team, not just yourself.',
+    5: 'A Listing Specialist and DOO free you from daily operations.',
+    6: 'A full leadership team runs the business day-to-day.',
+    7: 'The business operates without you. You are the owner, not the operator.',
+  };
+
+  const renderOrgChart = () => {
+    const agentName = state.user?.name || 'You';
+    const ea = findMember('Executive Assistant');
+    const ba1 = findMember("Buyer's Agent");
+    const ba2 = members.filter(m => m.role === "Buyer's Agent")[1]?.name || null;
+    const listingSpec = findMember('Listing Specialist');
+    const doo = findMember('Director of Operations');
+    const marketing = findMember('Marketing Manager');
+    const isa = findMember('ISA');
+    const tc = findMember('Transaction Coordinator');
+
+    if (level === 1) {
+      return (
+        <div className="flex flex-col items-center">
+          <RoleBox
+            role="You — Lead Agent"
+            person={agentName}
+            isAgent
+            functions={['Lead Gen', 'Follow-Up', 'Buyer Work', 'Listing Work', 'Marketing', 'Admin', 'TC', 'Financials']}
+          />
+          <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-600 max-w-sm text-center">
+            You are doing every job. Complete Level 1 deliverables to hire your first EA.
+          </div>
+        </div>
+      );
     }
-    return [
-      { title: 'Rainmaker', roles: [], placeholder: 'You' },
-      { title: 'Operations', roles: members.filter(m => ['Operations Manager', 'Executive Assistant', 'Transaction Coordinator'].includes(m.role)), placeholder: 'Ops Manager' },
-      { title: 'Sales', roles: members.filter(m => ['Agent', 'Buyer Agent', 'Listing Specialist'].includes(m.role)), placeholder: 'Buyer + Listing Agents' },
-      { title: 'Marketing', roles: members.filter(m => ['Marketing Manager', 'ISA'].includes(m.role)), placeholder: 'Marketing + ISA' },
-    ];
-  }, [members, level]);
+
+    if (level === 2) {
+      return (
+        <div className="flex flex-col items-center gap-0">
+          <RoleBox
+            role="Lead Agent"
+            person={agentName}
+            isAgent
+            functions={['Lead Gen', 'Buyer Work', 'Listing Work']}
+          />
+          <Connector />
+          <OrgRow boxes={[
+            <RoleBox
+              key="ea"
+              role="Executive Assistant"
+              person={ea}
+              isOpen={!ea}
+              functions={['Admin', 'Scheduling', 'Marketing', 'TC Support']}
+            />
+          ]} />
+          {!ea && (
+            <div className="mt-4 p-3 rounded-lg bg-[#DC143C]/10 border border-[#DC143C]/20 text-xs text-[#DC143C] max-w-sm text-center">
+              Your next hire is an EA. Add them in the Members tab to fill this seat.
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (level === 3) {
+      return (
+        <div className="flex flex-col items-center gap-0">
+          <RoleBox
+            role="Lead Agent"
+            person={agentName}
+            isAgent
+            functions={['Lead Gen', 'Listing Work', 'Team Lead']}
+          />
+          <Connector count={2} />
+          <OrgRow boxes={[
+            <RoleBox
+              key="ea"
+              role="Executive Assistant"
+              person={ea}
+              isOpen={!ea}
+              functions={['Admin', 'Marketing', 'Scheduling']}
+            />,
+            <RoleBox
+              key="ba"
+              role="Buyer's Agent"
+              person={ba1}
+              isOpen={!ba1}
+              functions={['Buyer Work', 'Follow-Up', 'Showings']}
+            />
+          ]} />
+        </div>
+      );
+    }
+
+    if (level === 4) {
+      return (
+        <div className="flex flex-col items-center gap-0">
+          <RoleBox
+            role="Lead Agent"
+            person={agentName}
+            isAgent
+            functions={['Lead Gen', 'Culture', 'Team Lead']}
+          />
+          <Connector count={3} />
+          <OrgRow boxes={[
+            <RoleBox
+              key="ea"
+              role="Executive Assistant"
+              person={ea}
+              isOpen={!ea}
+              functions={['Admin', 'Ops', 'Marketing']}
+            />,
+            <RoleBox
+              key="ba1"
+              role="Buyer's Agent"
+              person={ba1}
+              isOpen={!ba1}
+              functions={['Buyer Work', 'Showings']}
+            />,
+            <RoleBox
+              key="ba2"
+              role="Buyer's Agent #2"
+              person={ba2}
+              isOpen={!ba2}
+              functions={['Buyer Work', 'Showings']}
+            />
+          ]} />
+        </div>
+      );
+    }
+
+    if (level === 5) {
+      return (
+        <div className="flex flex-col items-center gap-0">
+          <div className="mb-2 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+            Vision · Culture · Key Relationships
+          </div>
+          <RoleBox role="Lead Agent / Owner" person={agentName} isAgent />
+          <Connector count={2} />
+          <OrgRow boxes={[
+            <RoleBox
+              key="doo"
+              role="Director of Operations"
+              person={doo}
+              isOpen={!doo}
+              functions={['Admin', 'TC', 'Marketing', 'EA']}
+            />,
+            <RoleBox
+              key="listing"
+              role="Listing Specialist"
+              person={listingSpec}
+              isOpen={!listingSpec}
+              functions={['Seller Consults', 'Listings', 'Pricing']}
+            />
+          ]} />
+          <Connector />
+          <OrgRow boxes={[
+            <RoleBox key="ba1" role="Buyer's Agent" person={ba1} isOpen={!ba1} />,
+            <RoleBox key="ba2" role="Buyer's Agent" person={ba2} isOpen={!ba2} />
+          ]} />
+        </div>
+      );
+    }
+
+    if (level === 6) {
+      return (
+        <div className="flex flex-col items-center gap-0">
+          <div className="mb-2 text-[10px] font-mono text-muted-foreground uppercase tracking-wider">
+            Vision · Ownership · Strategy
+          </div>
+          <RoleBox role="Owner / Vision Holder" person={agentName} isAgent />
+          <Connector count={2} />
+          <OrgRow boxes={[
+            <RoleBox key="doo" role="Director of Operations" person={doo} isOpen={!doo} />,
+            <RoleBox key="listing" role="Listing Specialist" person={listingSpec} isOpen={!listingSpec} />
+          ]} />
+          <Connector count={3} />
+          <OrgRow boxes={[
+            <RoleBox key="ea" role="EA" person={ea} isOpen={!ea} />,
+            <RoleBox key="tc" role="TC" person={tc} isOpen={!tc} />,
+            <RoleBox key="marketing" role="Marketing" person={marketing} isOpen={!marketing} />,
+            <RoleBox key="isa" role="ISA" person={isa} isOpen={!isa} />,
+            <RoleBox key="ba" role="Buyer Agent(s)" person={ba1} isOpen={!ba1} />
+          ]} />
+        </div>
+      );
+    }
+
+    // Level 7 — Owner outside the org
+    return (
+      <div className="flex flex-col items-center gap-4">
+        <div className="text-center">
+          <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">
+            Outside the org · Board level
+          </div>
+          <RoleBox role="Business Owner" person={agentName} isAgent />
+          <div className="my-3 text-xs text-muted-foreground font-mono">
+            — — — dotted line — — —
+          </div>
+        </div>
+        <div className="flex flex-col items-center gap-0 w-full opacity-90">
+          <OrgRow boxes={[
+            <RoleBox key="doo" role="Director of Operations" person={doo} isOpen={!doo} />,
+            <RoleBox key="listing" role="Lead Listing Agent" person={listingSpec} isOpen={!listingSpec} />,
+          ]} />
+          <Connector count={3} />
+          <OrgRow boxes={[
+            <RoleBox key="ea" role="EA" person={ea} isOpen={!ea} />,
+            <RoleBox key="tc" role="TC" person={tc} isOpen={!tc} />,
+            <RoleBox key="marketing" role="Marketing" person={marketing} isOpen={!marketing} />,
+            <RoleBox key="isa" role="ISA" person={isa} isOpen={!isa} />,
+            <RoleBox key="ba" role="Buyer Agents" person={ba1} isOpen={!ba1} />
+          ]} />
+        </div>
+        <div className="mt-2 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-sm text-emerald-600 text-center max-w-sm">
+          🎯 The business runs without you. This is what Level 7 looks like.
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
       <Card className="p-6">
-        <h3 className="font-display text-lg font-semibold mb-2 flex items-center gap-2">
-          <Network className="w-5 h-5 text-[#DC143C]" /> Organization Chart
-        </h3>
-        <p className="text-sm text-muted-foreground mb-6">
-          Level {level} structure — {level <= 2 ? 'Solo agent with first admin hire' : 'Growing team with department leads'}
-        </p>
+        <div className="flex items-start justify-between mb-6">
+          <div>
+            <h3 className="font-display text-lg font-semibold flex items-center gap-2">
+              <Network className="w-5 h-5 text-[#DC143C]" />
+              Organization Chart
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Level {level} — {levelDescriptions[level] || ''}
+            </p>
+          </div>
+          <Badge
+            variant="outline"
+            className="text-[#DC143C] border-[#DC143C]/20 font-mono text-[10px]"
+          >
+            LEVEL {level}
+          </Badge>
+        </div>
 
-        <div className="flex flex-col items-center gap-4">
-          {orgLevels.map((tier, i) => (
-            <div key={tier.title} className="w-full">
-              {i > 0 && (
-                <div className="flex justify-center my-2">
-                  <div className="w-px h-6 bg-border" />
-                </div>
-              )}
-              <div className="text-center mb-2">
-                <Badge variant="outline" className="text-[10px] font-mono">{tier.title}</Badge>
+        <div className="min-h-[200px] flex items-start justify-center py-4">
+          {renderOrgChart()}
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-border">
+          <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">
+            MREA Progression
+          </div>
+          <div className="flex gap-1 flex-wrap">
+            {[1, 2, 3, 4, 5, 6, 7].map(l => (
+              <div
+                key={l}
+                className={`
+                  flex items-center justify-center w-7 h-7 rounded-lg text-[11px] font-mono font-bold
+                  ${l < level
+                    ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
+                    : l === level
+                      ? 'bg-[#DC143C] text-white'
+                      : 'bg-muted text-muted-foreground border border-border'
+                  }
+                `}
+              >
+                {l < level ? '✓' : l}
               </div>
-              <div className="flex flex-wrap justify-center gap-3">
-                {tier.roles.length > 0 ? tier.roles.map(m => (
-                  <Card key={m.id} className="p-3 min-w-[140px] text-center border-[#DC143C]/10">
-                    <div className="w-8 h-8 rounded-full bg-[#DC143C]/10 flex items-center justify-center text-[#DC143C] font-display font-bold text-xs mx-auto mb-1">
-                      {m.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                    </div>
-                    <div className="text-xs font-medium text-foreground">{m.name}</div>
-                    <div className="text-[10px] text-muted-foreground">{m.role}</div>
-                  </Card>
-                )) : (
-                  <Card className="p-3 min-w-[140px] text-center border-dashed">
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center mx-auto mb-1">
-                      <Plus className="w-3 h-3 text-muted-foreground" />
-                    </div>
-                    <div className="text-xs text-muted-foreground">{tier.placeholder}</div>
-                  </Card>
-                )}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </Card>
+
+      {members.length <= 1 && level > 1 && (
+        <div className="p-4 rounded-xl bg-muted/50 border border-border text-sm text-muted-foreground text-center">
+          Add team members in the <strong>Members</strong> tab to populate
+          the org chart with real names.
+        </div>
+      )}
     </div>
-  );
+   );
 }
 
 // ─── Tab 3: Scorecards ───────────────────────────────────────────────
