@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, gt, sql } from "drizzle-orm";
+import { eq, and, desc, asc, gt, sql, or, inArray, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser, users,
@@ -22,6 +22,19 @@ import {
   referralExchanges, InsertReferralExchange,
   reviews, InsertReview,
   brokerageConfig, InsertBrokerageConfig,
+  // Phase 9
+  journeyPosts, InsertJourneyPost,
+  journeyReactions, InsertJourneyReaction,
+  journeyComments, InsertJourneyComment,
+  commentLikes,
+  feedConnections,
+  // Phase 10
+  aiTools, InsertAITool,
+  toolClicks, InsertToolClick,
+  toolSaves, InsertToolSave,
+  toolUpvotes,
+  toolSubmissions, InsertToolSubmission,
+  coachToolRecommendations, InsertCoachToolRecommendation,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -799,4 +812,369 @@ export async function getUserById(id: number) {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+
+// ============================================================
+// PHASE 9 — JOURNEY POSTS
+// ============================================================
+
+export async function createJourneyPost(data: InsertJourneyPost) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(journeyPosts).values(data);
+}
+
+export async function getJourneyPost(postId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const [row] = await db.select().from(journeyPosts)
+    .where(eq(journeyPosts.postId, postId));
+  return row ?? null;
+}
+
+export async function getUserJourneyPosts(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(journeyPosts)
+    .where(eq(journeyPosts.userId, userId))
+    .orderBy(desc(journeyPosts.createdAt))
+    .limit(100);
+}
+
+export async function getUserDraftPosts(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(journeyPosts)
+    .where(and(
+      eq(journeyPosts.userId, userId),
+      eq(journeyPosts.isPublished, false)
+    ))
+    .orderBy(desc(journeyPosts.createdAt));
+}
+
+export async function publishPost(
+  postId: string,
+  userId: number,
+  updates: { caption?: string; visibility: string }
+) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(journeyPosts)
+    .set({ ...updates, isPublished: true, updatedAt: new Date() } as any)
+    .where(and(
+      eq(journeyPosts.postId, postId),
+      eq(journeyPosts.userId, userId)
+    ));
+}
+
+export async function deletePost(postId: string, userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(journeyPosts)
+    .where(and(
+      eq(journeyPosts.postId, postId),
+      eq(journeyPosts.userId, userId)
+    ));
+}
+
+export async function featurePost(postId: string, coachId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(journeyPosts)
+    .set({ isFeatured: true, featuredBy: coachId, featuredAt: new Date() })
+    .where(eq(journeyPosts.postId, postId));
+}
+
+export async function getFeedForUser(
+  userId: number,
+  limit = 30,
+  offset = 0
+) {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Get cohort member IDs for this user
+  const cohort = await getAgentActiveCohort(userId);
+  const cohortMemberIds: number[] = [];
+  if (cohort) {
+    const members = await getCohortMembers(cohort.cohortId);
+    cohortMemberIds.push(...members.map(m => m.agentId));
+  }
+
+  // Get followed user IDs
+  const following = await db.select().from(feedConnections)
+    .where(eq(feedConnections.followerId, userId));
+  const followingIds = following.map(f => f.followingId);
+
+  // Eligible user IDs for this feed
+  const eligibleIds = Array.from(new Set([userId, ...cohortMemberIds, ...followingIds]));
+
+  return db.select().from(journeyPosts)
+    .where(and(
+      eq(journeyPosts.isPublished, true),
+      or(
+        // Own posts at any visibility
+        eq(journeyPosts.userId, userId),
+        // Cohort/following posts at cohort+ visibility
+        and(
+          inArray(journeyPosts.userId, eligibleIds.length > 0 ? eligibleIds : [0]),
+          or(
+            eq(journeyPosts.visibility, 'cohort'),
+            eq(journeyPosts.visibility, 'community'),
+            eq(journeyPosts.visibility, 'network'),
+          )
+        ),
+        // Community posts from anyone
+        eq(journeyPosts.visibility, 'community'),
+        eq(journeyPosts.visibility, 'network'),
+      )
+    ))
+    .orderBy(
+      desc(journeyPosts.isFeatured),
+      desc(journeyPosts.createdAt)
+    )
+    .limit(limit)
+    .offset(offset);
+}
+
+export async function getPostComments(postId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(journeyComments)
+    .where(and(
+      eq(journeyComments.postId, postId),
+      eq(journeyComments.isApproved, true),
+      isNull(journeyComments.parentCommentId)
+    ))
+    .orderBy(asc(journeyComments.createdAt))
+    .limit(50);
+}
+
+export async function createComment(data: InsertJourneyComment) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(journeyComments).values(data);
+  // Increment post comment count
+  await db.update(journeyPosts)
+    .set({ commentsCount: sql`${journeyPosts.commentsCount} + 1` })
+    .where(eq(journeyPosts.postId, data.postId));
+}
+
+export async function addReaction(
+  postId: string,
+  userId: number,
+  type: string
+) {
+  const db = await getDb();
+  if (!db) return;
+  // Upsert — one reaction type per user per post
+  const existing = await db.select().from(journeyReactions)
+    .where(and(
+      eq(journeyReactions.postId, postId),
+      eq(journeyReactions.userId, userId)
+    ));
+
+  if (existing.length > 0) {
+    if (existing[0].type === type) {
+      // Remove reaction (toggle off)
+      await db.delete(journeyReactions)
+        .where(and(
+          eq(journeyReactions.postId, postId),
+          eq(journeyReactions.userId, userId)
+        ));
+      await db.update(journeyPosts)
+        .set({ reactionsCount: sql`${journeyPosts.reactionsCount} - 1` })
+        .where(eq(journeyPosts.postId, postId));
+    } else {
+      // Change reaction type
+      await db.update(journeyReactions)
+        .set({ type: type as any })
+        .where(and(
+          eq(journeyReactions.postId, postId),
+          eq(journeyReactions.userId, userId)
+        ));
+    }
+  } else {
+    await db.insert(journeyReactions).values({ postId, userId, type: type as any });
+    await db.update(journeyPosts)
+      .set({ reactionsCount: sql`${journeyPosts.reactionsCount} + 1` })
+      .where(eq(journeyPosts.postId, postId));
+  }
+}
+
+export async function getPostReactions(postId: string) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(journeyReactions)
+    .where(eq(journeyReactions.postId, postId));
+}
+
+export async function followUser(followerId: number, followingId: number) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(feedConnections)
+    .where(and(
+      eq(feedConnections.followerId, followerId),
+      eq(feedConnections.followingId, followingId)
+    ));
+  if (!existing.length) {
+    await db.insert(feedConnections).values({ followerId, followingId });
+  }
+}
+
+export async function unfollowUser(followerId: number, followingId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(feedConnections)
+    .where(and(
+      eq(feedConnections.followerId, followerId),
+      eq(feedConnections.followingId, followingId)
+    ));
+}
+
+// ============================================================
+// PHASE 10 — AI TOOLS DIRECTORY
+// ============================================================
+
+export async function getAllTools(filters?: {
+  category?: string;
+  curationTier?: string;
+  pricingModel?: string;
+  integrationStatus?: string;
+}) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions = [eq(aiTools.isApproved, true)];
+
+  if (filters?.category) {
+    conditions.push(eq(aiTools.category, filters.category as any));
+  }
+  if (filters?.curationTier) {
+    conditions.push(eq(aiTools.curationTier, filters.curationTier as any));
+  }
+  if (filters?.integrationStatus) {
+    conditions.push(eq(aiTools.integrationStatus, filters.integrationStatus as any));
+  }
+
+  return db.select().from(aiTools)
+    .where(and(...conditions))
+    .orderBy(asc(aiTools.sortOrder), desc(aiTools.upvoteCount));
+}
+
+export async function getTool(toolId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const [row] = await db.select().from(aiTools)
+    .where(eq(aiTools.toolId, toolId));
+  return row ?? null;
+}
+
+export async function upsertTool(data: InsertAITool) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(aiTools).values(data)
+    .onDuplicateKeyUpdate({ set: { ...data, updatedAt: new Date() } });
+}
+
+export async function logToolClick(data: InsertToolClick) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(toolClicks).values(data);
+  await db.update(aiTools)
+    .set({ clickCount: sql`${aiTools.clickCount} + 1` })
+    .where(eq(aiTools.toolId, data.toolId));
+}
+
+export async function getToolClickStats(toolId: string) {
+  const db = await getDb();
+  if (!db) return { total: 0, last30Days: 0 };
+  const clicks = await db.select().from(toolClicks)
+    .where(eq(toolClicks.toolId, toolId));
+  const last30Days = clicks.filter(
+    c => new Date(c.createdAt).getTime() > Date.now() - 30 * 86400000
+  ).length;
+  return { total: clicks.length, last30Days };
+}
+
+export async function saveTool(userId: number, toolId: string, notes?: string) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(toolSaves)
+    .where(and(eq(toolSaves.userId, userId), eq(toolSaves.toolId, toolId)));
+  if (!existing.length) {
+    await db.insert(toolSaves).values({ userId, toolId, notes });
+    await db.update(aiTools)
+      .set({ saveCount: sql`${aiTools.saveCount} + 1` })
+      .where(eq(aiTools.toolId, toolId));
+  }
+}
+
+export async function unsaveTool(userId: number, toolId: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(toolSaves)
+    .where(and(eq(toolSaves.userId, userId), eq(toolSaves.toolId, toolId)));
+  await db.update(aiTools)
+    .set({ saveCount: sql`${aiTools.saveCount} - 1` })
+    .where(eq(aiTools.toolId, toolId));
+}
+
+export async function getUserSavedTools(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const saves = await db.select().from(toolSaves)
+    .where(eq(toolSaves.userId, userId));
+  const toolIds = saves.map(s => s.toolId);
+  if (!toolIds.length) return [];
+  return db.select().from(aiTools)
+    .where(inArray(aiTools.toolId, toolIds));
+}
+
+export async function upvoteTool(userId: number, toolId: string) {
+  const db = await getDb();
+  if (!db) return { voted: false };
+  const existing = await db.select().from(toolUpvotes)
+    .where(and(eq(toolUpvotes.userId, userId), eq(toolUpvotes.toolId, toolId)));
+  if (!existing.length) {
+    await db.insert(toolUpvotes).values({ userId, toolId });
+    await db.update(aiTools)
+      .set({ upvoteCount: sql`${aiTools.upvoteCount} + 1` })
+      .where(eq(aiTools.toolId, toolId));
+    return { voted: true };
+  } else {
+    await db.delete(toolUpvotes)
+      .where(and(eq(toolUpvotes.userId, userId), eq(toolUpvotes.toolId, toolId)));
+    await db.update(aiTools)
+      .set({ upvoteCount: sql`${aiTools.upvoteCount} - 1` })
+      .where(eq(aiTools.toolId, toolId));
+    return { voted: false };
+  }
+}
+
+export async function submitTool(data: InsertToolSubmission) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(toolSubmissions).values(data);
+}
+
+export async function addCoachRecommendation(data: InsertCoachToolRecommendation) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(coachToolRecommendations).values(data);
+}
+
+export async function getAgentToolRecommendations(agentId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const recs = await db.select().from(coachToolRecommendations)
+    .where(eq(coachToolRecommendations.agentId, agentId))
+    .orderBy(desc(coachToolRecommendations.createdAt));
+
+  return Promise.all(recs.map(async rec => {
+    const tool = await getTool(rec.toolId);
+    const coach = await getAgentProfile(rec.coachId);
+    return { ...rec, tool, coach };
+  }));
 }

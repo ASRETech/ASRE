@@ -7,6 +7,8 @@ import { invokeLLM } from "./_core/llm";
 import { ENV } from "./_core/env";
 import * as db from "./db";
 import { nanoid } from "nanoid";
+import * as schema from "../drizzle/schema";
+import { eq, and } from "drizzle-orm";
 
 export const appRouter = router({
   system: systemRouter,
@@ -1217,6 +1219,343 @@ Be warm, professional, and informative. Include next steps when applicable.`,
     listCandidates: protectedProcedure.query(async () => {
       return db.getCertificationCandidates();
     }),
+  }),
+
+  // ════════════════════════════════════════════════════════════════
+  // Phase 9 — Business Journey Feed
+  // ════════════════════════════════════════════════════════════════
+  journey: router({
+    getFeed: protectedProcedure
+      .input(z.object({
+        limit: z.number().default(30),
+        offset: z.number().default(0),
+      }))
+      .query(async ({ ctx, input }) => {
+        const posts = await db.getFeedForUser(
+          ctx.user.id, input.limit, input.offset
+        );
+        return Promise.all(posts.map(async (post) => {
+          const [profile, reactions, comments] = await Promise.all([
+            db.getAgentProfile(post.userId),
+            db.getPostReactions(post.postId),
+            db.getPostComments(post.postId).then(c => c.slice(0, 2)),
+          ]);
+          const userReaction = reactions.find(r => r.userId === ctx.user.id);
+          const reactionCounts = reactions.reduce((acc, r) => {
+            acc[r.type] = (acc[r.type] || 0) + 1;
+            return acc;
+          }, {} as Record<string, number>);
+          return {
+            ...post,
+            author: {
+              name: profile?.name || 'Agent',
+              brokerage: profile?.brokerage || '',
+              marketCenter: profile?.marketCenter || '',
+              currentLevel: profile?.currentLevel || 1,
+              isCoach: profile?.coachMode || false,
+            },
+            reactionCounts,
+            userReaction: userReaction?.type || null,
+            commentPreview: comments,
+          };
+        }));
+      }),
+
+    getDrafts: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserDraftPosts(ctx.user.id);
+    }),
+
+    publishPost: protectedProcedure
+      .input(z.object({
+        postId: z.string(),
+        caption: z.string().optional(),
+        visibility: z.enum(['private', 'cohort', 'community', 'network']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (input.caption) {
+          const scan = await invokeLLM({
+            messages: [{
+              role: 'system',
+              content: 'Screen this real estate social post for Fair Housing violations, discriminatory language, or inappropriate content. Return JSON: {"result": "pass"|"flag", "reason": "string or null"}',
+            }, {
+              role: 'user',
+              content: input.caption,
+            }],
+          });
+          const rawContent = scan.choices[0]?.message?.content || '{"result":"pass"}';
+          const text = typeof rawContent === 'string' ? rawContent : JSON.stringify(rawContent);
+          try {
+            const result = JSON.parse(text.replace(/```json?|```/g, '').trim());
+            if (result.result === 'flag') {
+              throw new Error(`Caption flagged: ${result.reason}`);
+            }
+          } catch (e: any) {
+            if (e.message.includes('Caption flagged')) throw e;
+          }
+        }
+        await db.publishPost(input.postId, ctx.user.id, {
+          caption: input.caption,
+          visibility: input.visibility,
+        });
+        return { success: true };
+      }),
+
+    discardDraft: protectedProcedure
+      .input(z.object({ postId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deletePost(input.postId, ctx.user.id);
+        return { success: true };
+      }),
+
+    deletePost: protectedProcedure
+      .input(z.object({ postId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deletePost(input.postId, ctx.user.id);
+        return { success: true };
+      }),
+
+    react: protectedProcedure
+      .input(z.object({
+        postId: z.string(),
+        type: z.enum(['fire', 'leveling_up', 'lets_go', 'been_there', 'coach_feature']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (input.type === 'coach_feature') {
+          const profile = await db.getAgentProfile(ctx.user.id);
+          if (!profile?.coachMode) throw new Error('Only coaches can feature posts');
+          await db.featurePost(input.postId, ctx.user.id);
+        }
+        await db.addReaction(input.postId, ctx.user.id, input.type);
+        return { success: true };
+      }),
+
+    getPostDetail: protectedProcedure
+      .input(z.object({ postId: z.string() }))
+      .query(async ({ ctx, input }) => {
+        const [post, reactions, comments] = await Promise.all([
+          db.getJourneyPost(input.postId),
+          db.getPostReactions(input.postId),
+          db.getPostComments(input.postId),
+        ]);
+        if (!post) throw new Error('Post not found');
+        const enrichedComments = await Promise.all(
+          comments.map(async (c) => {
+            const profile = await db.getAgentProfile(c.userId);
+            return {
+              ...c,
+              author: {
+                name: profile?.name || 'Agent',
+                currentLevel: profile?.currentLevel || 1,
+                isCoach: profile?.coachMode || false,
+              },
+            };
+          })
+        );
+        return { post, reactions, comments: enrichedComments };
+      }),
+
+    addComment: protectedProcedure
+      .input(z.object({
+        postId: z.string(),
+        body: z.string().min(1).max(500),
+        myExperience: z.string().optional(),
+        whatHelped: z.string().optional(),
+        parentCommentId: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const textToScreen = [input.body, input.myExperience, input.whatHelped]
+          .filter(Boolean).join(' ');
+        const scan = await invokeLLM({
+          messages: [{
+            role: 'system',
+            content: 'Screen this comment for Fair Housing violations or inappropriate content. Return JSON: {"result": "pass"|"flag", "reason": "string or null"}',
+          }, {
+            role: 'user',
+            content: textToScreen,
+          }],
+        });
+        const rawComment = scan.choices[0]?.message?.content || '{"result":"pass"}';
+        const text = typeof rawComment === 'string' ? rawComment : JSON.stringify(rawComment);
+        let flagged = false;
+        try {
+          const result = JSON.parse(text.replace(/```json?|```/g, '').trim());
+          flagged = result.result === 'flag';
+        } catch {}
+        await db.createComment({
+          commentId: nanoid(12),
+          postId: input.postId,
+          userId: ctx.user.id,
+          body: input.body,
+          myExperience: input.myExperience,
+          whatHelped: input.whatHelped,
+          parentCommentId: input.parentCommentId,
+          isApproved: !flagged,
+          flaggedForReview: flagged,
+        });
+        if (flagged) {
+          throw new Error('Your comment was flagged for review and will be visible after approval.');
+        }
+        return { success: true };
+      }),
+
+    follow: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.followUser(ctx.user.id, input.userId);
+        return { success: true };
+      }),
+
+    unfollow: protectedProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.unfollowUser(ctx.user.id, input.userId);
+        return { success: true };
+      }),
+
+    myTimeline: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserJourneyPosts(ctx.user.id)
+        .then(posts => posts.filter(p => p.isPublished));
+    }),
+  }),
+
+  // ════════════════════════════════════════════════════════════════
+  // Phase 10 — AI Tools Directory
+  // ════════════════════════════════════════════════════════════════
+  tools: router({
+    list: protectedProcedure
+      .input(z.object({
+        category: z.string().optional(),
+        search: z.string().optional(),
+        savedOnly: z.boolean().optional(),
+        integrationStatus: z.string().optional(),
+        relevantToMyLevel: z.boolean().optional(),
+      }))
+      .query(async ({ ctx, input }) => {
+        let tools = await db.getAllTools({
+          category: input.category,
+          integrationStatus: input.integrationStatus,
+        });
+        if (input.relevantToMyLevel) {
+          const profile = await db.getAgentProfile(ctx.user.id);
+          const level = profile?.currentLevel ?? 1;
+          tools = tools.filter(t => {
+            const levels = t.relevantLevels as number[] | null;
+            return !levels || levels.includes(level);
+          });
+        }
+        if (input.search) {
+          const q = input.search.toLowerCase();
+          tools = tools.filter(t =>
+            t.name.toLowerCase().includes(q) ||
+            t.tagline.toLowerCase().includes(q) ||
+            t.description.toLowerCase().includes(q) ||
+            ((t.tags as string[]) || []).some(tag => tag.includes(q))
+          );
+        }
+        const dbInstance = await db.getDb();
+        const [saves, upvotes] = await Promise.all([
+          db.getUserSavedTools(ctx.user.id).then(s => s.map(t => t.toolId)),
+          dbInstance ? dbInstance.select().from(schema.toolUpvotes)
+            .where(eq(schema.toolUpvotes.userId, ctx.user.id))
+            .then(rows => rows.map(r => r.toolId)) : Promise.resolve([]),
+        ]);
+        const enriched = tools.map(t => ({
+          ...t,
+          isSaved: saves.includes(t.toolId),
+          hasUpvoted: upvotes.includes(t.toolId),
+        }));
+        if (input.savedOnly) {
+          return enriched.filter(t => t.isSaved);
+        }
+        return enriched;
+      }),
+
+    get: protectedProcedure
+      .input(z.object({ toolId: z.string() }))
+      .query(async ({ ctx, input }) => {
+        const tool = await db.getTool(input.toolId);
+        if (!tool || !tool.isApproved) throw new Error('Tool not found');
+        const dbInstance = await db.getDb();
+        const [saves, upvotes] = await Promise.all([
+          db.getUserSavedTools(ctx.user.id).then(s => s.map(t => t.toolId)),
+          dbInstance ? dbInstance.select().from(schema.toolUpvotes)
+            .where(and(
+              eq(schema.toolUpvotes.userId, ctx.user.id),
+              eq(schema.toolUpvotes.toolId, input.toolId)
+            )) : Promise.resolve([]),
+        ]);
+        return {
+          ...tool,
+          isSaved: saves.includes(tool.toolId),
+          hasUpvoted: upvotes.length > 0,
+        };
+      }),
+
+    toggleSave: protectedProcedure
+      .input(z.object({ toolId: z.string(), notes: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const saves = await db.getUserSavedTools(ctx.user.id);
+        const isSaved = saves.some(t => t.toolId === input.toolId);
+        if (isSaved) {
+          await db.unsaveTool(ctx.user.id, input.toolId);
+          return { saved: false };
+        } else {
+          await db.saveTool(ctx.user.id, input.toolId, input.notes);
+          return { saved: true };
+        }
+      }),
+
+    toggleUpvote: protectedProcedure
+      .input(z.object({ toolId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        return db.upvoteTool(ctx.user.id, input.toolId);
+      }),
+
+    submit: protectedProcedure
+      .input(z.object({
+        toolName: z.string().min(2).max(100),
+        toolUrl: z.string().url(),
+        category: z.string().optional(),
+        description: z.string().optional(),
+        whyRecommend: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.submitTool({
+          submissionId: nanoid(12),
+          submittedBy: ctx.user.id,
+          ...input,
+          status: 'pending',
+        });
+        return { success: true };
+      }),
+
+    myRecommendations: protectedProcedure.query(async ({ ctx }) => {
+      return db.getAgentToolRecommendations(ctx.user.id);
+    }),
+
+    recommendToClient: protectedProcedure
+      .input(z.object({
+        agentId: z.number(),
+        toolId: z.string(),
+        note: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const rel = await db.getCoachRelationshipForPair(ctx.user.id, input.agentId);
+        if (!rel || rel.status !== 'active') throw new Error('Not authorized');
+        await db.addCoachRecommendation({
+          coachId: ctx.user.id,
+          agentId: input.agentId,
+          toolId: input.toolId,
+          note: input.note,
+        });
+        return { success: true };
+      }),
+
+    getClickStats: protectedProcedure
+      .input(z.object({ toolId: z.string() }))
+      .query(async ({ ctx, input }) => {
+        return db.getToolClickStats(input.toolId);
+      }),
   }),
 });
 

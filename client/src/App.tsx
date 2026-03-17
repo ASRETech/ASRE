@@ -29,6 +29,7 @@ import ClientPortal from "./pages/ClientPortal";
 import Referrals from "./pages/Referrals";
 import Reviews from "./pages/Reviews";
 import Certification from "./pages/Certification";
+import Tools from "./pages/Tools";
 function AppRoutes() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -88,6 +89,9 @@ function AppRoutes() {
       </Route>
       <Route path="/certification">
         <DashboardLayout><Certification /></DashboardLayout>
+      </Route>
+      <Route path="/tools">
+        <DashboardLayout><Tools /></DashboardLayout>
       </Route>
       <Route path="/settings">
         <DashboardLayout><SettingsPage /></DashboardLayout>

@@ -20,6 +20,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/library': 'Knowledge Library',
   '/culture': 'Culture OS',
   '/compliance': 'Compliance',
+  '/tools': 'AI Tools Directory',
   '/settings': 'Settings',
 };
 

@@ -548,3 +548,276 @@ export const certifications = mysqlTable("certifications", {
 
 export type Certification = typeof certifications.$inferSelect;
 export type InsertCertification = typeof certifications.$inferInsert;
+
+
+// ═══════════════════════════════════════════════════════════════════
+// Phase 9 — Business Journey Feed
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Journey posts — auto-generated or agent-written milestone posts
+ */
+export const journeyPosts = mysqlTable('journey_posts', {
+  id: int('id').autoincrement().primaryKey(),
+  postId: varchar('postId', { length: 32 }).notNull().unique(),
+  userId: int('userId').notNull(),
+
+  type: mysqlEnum('postType', [
+    'level_advance',
+    'deliverable_complete',
+    'team_hire',
+    'production_milestone',
+    'certification',
+    'streak',
+    'coaching_milestone',
+    'culture_win',
+    'custom',
+  ]).notNull(),
+
+  visibility: mysqlEnum('postVisibility', [
+    'private',
+    'cohort',
+    'community',
+    'network',
+  ]).default('cohort').notNull(),
+
+  headline: varchar('headline', { length: 256 }).notNull(),
+  caption: text('caption'),
+  metadata: json('metadata'),
+
+  isPublished: boolean('isPublished').default(false).notNull(),
+  isFeatured: boolean('isFeatured').default(false).notNull(),
+  featuredBy: int('featuredBy'),
+  featuredAt: timestamp('featuredAt'),
+  isPinned: boolean('isPinned').default(false).notNull(),
+
+  reactionsCount: int('reactionsCount').default(0).notNull(),
+  commentsCount: int('commentsCount').default(0).notNull(),
+
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type JourneyPost = typeof journeyPosts.$inferSelect;
+export type InsertJourneyPost = typeof journeyPosts.$inferInsert;
+
+/**
+ * Reactions to posts
+ */
+export const journeyReactions = mysqlTable('journey_reactions', {
+  id: int('id').autoincrement().primaryKey(),
+  postId: varchar('postId', { length: 32 }).notNull(),
+  userId: int('userId').notNull(),
+  type: mysqlEnum('reactionType', [
+    'fire',
+    'leveling_up',
+    'lets_go',
+    'been_there',
+    'coach_feature',
+  ]).notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export type JourneyReaction = typeof journeyReactions.$inferSelect;
+export type InsertJourneyReaction = typeof journeyReactions.$inferInsert;
+
+/**
+ * Comments on posts
+ */
+export const journeyComments = mysqlTable('journey_comments', {
+  id: int('id').autoincrement().primaryKey(),
+  commentId: varchar('commentId', { length: 32 }).notNull().unique(),
+  postId: varchar('postId', { length: 32 }).notNull(),
+  userId: int('userId').notNull(),
+  body: text('body').notNull(),
+  myExperience: text('myExperience'),
+  whatHelped: text('whatHelped'),
+  isApproved: boolean('isApproved').default(true).notNull(),
+  flaggedForReview: boolean('flaggedForReview').default(false).notNull(),
+  parentCommentId: varchar('parentCommentId', { length: 32 }),
+  likesCount: int('likesCount').default(0).notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export type JourneyComment = typeof journeyComments.$inferSelect;
+export type InsertJourneyComment = typeof journeyComments.$inferInsert;
+
+/**
+ * Comment likes
+ */
+export const commentLikes = mysqlTable('comment_likes', {
+  id: int('id').autoincrement().primaryKey(),
+  commentId: varchar('commentId', { length: 32 }).notNull(),
+  userId: int('userId').notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+/**
+ * Feed connections — who each agent follows beyond their cohort
+ */
+export const feedConnections = mysqlTable('feed_connections', {
+  id: int('id').autoincrement().primaryKey(),
+  followerId: int('followerId').notNull(),
+  followingId: int('followingId').notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export type FeedConnection = typeof feedConnections.$inferSelect;
+export type InsertFeedConnection = typeof feedConnections.$inferInsert;
+
+// ═══════════════════════════════════════════════════════════════════
+// Phase 10 — AI Tools Directory
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * AI Tools directory entries
+ */
+export const aiTools = mysqlTable('ai_tools', {
+  id: int('id').autoincrement().primaryKey(),
+  toolId: varchar('toolId', { length: 32 }).notNull().unique(),
+  name: varchar('name', { length: 256 }).notNull(),
+  tagline: varchar('tagline', { length: 256 }).notNull(),
+  description: text('description').notNull(),
+  logoUrl: varchar('logoUrl', { length: 512 }),
+  websiteUrl: varchar('websiteUrl', { length: 512 }).notNull(),
+  affiliateUrl: varchar('affiliateUrl', { length: 512 }),
+  affiliateCookieDays: int('affiliateCookieDays').default(30),
+
+  category: mysqlEnum('toolCategory', [
+    'lead_generation',
+    'ai_writing',
+    'video_presentations',
+    'transaction_management',
+    'financial_intelligence',
+    'team_operations',
+    'marketing_social',
+    'learning_coaching',
+    'compliance',
+    'data_analytics',
+  ]).notNull(),
+
+  pricingModel: mysqlEnum('pricingModel', [
+    'free',
+    'freemium',
+    'paid',
+    'per_seat',
+    'usage_based',
+    'enterprise',
+  ]).notNull(),
+  pricingFrom: int('pricingFrom'),
+  pricingLabel: varchar('pricingLabel', { length: 64 }),
+
+  curationTier: mysqlEnum('curationTier', [
+    'vetted',
+    'listed',
+    'featured',
+    'integrated',
+    'deprecated',
+  ]).default('listed').notNull(),
+
+  integrationStatus: mysqlEnum('integrationStatus', [
+    'native',
+    'connected',
+    'planned',
+    'none',
+  ]).default('none').notNull(),
+
+  relevantLevels: json('relevantLevels'),
+  endorsementQuote: text('endorsementQuote'),
+  endorsementContext: varchar('endorsementContext', { length: 256 }),
+
+  upvoteCount: int('upvoteCount').default(0).notNull(),
+  clickCount: int('clickCount').default(0).notNull(),
+  saveCount: int('saveCount').default(0).notNull(),
+
+  submittedBy: int('submittedBy'),
+  isApproved: boolean('isApproved').default(false).notNull(),
+  tags: json('tags'),
+  sortOrder: int('sortOrder').default(100).notNull(),
+
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type AITool = typeof aiTools.$inferSelect;
+export type InsertAITool = typeof aiTools.$inferInsert;
+
+/**
+ * Click tracking for affiliate attribution
+ */
+export const toolClicks = mysqlTable('tool_clicks', {
+  id: int('id').autoincrement().primaryKey(),
+  clickId: varchar('clickId', { length: 32 }).notNull().unique(),
+  toolId: varchar('toolId', { length: 32 }).notNull(),
+  userId: int('userId'),
+  sessionId: varchar('sessionId', { length: 64 }),
+  referrer: varchar('referrer', { length: 256 }),
+  source: varchar('source', { length: 64 }),
+  ipHash: varchar('ipHash', { length: 64 }),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export type ToolClick = typeof toolClicks.$inferSelect;
+export type InsertToolClick = typeof toolClicks.$inferInsert;
+
+/**
+ * Agent tool saves / bookmarks
+ */
+export const toolSaves = mysqlTable('tool_saves', {
+  id: int('id').autoincrement().primaryKey(),
+  userId: int('userId').notNull(),
+  toolId: varchar('toolId', { length: 32 }).notNull(),
+  notes: text('notes'),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export type ToolSave = typeof toolSaves.$inferSelect;
+export type InsertToolSave = typeof toolSaves.$inferInsert;
+
+/**
+ * Tool upvotes
+ */
+export const toolUpvotes = mysqlTable('tool_upvotes', {
+  id: int('id').autoincrement().primaryKey(),
+  userId: int('userId').notNull(),
+  toolId: varchar('toolId', { length: 32 }).notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+/**
+ * Tool submissions from the community
+ */
+export const toolSubmissions = mysqlTable('tool_submissions', {
+  id: int('id').autoincrement().primaryKey(),
+  submissionId: varchar('submissionId', { length: 32 }).notNull().unique(),
+  submittedBy: int('submittedBy').notNull(),
+  toolName: varchar('toolName', { length: 256 }).notNull(),
+  toolUrl: varchar('toolUrl', { length: 512 }).notNull(),
+  category: varchar('category', { length: 64 }),
+  description: text('description'),
+  whyRecommend: text('whyRecommend'),
+  status: mysqlEnum('submissionStatus', [
+    'pending', 'approved', 'rejected', 'merged',
+  ]).default('pending').notNull(),
+  reviewNotes: text('reviewNotes'),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export type ToolSubmission = typeof toolSubmissions.$inferSelect;
+export type InsertToolSubmission = typeof toolSubmissions.$inferInsert;
+
+/**
+ * Coach tool recommendations to specific clients
+ */
+export const coachToolRecommendations = mysqlTable('coach_tool_recommendations', {
+  id: int('id').autoincrement().primaryKey(),
+  coachId: int('coachId').notNull(),
+  agentId: int('agentId').notNull(),
+  toolId: varchar('toolId', { length: 32 }).notNull(),
+  note: text('note'),
+  isRead: boolean('isRead').default(false).notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export type CoachToolRecommendation = typeof coachToolRecommendations.$inferSelect;
+export type InsertCoachToolRecommendation = typeof coachToolRecommendations.$inferInsert;

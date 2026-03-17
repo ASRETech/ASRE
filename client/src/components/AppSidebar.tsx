@@ -4,9 +4,10 @@ import {
   Map, Target, LayoutDashboard, Users, FileText,
   DollarSign, BookOpen, Heart, Shield, Settings,
   Zap, BarChart3, UsersRound, GraduationCap,
-  Handshake, Star, UserPlus, Award,
+  Handshake, Star, UserPlus, Award, Wrench,
 } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
+import { trpc } from '@/lib/trpc';
 
 const NAV_ITEMS = [
   {
@@ -48,6 +49,7 @@ const NAV_ITEMS = [
       { label: 'Knowledge Library', icon: BookOpen, path: '/library' },
       { label: 'Culture OS', icon: Heart, path: '/culture' },
       { label: 'Compliance', icon: Shield, path: '/compliance' },
+      { label: 'AI Tools', icon: Wrench, path: '/tools' },
     ],
   },
 ];
@@ -56,6 +58,10 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { state } = useApp();
   const user = state.user;
+  const draftsQuery = trpc.journey.getDrafts.useQuery(undefined, {
+    refetchInterval: 60000,
+  });
+  const draftCount = draftsQuery.data?.length ?? 0;
   const currentLevel = user?.currentLevel ?? 1;
   const levelData = LEVELS[currentLevel - 1];
   const progressPercent = ((currentLevel - 1) / 6) * 100;
@@ -161,6 +167,12 @@ export function AppSidebar() {
                       >
                         <Icon className="w-4 h-4 shrink-0" />
                         <span>{item.label}</span>
+                        {item.path === '/journey' && draftCount > 0 && (
+                          <span className="ml-auto text-[9px] font-mono bg-[#DC143C] text-white
+                            rounded-full w-4 h-4 flex items-center justify-center shrink-0">
+                            {draftCount}
+                          </span>
+                        )}
                       </div>
                     </Link>
                   </li>

@@ -2,11 +2,15 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import net from "net";
+import crypto from "crypto";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import * as db from "../db";
+import { nanoid } from "nanoid";
+import { seedTools } from "../tools/seedTools";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -35,6 +39,38 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+
+  // Affiliate redirect endpoint — tracks click then redirects to tool URL
+  app.get('/api/tools/click/:toolId', async (req, res) => {
+    const { toolId } = req.params;
+    const userId = req.query.userId as string;
+    const source = (req.query.source as string) || 'direct';
+    try {
+      const tool = await db.getTool(toolId);
+      if (!tool || !tool.isApproved) {
+        return res.redirect('/tools');
+      }
+      const ipHash = crypto
+        .createHash('sha256')
+        .update(req.ip || '')
+        .digest('hex')
+        .substring(0, 16);
+      await db.logToolClick({
+        clickId: nanoid(16),
+        toolId,
+        userId: userId ? parseInt(userId) : undefined,
+        source,
+        referrer: req.headers.referer || undefined,
+        ipHash,
+      });
+      const destination = tool.affiliateUrl || tool.websiteUrl;
+      return res.redirect(302, destination);
+    } catch (e) {
+      const tool = await db.getTool(toolId).catch(() => null);
+      return res.redirect(tool?.websiteUrl || '/tools');
+    }
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",
@@ -59,6 +95,8 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    // Seed AI tools directory on first start (idempotent via upsert)
+    seedTools().catch(e => console.warn('[Seed] Tools seed failed:', e.message));
   });
 }
 
