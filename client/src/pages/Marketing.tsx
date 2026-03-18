@@ -1,4 +1,4 @@
-// Marketing / Content Studio — AI content generation with auto-compliance screening
+// Marketing / Content Studio — AI content generation
 import { useState, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { trpc } from '@/lib/trpc';
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Sparkles, Shield, CheckCircle, AlertTriangle, Copy, RefreshCw,
+  Sparkles, Copy, RefreshCw,
   Loader2, Megaphone, CalendarDays, Database, Magnet, FileText,
   Mail, Share2, Users, TrendingUp
 } from 'lucide-react';
@@ -66,7 +66,6 @@ function ContentStudioTab() {
   const [context, setContext] = useState('');
   const [generated, setGenerated] = useState('');
   const [generating, setGenerating] = useState(false);
-
   const coachMutation = trpc.coaching.ask.useMutation();
 
   const generate = () => {
@@ -198,7 +197,7 @@ Return ONLY the content. No explanation or preamble.`,
         <Card className="p-6">
           <div className="flex items-center justify-between mb-3">
             <h4 className="font-display text-sm font-semibold">Generated Content</h4>
-
+  
           </div>
 
           {generating ? (
@@ -239,6 +238,7 @@ Return ONLY the content. No explanation or preamble.`,
             </div>
           )}
         </Card>
+
 
       </div>
     </div>
@@ -301,7 +301,6 @@ function CalendarTab() {
 function DatabaseMarketingTab({ leads }: { leads: any[] }) {
   const [dbSize, setDbSize] = useState(100);
 
-  // Stage-based segments — calculated from what agents manually enter
   const pastClients = leads.filter(l => l.stage === 'Closed');
   const sphere = leads.filter(l => l.source === 'Sphere of Influence');
   const active = leads.filter(l => !['Closed', 'Dead'].includes(l.stage));
@@ -312,7 +311,6 @@ function DatabaseMarketingTab({ leads }: { leads: any[] }) {
     { label: 'Active Pipeline', count: active.length, color: 'bg-blue-500', desc: 'All non-closed records' },
   ];
 
-  // 36:12:3 calculator — manual input, honest planning tool
   const contactsPerYear = dbSize * 36;
   const contactsPerWeek = Math.ceil(contactsPerYear / 52);
   const projectedTx = Math.round(dbSize * 0.03);
@@ -321,7 +319,6 @@ function DatabaseMarketingTab({ leads }: { leads: any[] }) {
 
   return (
     <div className="space-y-6">
-      {/* Stage-based pipeline segments */}
       <div className="grid grid-cols-3 gap-3">
         {segments.map(seg => (
           <motion.div key={seg.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -335,7 +332,6 @@ function DatabaseMarketingTab({ leads }: { leads: any[] }) {
         ))}
       </div>
 
-      {/* 36:12:3 Planning Calculator — manual input */}
       <Card className="p-6">
         <h3 className="font-display text-lg font-semibold mb-1 flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-[#DC143C]" />

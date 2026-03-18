@@ -819,6 +819,8 @@ export const coachToolRecommendations = mysqlTable('coach_tool_recommendations',
 
 export type CoachToolRecommendation = typeof coachToolRecommendations.$inferSelect;
 export type InsertCoachToolRecommendation = typeof coachToolRecommendations.$inferInsert;
+
+
 export const oneThing = mysqlTable('one_thing', {
   id: int('id').autoincrement().primaryKey(),
   userId: int('userId').notNull(),
