@@ -12,7 +12,7 @@ const MODULES = [
   { key: 'm2', title: 'Coaching Methodology', desc: 'Accountability structures, session cadence, commitment tracking, and pre-brief workflows.' },
   { key: 'm3', title: 'AgentOS Platform Proficiency', desc: 'Navigate all platform features: deliverables, pipeline, financials, SOPs, and coach portal.' },
   { key: 'm4', title: 'Business Diagnostics', desc: 'Assess agent businesses, identify bottlenecks, and prescribe level-appropriate interventions.' },
-  { key: 'm5', title: 'Compliance & Ethics', desc: 'Fair Housing, coaching boundaries, data privacy, and professional conduct standards.' },
+  { key: 'm5', title: 'Professional Standards', desc: 'Coaching ethics, client confidentiality, professional conduct, and industry best practices.' },
 ] as const;
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {

@@ -108,7 +108,6 @@ export const appRouter = router({
         budget: z.number().optional(),
         timeline: z.string().optional(),
         tags: z.any().optional(),
-        nextAction: z.string().optional(),
         notes: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -129,9 +128,7 @@ export const appRouter = router({
           budget: z.number().optional(),
           timeline: z.string().optional(),
           tags: z.any().optional(),
-          nextAction: z.string().optional(),
           notes: z.string().optional(),
-          lastContactedAt: z.date().optional(),
         }),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -298,81 +295,6 @@ Return JSON: { "vendor": string, "amount": number, "date": string, "category": s
       .mutation(async ({ ctx, input }) => {
         await db.updateSOP(ctx.user.id, input.sopId, input.updates);
         return { success: true };
-      }),
-  }),
-
-  // ============================================================
-  // COMPLIANCE
-  // ============================================================
-  compliance: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      return db.getUserComplianceLogs(ctx.user.id);
-    }),
-    scan: protectedProcedure
-      .input(z.object({ inputText: z.string() }))
-      .mutation(async ({ ctx, input }) => {
-        const response = await invokeLLM({
-          messages: [
-            {
-              role: "system",
-              content: `You are a Fair Housing compliance expert. Analyze the following real estate marketing text for potential Fair Housing Act violations. Check for discriminatory language related to race, color, religion, national origin, sex, familial status, or disability. Also check for steering language, exclusionary terms, or preferential treatment indicators.
-
-Return a JSON object with:
-- result: "pass" | "warning" | "fail"
-- flaggedItems: array of objects with { text: string, reason: string, severity: "low" | "medium" | "high" }
-- summary: brief overall assessment`,
-            },
-            { role: "user", content: input.inputText },
-          ],
-          response_format: {
-            type: "json_schema",
-            json_schema: {
-              name: "compliance_scan",
-              strict: true,
-              schema: {
-                type: "object",
-                properties: {
-                  result: { type: "string", enum: ["pass", "warning", "fail"] },
-                  flaggedItems: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        text: { type: "string" },
-                        reason: { type: "string" },
-                        severity: { type: "string", enum: ["low", "medium", "high"] },
-                      },
-                      required: ["text", "reason", "severity"],
-                      additionalProperties: false,
-                    },
-                  },
-                  summary: { type: "string" },
-                },
-                required: ["result", "flaggedItems", "summary"],
-                additionalProperties: false,
-              },
-            },
-          },
-        });
-
-        const content = response.choices[0]?.message?.content;
-        let parsed: any = null;
-        try {
-          parsed = JSON.parse(typeof content === "string" ? content : "{}");
-        } catch {
-          parsed = { result: "pass", flaggedItems: [], summary: content || "Unable to parse response" };
-        }
-
-        if (parsed) {
-          await db.insertComplianceLog({
-            userId: ctx.user.id,
-            inputText: input.inputText,
-            result: parsed.result,
-            flaggedItems: parsed.flaggedItems,
-          });
-        }
-
-        return parsed;
       }),
   }),
 
@@ -1556,6 +1478,305 @@ Be warm, professional, and informative. Include next steps when applicable.`,
       .query(async ({ ctx, input }) => {
         return db.getToolClickStats(input.toolId);
       }),
+  }),
+
+  // ── Phase 11 — KW Model Library ──────────────────────────────
+  models: router({
+    list: protectedProcedure
+      .input(z.object({
+        category: z.string().optional(),
+        relevantToMyLevel: z.boolean().optional(),
+      }))
+      .query(async ({ ctx, input }) => {
+        const models = await db.getModelLibrary(input.category);
+        if (!input.relevantToMyLevel) return models;
+        const profile = await db.getAgentProfile(ctx.user.id);
+        const level = profile?.currentLevel ?? 1;
+        return models.filter(m => {
+          const levels = m.relevantLevels as number[] | null;
+          return !levels || levels.includes(level);
+        });
+      }),
+
+    get: protectedProcedure
+      .input(z.object({ modelId: z.string() }))
+      .query(async ({ ctx, input }) => {
+        return db.getModel(input.modelId);
+      }),
+
+    setOneThing: protectedProcedure
+      .input(z.object({
+        period: z.enum(['daily', 'weekly', 'monthly', 'annual']),
+        focusingQuestion: z.string(),
+        statement: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deactivateOneThing(ctx.user.id, input.period);
+        await db.createOneThing({ userId: ctx.user.id, ...input, isActive: true });
+        return { success: true };
+      }),
+
+    getOneThings: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserOneThings(ctx.user.id);
+    }),
+
+    completeOneThing: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.completeOneThing(input.id, ctx.user.id);
+        return { success: true };
+      }),
+
+    saveGPS: protectedProcedure
+      .input(z.object({
+        planId: z.string().optional(),
+        quarter: z.string(),
+        goal: z.string(),
+        priority1: z.string().optional(),
+        priority1Strategies: z.array(z.string()).optional(),
+        priority2: z.string().optional(),
+        priority2Strategies: z.array(z.string()).optional(),
+        priority3: z.string().optional(),
+        priority3Strategies: z.array(z.string()).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const planId = input.planId || nanoid(16);
+        await db.upsertGPSPlan({ ...input, planId, userId: ctx.user.id, isComplete: false });
+        return { planId };
+      }),
+
+    getGPS: protectedProcedure
+      .input(z.object({ quarter: z.string().optional() }))
+      .query(async ({ ctx, input }) => {
+        return db.getUserGPSPlans(ctx.user.id, input.quarter);
+      }),
+
+    saveBoldGoal: protectedProcedure
+      .input(z.object({
+        year: z.number(),
+        goal: z.string(),
+        whyItMatters: z.string().optional(),
+        measurableOutcome: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.upsertBoldGoal({ userId: ctx.user.id, ...input, isAchieved: false });
+        return { success: true };
+      }),
+
+    getBoldGoal: protectedProcedure
+      .input(z.object({ year: z.number() }))
+      .query(async ({ ctx, input }) => {
+        return db.getUserBoldGoal(ctx.user.id, input.year);
+      }),
+
+    enroll8x8: protectedProcedure
+      .input(z.object({ leadId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const enrollmentId = nanoid(16);
+        await db.createEightByEight({
+          enrollmentId, userId: ctx.user.id,
+          leadId: input.leadId, completedTouches: [],
+          currentTouch: 1, status: 'active',
+        });
+        return { enrollmentId };
+      }),
+
+    completeTouch: protectedProcedure
+      .input(z.object({
+        enrollmentId: z.string(),
+        touchNumber: z.number(),
+        note: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.completeEightByEightTouch(
+          input.enrollmentId, ctx.user.id,
+          input.touchNumber, input.note
+        );
+        return { success: true };
+      }),
+
+    getActive8x8: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserActive8x8(ctx.user.id);
+    }),
+
+    enroll33Touch: protectedProcedure
+      .input(z.object({ leadId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const year = new Date().getFullYear();
+        await db.createThirtyThreeTouch({
+          userId: ctx.user.id, leadId: input.leadId, year,
+          touchLog: [], touchesCompleted: 0, isActive: true,
+          nextTouchDue: new Date(Date.now() + 11 * 24 * 60 * 60 * 1000),
+        });
+        return { success: true };
+      }),
+
+    logTouch: protectedProcedure
+      .input(z.object({
+        leadId: z.string(),
+        touchType: z.string(),
+        note: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.logThirtyThreeTouch(ctx.user.id, input.leadId, {
+          type: input.touchType, date: new Date(), note: input.note,
+        });
+        return { success: true };
+      }),
+
+    get33TouchStatus: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserThirtyThreeTouchStatus(ctx.user.id);
+    }),
+
+    calculate36123: protectedProcedure
+      .input(z.object({
+        metDatabaseSize: z.number(),
+        currentAnnualContacts: z.number(),
+      }))
+      .query(async ({ ctx, input }) => {
+        const { metDatabaseSize, currentAnnualContacts } = input;
+        const targetContacts = metDatabaseSize * 36;
+        const expectedTransactions = Math.floor(metDatabaseSize / 100 * 3);
+        const currentExpected = Math.floor(
+          (currentAnnualContacts / Math.max(targetContacts, 1)) * expectedTransactions
+        );
+        const weeklyContactsNeeded = Math.ceil(targetContacts / 52);
+        const currentWeekly = Math.ceil(currentAnnualContacts / 52);
+        return {
+          targetContacts, currentAnnualContacts,
+          gap: targetContacts - currentAnnualContacts,
+          expectedTransactions, currentExpectedTransactions: currentExpected,
+          transactionGap: expectedTransactions - currentExpected,
+          weeklyContactsNeeded, currentWeekly,
+          weeklyGap: weeklyContactsNeeded - currentWeekly,
+        };
+      }),
+
+    saveTTSA: protectedProcedure
+      .input(z.object({
+        id: z.number().optional(),
+        teamMemberName: z.string(),
+        role: z.string().optional(),
+        talentScore: z.number().min(1).max(5).optional(),
+        talentNotes: z.string().optional(),
+        trainingStatus: z.enum(['not_started', 'in_progress', 'complete', 'needs_refresh']).optional(),
+        currentTraining: z.string().optional(),
+        systemsOwned: z.array(z.string()).optional(),
+        accountabilityMethod: z.string().optional(),
+        gwcGetsIt: z.boolean().optional(),
+        gwcWantsIt: z.boolean().optional(),
+        gwcCapacity: z.boolean().optional(),
+        discProfile: z.string().optional(),
+        careerVision: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.upsertTTSA({ userId: ctx.user.id, ...input } as Parameters<typeof db.upsertTTSA>[0]);
+        return { success: true };
+      }),
+
+    getTTSAProfiles: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserTTSAProfiles(ctx.user.id);
+    }),
+
+    deleteTTSA: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteTTSAProfile(input.id, ctx.user.id);
+        return { success: true };
+      }),
+
+    saveTeamEconomicModel: protectedProcedure
+      .input(z.object({
+        teamGciGoal: z.number(),
+        avgSalePrice: z.number(),
+        teamCommissionRate: z.number(),
+        teamSplitToAgents: z.number(),
+        leaderGciTarget: z.number(),
+        staffingCosts: z.number(),
+        marketingBudget: z.number(),
+        techBudget: z.number(),
+        otherExpenses: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const targetNetProfit =
+          input.teamGciGoal * (1 - input.teamSplitToAgents) -
+          input.staffingCosts - input.marketingBudget -
+          input.techBudget - input.otherExpenses;
+        await db.upsertTeamEconomicModel({
+          userId: ctx.user.id,
+          teamGciGoal: String(input.teamGciGoal),
+          avgSalePrice: String(input.avgSalePrice),
+          teamCommissionRate: String(input.teamCommissionRate),
+          teamSplitToAgents: String(input.teamSplitToAgents),
+          leaderGciTarget: String(input.leaderGciTarget),
+          staffingCosts: String(input.staffingCosts),
+          marketingBudget: String(input.marketingBudget),
+          techBudget: String(input.techBudget),
+          otherExpenses: String(input.otherExpenses),
+          targetNetProfit: String(targetNetProfit),
+        });
+        return { success: true };
+      }),
+
+    getTeamEconomicModel: protectedProcedure.query(async ({ ctx }) => {
+      return db.getTeamEconomicModel(ctx.user.id);
+    }),
+
+    saveAccountabilityAssessment: protectedProcedure
+      .input(z.object({
+        agentId: z.number(),
+        sessionId: z.string().optional(),
+        commitmentDescription: z.string(),
+        ladderLevel: z.enum([
+          'blame', 'justification', 'shame',
+          'obligation', 'responsibility', 'accountability', 'ownership',
+        ]),
+        coachNotes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.createAccountabilityAssessment({
+          assessmentId: nanoid(12), coachId: ctx.user.id, ...input,
+        });
+        return { success: true };
+      }),
+
+    getAgentAccountabilityHistory: protectedProcedure
+      .input(z.object({ agentId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        return db.getAgentAccountabilityHistory(input.agentId, ctx.user.id);
+      }),
+
+    startSessionRunner: protectedProcedure
+      .input(z.object({ sessionId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.initSessionRunner({
+          sessionId: input.sessionId,
+          currentSegment: 0,
+          segmentStartedAt: new Date(),
+          notes: {},
+          isComplete: false,
+        });
+        return { success: true };
+      }),
+
+    advanceSessionSegment: protectedProcedure
+      .input(z.object({
+        sessionId: z.string(),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return db.advanceSessionSegment(input.sessionId, input.notes);
+      }),
+
+    getSessionRunnerState: protectedProcedure
+      .input(z.object({ sessionId: z.string() }))
+      .query(async ({ ctx, input }) => {
+        return db.getSessionRunnerState(input.sessionId);
+      }),
+
+    getDatabaseHealthScore: protectedProcedure.query(async ({ ctx }) => {
+      return db.getDatabaseHealthScore(ctx.user.id);
+    }),
   }),
 });
 

@@ -43,8 +43,6 @@ export interface Lead {
   timeline: string;
   assignedAgentId?: string;
   tags: string[];
-  lastContactedAt: string;
-  nextAction: string;
   notes: string;
   createdAt: string;
 }
@@ -105,15 +103,6 @@ export interface SOPStep {
   description: string;
   assigneeRole: string;
   isAutomated: boolean;
-}
-
-export interface ComplianceLog {
-  id: string;
-  type: string;
-  inputText: string;
-  flaggedTerms: string[];
-  result: 'pass' | 'flagged';
-  timestamp: string;
 }
 
 export interface FlaggedItem {
@@ -274,7 +263,6 @@ export const TOP_PROBLEMS = [
   'Time management is a constant struggle',
   'No accountability structure',
   'Don\'t know my numbers',
-  'Compliance concerns',
   'Burnout / working too many hours',
 ];
 

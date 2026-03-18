@@ -18,7 +18,6 @@ import Transactions from "./pages/Transactions";
 import Financials from "./pages/Financials";
 import Library from "./pages/Library";
 import CultureOS from "./pages/CultureOS";
-import Compliance from "./pages/Compliance";
 import SettingsPage from "./pages/Settings";
 import Analytics from "./pages/Analytics";
 import TeamOS from "./pages/TeamOS";
@@ -29,7 +28,8 @@ import ClientPortal from "./pages/ClientPortal";
 import Referrals from "./pages/Referrals";
 import Reviews from "./pages/Reviews";
 import Certification from "./pages/Certification";
-import Tools from "./pages/Tools";
+import Tools from './pages/Tools';
+import Goals from './pages/Goals';
 function AppRoutes() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -60,9 +60,6 @@ function AppRoutes() {
       <Route path="/culture">
         <DashboardLayout><CultureOS /></DashboardLayout>
       </Route>
-      <Route path="/compliance">
-        <DashboardLayout><Compliance /></DashboardLayout>
-      </Route>
       <Route path="/analytics">
         <DashboardLayout><Analytics /></DashboardLayout>
       </Route>
@@ -92,6 +89,9 @@ function AppRoutes() {
       </Route>
       <Route path="/tools">
         <DashboardLayout><Tools /></DashboardLayout>
+      </Route>
+      <Route path="/goals">
+        <DashboardLayout><Goals /></DashboardLayout>
       </Route>
       <Route path="/settings">
         <DashboardLayout><SettingsPage /></DashboardLayout>

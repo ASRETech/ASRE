@@ -153,7 +153,7 @@ export default function SettingsPage() {
                 Data & Privacy
               </h3>
               <p className="text-xs text-muted-foreground">
-                Your data is stored securely in the AgentOS database. All compliance screenings use AI analysis.
+                Your data is stored securely in the AgentOS database.
                 You can export your data at any time.
               </p>
               <div className="mt-3">
@@ -349,7 +349,6 @@ export default function SettingsPage() {
                   { label: 'Lead follow-up reminders', description: 'Get notified when a lead needs attention' },
                   { label: 'Transaction milestone alerts', description: 'Alerts for upcoming deadlines' },
                   { label: 'Weekly performance digest', description: 'Summary of your weekly metrics' },
-                  { label: 'Compliance screening alerts', description: 'Notifications for flagged content' },
                   { label: 'Coach comments', description: 'Notifications when your coach leaves feedback' },
                   { label: 'Review requests', description: 'Reminders to request reviews after closings' },
                 ].map((item) => (

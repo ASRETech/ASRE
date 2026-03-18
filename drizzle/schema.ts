@@ -88,8 +88,6 @@ export const leads = mysqlTable("leads", {
   budget: int("budget").default(0),
   timeline: varchar("timeline", { length: 64 }),
   tags: json("tags"),
-  lastContactedAt: timestamp("lastContactedAt"),
-  nextAction: text("nextAction"),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -162,20 +160,7 @@ export const sops = mysqlTable("sops", {
 export type SOP = typeof sops.$inferSelect;
 export type InsertSOP = typeof sops.$inferInsert;
 
-/**
- * Compliance logs
- */
-export const complianceLogs = mysqlTable("compliance_logs", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  inputText: text("inputText").notNull(),
-  result: mysqlEnum("result", ["pass", "warning", "fail"]).notNull(),
-  flaggedItems: json("flaggedItems"),
-  timestamp: timestamp("timestamp").defaultNow().notNull(),
-});
 
-export type ComplianceLog = typeof complianceLogs.$inferSelect;
-export type InsertComplianceLog = typeof complianceLogs.$inferInsert;
 
 /**
  * Culture documents (mission, vision, values)
@@ -821,3 +806,214 @@ export const coachToolRecommendations = mysqlTable('coach_tool_recommendations',
 
 export type CoachToolRecommendation = typeof coachToolRecommendations.$inferSelect;
 export type InsertCoachToolRecommendation = typeof coachToolRecommendations.$inferInsert;
+
+// ─────────────────────────────────────────────────────────────
+// PHASE 11 — KW Model Library
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Agent's One Thing — weekly, monthly, annual focusing questions
+ */
+export const oneThing = mysqlTable('one_thing', {
+  id: int('id').autoincrement().primaryKey(),
+  userId: int('userId').notNull(),
+  period: mysqlEnum('period', ['daily', 'weekly', 'monthly', 'annual']).notNull(),
+  focusingQuestion: text('focusingQuestion').notNull(),
+  statement: text('statement').notNull(),
+  isActive: boolean('isActive').default(true).notNull(),
+  completedAt: timestamp('completedAt'),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export type OneThing = typeof oneThing.$inferSelect;
+export type InsertOneThing = typeof oneThing.$inferInsert;
+
+/**
+ * GPS quarterly planning — Goals, Priorities, Strategies
+ */
+export const gpsPlans = mysqlTable('gps_plans', {
+  id: int('id').autoincrement().primaryKey(),
+  planId: varchar('planId', { length: 32 }).notNull().unique(),
+  userId: int('userId').notNull(),
+  quarter: varchar('quarter', { length: 7 }).notNull(),
+  goal: text('goal').notNull(),
+  priority1: text('priority1'),
+  priority1Strategies: json('priority1Strategies'),
+  priority2: text('priority2'),
+  priority2Strategies: json('priority2Strategies'),
+  priority3: text('priority3'),
+  priority3Strategies: json('priority3Strategies'),
+  reviewDate: timestamp('reviewDate'),
+  isComplete: boolean('isComplete').default(false).notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type GpsPlan = typeof gpsPlans.$inferSelect;
+export type InsertGpsPlan = typeof gpsPlans.$inferInsert;
+
+/**
+ * 8x8 contact enrollment — 8 touches in 8 weeks
+ */
+export const eightByEight = mysqlTable('eight_by_eight', {
+  id: int('id').autoincrement().primaryKey(),
+  enrollmentId: varchar('enrollmentId', { length: 32 }).notNull().unique(),
+  userId: int('userId').notNull(),
+  leadId: varchar('leadId', { length: 32 }).notNull(),
+  startedAt: timestamp('startedAt').defaultNow().notNull(),
+  currentTouch: int('currentTouch').default(1).notNull(),
+  completedTouches: json('completedTouches'),
+  status: mysqlEnum('eightByEightStatus', [
+    'active', 'complete', 'paused', 'converted',
+  ]).default('active').notNull(),
+  completedAt: timestamp('completedAt'),
+});
+
+export type EightByEight = typeof eightByEight.$inferSelect;
+export type InsertEightByEight = typeof eightByEight.$inferInsert;
+
+/**
+ * 33 Touch annual relationship plan assignments
+ */
+export const thirtyThreeTouch = mysqlTable('thirty_three_touch', {
+  id: int('id').autoincrement().primaryKey(),
+  userId: int('userId').notNull(),
+  leadId: varchar('leadId', { length: 32 }).notNull(),
+  year: int('year').notNull(),
+  touchesCompleted: int('touchesCompleted').default(0).notNull(),
+  lastTouchDate: timestamp('lastTouchDate'),
+  nextTouchDue: timestamp('nextTouchDue'),
+  touchLog: json('touchLog'),
+  isActive: boolean('isActive').default(true).notNull(),
+});
+
+export type ThirtyThreeTouch = typeof thirtyThreeTouch.$inferSelect;
+export type InsertThirtyThreeTouch = typeof thirtyThreeTouch.$inferInsert;
+
+/**
+ * Bold goal — annual transformative goal
+ */
+export const boldGoal = mysqlTable('bold_goal', {
+  id: int('id').autoincrement().primaryKey(),
+  userId: int('userId').notNull(),
+  year: int('year').notNull(),
+  goal: text('goal').notNull(),
+  whyItMatters: text('whyItMatters'),
+  measurableOutcome: text('measurableOutcome'),
+  targetDate: timestamp('targetDate'),
+  progressNotes: json('progressNotes'),
+  isAchieved: boolean('isAchieved').default(false).notNull(),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export type BoldGoal = typeof boldGoal.$inferSelect;
+export type InsertBoldGoal = typeof boldGoal.$inferInsert;
+
+/**
+ * Team member TTSA profiles — Talent, Training, Systems, Accountability
+ */
+export const ttsaProfiles = mysqlTable('ttsa_profiles', {
+  id: int('id').autoincrement().primaryKey(),
+  userId: int('userId').notNull(),
+  teamMemberName: varchar('teamMemberName', { length: 128 }).notNull(),
+  role: varchar('role', { length: 64 }),
+  talentScore: int('talentScore'),
+  talentNotes: text('talentNotes'),
+  trainingStatus: mysqlEnum('trainingStatus', [
+    'not_started', 'in_progress', 'complete', 'needs_refresh',
+  ]),
+  currentTraining: varchar('currentTraining', { length: 256 }),
+  systemsOwned: json('systemsOwned'),
+  accountabilityMethod: varchar('accountabilityMethod', { length: 256 }),
+  gwcGetsIt: boolean('gwcGetsIt'),
+  gwcWantsIt: boolean('gwcWantsIt'),
+  gwcCapacity: boolean('gwcCapacity'),
+  lastReviewDate: timestamp('lastReviewDate'),
+  careerVision: text('careerVision'),
+  discProfile: mysqlEnum('discProfile', ['D', 'I', 'S', 'C', 'DI', 'DC', 'IS', 'SC']),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type TtsaProfile = typeof ttsaProfiles.$inferSelect;
+export type InsertTtsaProfile = typeof ttsaProfiles.$inferInsert;
+
+/**
+ * Team economic model — separate from individual economic model
+ */
+export const teamEconomicModel = mysqlTable('team_economic_model', {
+  id: int('id').autoincrement().primaryKey(),
+  userId: int('userId').notNull().unique(),
+  teamGciGoal: decimal('teamGciGoal', { precision: 12, scale: 2 }),
+  avgSalePrice: decimal('avgSalePrice', { precision: 12, scale: 2 }),
+  teamCommissionRate: decimal('teamCommissionRate', { precision: 5, scale: 4 }),
+  teamSplitToAgents: decimal('teamSplitToAgents', { precision: 5, scale: 4 }),
+  leaderGciTarget: decimal('leaderGciTarget', { precision: 12, scale: 2 }),
+  staffingCosts: decimal('staffingCosts', { precision: 12, scale: 2 }),
+  marketingBudget: decimal('marketingBudget', { precision: 12, scale: 2 }),
+  techBudget: decimal('techBudget', { precision: 12, scale: 2 }),
+  otherExpenses: decimal('otherExpenses', { precision: 12, scale: 2 }),
+  targetNetProfit: decimal('targetNetProfit', { precision: 12, scale: 2 }),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type TeamEconomicModel = typeof teamEconomicModel.$inferSelect;
+export type InsertTeamEconomicModel = typeof teamEconomicModel.$inferInsert;
+
+/**
+ * Coaching session live runner state
+ */
+export const sessionRunnerState = mysqlTable('session_runner_state', {
+  id: int('id').autoincrement().primaryKey(),
+  sessionId: varchar('sessionId', { length: 32 }).notNull().unique(),
+  currentSegment: int('currentSegment').default(0).notNull(),
+  segmentStartedAt: timestamp('segmentStartedAt'),
+  notes: json('notes'),
+  isComplete: boolean('isComplete').default(false).notNull(),
+  updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
+});
+
+export type SessionRunnerState = typeof sessionRunnerState.$inferSelect;
+export type InsertSessionRunnerState = typeof sessionRunnerState.$inferInsert;
+
+/**
+ * Accountability ladder assessments — per agent per coaching session
+ */
+export const accountabilityAssessments = mysqlTable('accountability_assessments', {
+  id: int('id').autoincrement().primaryKey(),
+  assessmentId: varchar('assessmentId', { length: 32 }).notNull().unique(),
+  coachId: int('coachId').notNull(),
+  agentId: int('agentId').notNull(),
+  sessionId: varchar('sessionId', { length: 32 }),
+  commitmentDescription: text('commitmentDescription'),
+  ladderLevel: mysqlEnum('ladderLevel', [
+    'blame', 'justification', 'shame',
+    'obligation', 'responsibility', 'accountability', 'ownership',
+  ]).notNull(),
+  coachNotes: text('coachNotes'),
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+});
+
+export type AccountabilityAssessment = typeof accountabilityAssessments.$inferSelect;
+export type InsertAccountabilityAssessment = typeof accountabilityAssessments.$inferInsert;
+
+/**
+ * KW model reference library — structured content for Knowledge Library
+ */
+export const modelLibrary = mysqlTable('model_library', {
+  id: int('id').autoincrement().primaryKey(),
+  modelId: varchar('modelId', { length: 64 }).notNull().unique(),
+  title: varchar('title', { length: 256 }).notNull(),
+  category: mysqlEnum('modelCategory', [
+    'mrea_core', 'goal_setting', 'lead_generation',
+    'business_philosophy', 'team_leadership', 'coaching_accountability',
+  ]).notNull(),
+  summary: text('summary').notNull(),
+  content: json('content'),
+  relevantLevels: json('relevantLevels'),
+  relatedModels: json('relatedModels'),
+  sortOrder: int('sortOrder').default(100),
+  isActive: boolean('isActive').default(true).notNull(),
+});
+
+export type ModelLibraryEntry = typeof modelLibrary.$inferSelect;
+export type InsertModelLibraryEntry = typeof modelLibrary.$inferInsert;

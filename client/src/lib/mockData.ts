@@ -1,4 +1,4 @@
-import type { Lead, Transaction, FinancialEntry, SOP, ComplianceLog, LevelDeliverable } from './store';
+import type { Lead, Transaction, FinancialEntry, SOP, LevelDeliverable } from './store';
 import { LEVELS, PIPELINE_STAGES, LEAD_SOURCES } from './store';
 
 const firstNames = ['Sarah', 'Michael', 'Jennifer', 'David', 'Emily', 'James', 'Ashley', 'Robert', 'Jessica', 'William', 'Amanda', 'Christopher', 'Stephanie', 'Daniel', 'Nicole', 'Matthew', 'Lisa', 'Andrew', 'Rachel', 'Joshua'];
@@ -41,8 +41,6 @@ export function generateMockLeads(count: number = 25): Lead[] {
       budget: randomBetween(150, 800) * 1000,
       timeline: randomFrom(['0-3 months', '3-6 months', '6-12 months', '12+ months']),
       tags: [],
-      lastContactedAt: randomDate(30),
-      nextAction: randomFrom(['Follow up call', 'Send listing info', 'Schedule showing', 'Check in', 'Send market update']),
       notes: '',
       createdAt: randomDate(90),
     };

@@ -2,9 +2,9 @@ import { useApp } from '@/contexts/AppContext';
 import { LEVELS } from '@/lib/store';
 import {
   Map, Target, LayoutDashboard, Users, FileText,
-  DollarSign, BookOpen, Heart, Shield, Settings,
+  DollarSign, BookOpen, Heart, Settings,
   Zap, BarChart3, UsersRound, GraduationCap,
-  Handshake, Star, UserPlus, Award, Wrench,
+  Handshake, Star, UserPlus, Award, Wrench, Crosshair,
 } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
 import { trpc } from '@/lib/trpc';
@@ -28,6 +28,12 @@ const NAV_ITEMS = [
     ],
   },
   {
+    section: 'GOALS',
+    items: [
+      { label: 'Goal Center', icon: Crosshair, path: '/goals' },
+    ],
+  },
+  {
     section: 'TEAM',
     items: [
       { label: 'Team OS', icon: UsersRound, path: '/team' },
@@ -46,9 +52,8 @@ const NAV_ITEMS = [
   {
     section: 'FOUNDATION',
     items: [
-      { label: 'Knowledge Library', icon: BookOpen, path: '/library' },
+      { label: 'Model Library', icon: BookOpen, path: '/library' },
       { label: 'Culture OS', icon: Heart, path: '/culture' },
-      { label: 'Compliance', icon: Shield, path: '/compliance' },
       { label: 'AI Tools', icon: Wrench, path: '/tools' },
     ],
   },

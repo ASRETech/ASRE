@@ -17,9 +17,9 @@ const PAGE_TITLES: Record<string, string> = {
   '/reviews': 'Reviews',
   '/coach': 'Coach Hub',
   '/certification': 'Coach Certification',
-  '/library': 'Knowledge Library',
+  '/library': 'Model Library',
+  '/goals': 'Goal Center',
   '/culture': 'Culture OS',
-  '/compliance': 'Compliance',
   '/tools': 'AI Tools Directory',
   '/settings': 'Settings',
 };

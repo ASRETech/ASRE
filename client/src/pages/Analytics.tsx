@@ -376,19 +376,17 @@ function HealthTab() {
     const d7 = 7 * 24 * 60 * 60 * 1000;
 
     const leadGen = Math.min(25, leads.filter(l => new Date(l.createdAt).getTime() > now - d30).length * 2);
-    const followUp = Math.min(25, leads.filter(l => l.lastContactedAt && new Date(l.lastContactedAt).getTime() > now - d7).length / Math.max(1, leads.length) * 25);
+    const goalScore = Math.min(25, deliverables.filter(d => d.isComplete && ['economic-model', 'lead-gen-plan', '411-tracker'].includes(d.id)).length * 8);
     const txScore = Math.min(20, transactions.filter(t => t.status !== 'closed').length * 4);
-    const compScore = Math.min(15, state.complianceLogs.length * 3);
-    const delScore = Math.min(15, deliverables.filter(d => d.isComplete).length * 2);
+    const delScore = Math.min(30, deliverables.filter(d => d.isComplete).length * 3);
 
     return [
       { label: 'Lead Generation', score: Math.round(leadGen), max: 25 },
-      { label: 'Follow-Up', score: Math.round(followUp), max: 25 },
+      { label: 'Goal Setting', score: Math.round(goalScore), max: 25 },
       { label: 'Transactions', score: Math.round(txScore), max: 20 },
-      { label: 'Compliance', score: Math.round(compScore), max: 15 },
-      { label: 'Deliverables', score: Math.round(delScore), max: 15 },
+      { label: 'Deliverables', score: Math.round(delScore), max: 30 },
     ];
-  }, [leads, transactions, deliverables, state.complianceLogs]);
+  }, [leads, transactions, deliverables]);
 
   const totalScore = dimensions.reduce((s, d) => s + d.score, 0);
   const scoreColor = totalScore >= 70 ? '#22c55e' : totalScore >= 50 ? '#f59e0b' : '#ef4444';

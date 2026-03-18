@@ -13,7 +13,7 @@ import {
   DollarSign, Users, TrendingUp, Activity,
   Phone, Calendar, FileText, ChevronRight,
   ArrowUpRight, ArrowDownRight, MapPin,
-  Mail, Shield, BarChart3, RefreshCw, Loader2,
+  Mail, BarChart3, RefreshCw, Loader2,
   CheckSquare, Sparkles
 } from 'lucide-react';
 import { Link } from 'wouter';
@@ -373,8 +373,8 @@ export default function Dashboard() {
             </div>
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">DB Contacts Touched</span>
-                <span className="font-mono text-sm text-foreground">{leads.filter(l => new Date(l.lastContactedAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length}</span>
+                <span className="text-xs text-muted-foreground">Leads Added (30 days)</span>
+                <span className="font-mono text-sm text-foreground">{leads.filter(l => new Date(l.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-muted-foreground">Active Leads</span>
@@ -393,28 +393,7 @@ export default function Dashboard() {
           {/* Coaching Commitments (Phase 6) */}
           <CommitmentsWidget />
 
-          {/* Compliance */}
-          <Card className="p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <Shield className="w-4 h-4 text-muted-foreground" />
-              <h3 className="font-display text-sm font-semibold text-foreground">Compliance</h3>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">Status</span>
-                <Badge variant="outline" className="text-emerald-500 border-emerald-500/30 text-[10px] font-mono">COMPLIANT</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">Screens Run</span>
-                <span className="font-mono text-sm text-foreground">{state.complianceLogs.length}</span>
-              </div>
-              <Link href="/compliance" className="block">
-                <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground mt-1 h-7">
-                  View Audit Trail <ChevronRight className="w-3 h-3 ml-1" />
-                </Button>
-              </Link>
-            </div>
-          </Card>
+
         </div>
       </div>
     </div>

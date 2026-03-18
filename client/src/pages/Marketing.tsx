@@ -1,4 +1,4 @@
-// Marketing / Content Studio — AI content generation with auto-compliance screening
+// Marketing / Content Studio — AI content generation
 import { useState, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { trpc } from '@/lib/trpc';
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Sparkles, Shield, CheckCircle, AlertTriangle, Copy, RefreshCw,
+  Sparkles, Copy, RefreshCw,
   Loader2, Megaphone, CalendarDays, Database, Magnet, FileText,
   Mail, Share2, Users, TrendingUp
 } from 'lucide-react';
@@ -66,16 +66,11 @@ function ContentStudioTab() {
   const [context, setContext] = useState('');
   const [generated, setGenerated] = useState('');
   const [generating, setGenerating] = useState(false);
-  const [screening, setScreening] = useState(false);
-  const [screenResult, setScreenResult] = useState<{ result: string; flaggedItems: any[]; summary: string } | null>(null);
-
   const coachMutation = trpc.coaching.ask.useMutation();
-  const scanMutation = trpc.compliance.scan.useMutation();
 
   const generate = () => {
     setGenerating(true);
     setGenerated('');
-    setScreenResult(null);
 
     coachMutation.mutate({
       context: 'content-generation',
@@ -97,15 +92,6 @@ Return ONLY the content. No explanation or preamble.`,
       onSuccess: (data) => {
         setGenerated(data.response);
         setGenerating(false);
-        // Auto-screen
-        setScreening(true);
-        scanMutation.mutate(
-          { inputText: data.response },
-          {
-            onSuccess: (scanData) => { setScreenResult(scanData as any); setScreening(false); },
-            onError: () => setScreening(false),
-          }
-        );
       },
       onError: () => { setGenerating(false); toast.error('Generation failed'); },
     });
@@ -211,25 +197,7 @@ Return ONLY the content. No explanation or preamble.`,
         <Card className="p-6">
           <div className="flex items-center justify-between mb-3">
             <h4 className="font-display text-sm font-semibold">Generated Content</h4>
-            {/* Compliance Badge */}
-            {screening && (
-              <Badge variant="outline" className="text-[10px] font-mono text-amber-500 border-amber-500/20">
-                <Loader2 className="w-2.5 h-2.5 mr-1 animate-spin" /> Screening...
-              </Badge>
-            )}
-            {screenResult && !screening && (
-              <Badge variant="outline" className={`text-[10px] font-mono ${
-                screenResult.result === 'pass'
-                  ? 'text-emerald-500 border-emerald-500/20'
-                  : 'text-red-500 border-red-500/20'
-              }`}>
-                {screenResult.result === 'pass' ? (
-                  <><CheckCircle className="w-2.5 h-2.5 mr-1" /> Compliant</>
-                ) : (
-                  <><AlertTriangle className="w-2.5 h-2.5 mr-1" /> Issues Found</>
-                )}
-              </Badge>
-            )}
+
           </div>
 
           {generating ? (
@@ -271,22 +239,7 @@ Return ONLY the content. No explanation or preamble.`,
           )}
         </Card>
 
-        {/* Flagged items */}
-        {screenResult && screenResult.flaggedItems.length > 0 && (
-          <Card className="p-4 border-red-500/20">
-            <h4 className="text-xs font-semibold text-red-500 mb-2 flex items-center gap-1">
-              <AlertTriangle className="w-3.5 h-3.5" /> Compliance Issues
-            </h4>
-            <div className="space-y-1.5">
-              {screenResult.flaggedItems.map((item: any, i: number) => (
-                <div key={i} className="text-xs p-2 rounded bg-red-500/5 border border-red-500/10">
-                  <span className="font-medium text-foreground">"{item.text}"</span>
-                  <span className="text-muted-foreground"> — {item.reason}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
+
       </div>
     </div>
   );
@@ -346,84 +299,80 @@ function CalendarTab() {
 
 // ─── Tab 3: Database Marketing ───────────────────────────────────────
 function DatabaseMarketingTab({ leads }: { leads: any[] }) {
-  const now = Date.now();
-  const d90 = 90 * 24 * 60 * 60 * 1000;
-  const d180 = 180 * 24 * 60 * 60 * 1000;
+  const [dbSize, setDbSize] = useState(100);
 
-  const hot = leads.filter(l => {
-    const lc = new Date(l.lastContactedAt).getTime();
-    return (now - lc) < d90 && !['Closed', 'Dead'].includes(l.stage);
-  });
-  const warm = leads.filter(l => {
-    const lc = new Date(l.lastContactedAt).getTime();
-    return (now - lc) >= d90 && (now - lc) < d180 && !['Closed', 'Dead'].includes(l.stage);
-  });
-  const cold = leads.filter(l => {
-    const lc = new Date(l.lastContactedAt).getTime();
-    return (now - lc) >= d180 && !['Closed', 'Dead'].includes(l.stage);
-  });
-  const pastClients = leads.filter(l => l.stage === 'Closed');
-  const sphere = leads.filter(l => l.source === 'Sphere of Influence');
-
-  const segments = [
-    { label: 'Hot', count: hot.length, color: 'bg-red-500', desc: '< 90 days to transact' },
-    { label: 'Warm', count: warm.length, color: 'bg-amber-500', desc: '90-180 days' },
-    { label: 'Cold', count: cold.length, color: 'bg-blue-500', desc: '180+ days' },
-    { label: 'Past Clients', count: pastClients.length, color: 'bg-emerald-500', desc: 'Previous closings' },
-    { label: 'Sphere', count: sphere.length, color: 'bg-violet-500', desc: 'Sphere of Influence' },
-  ];
-
-  // 36:12:3 calculation
-  const dbSize = leads.length;
-  const projectedTx = Math.round(dbSize * 0.12);
+  // 36:12:3 calculator — manual input, honest planning tool
+  const contactsPerYear = dbSize * 36;
+  const contactsPerWeek = Math.ceil(contactsPerYear / 52);
+  const projectedTx = Math.round(dbSize * 0.03);
   const avgGCI = 9500;
   const projectedIncome = projectedTx * avgGCI;
 
+  const segments = [
+    { label: 'Past Clients', count: leads.filter(l => l.stage === 'Closed').length, color: 'bg-emerald-500', desc: 'Previous closings in pipeline' },
+    { label: 'Sphere', count: leads.filter(l => l.source === 'Sphere of Influence').length, color: 'bg-violet-500', desc: 'Sphere of Influence tagged' },
+    { label: 'Active', count: leads.filter(l => !['Closed', 'Dead'].includes(l.stage)).length, color: 'bg-blue-500', desc: 'Active pipeline records' },
+  ];
+
   return (
     <div className="space-y-6">
-      {/* Segments */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      {/* Pipeline segments — based on stage, not contact timing */}
+      <div className="grid grid-cols-3 gap-3">
         {segments.map(seg => (
-          <motion.div key={seg.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <Card className="p-4 text-center">
-              <div className={`w-3 h-3 rounded-full ${seg.color} mx-auto mb-2`} />
-              <div className="font-mono text-2xl font-bold text-foreground">{seg.count}</div>
-              <div className="text-xs font-medium text-foreground">{seg.label}</div>
-              <div className="text-[10px] text-muted-foreground">{seg.desc}</div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-[10px] mt-2 h-6 w-full"
-                onClick={() => toast.info('Campaign sending coming soon')}
-              >
-                Send Campaign
-              </Button>
-            </Card>
-          </motion.div>
+          <Card key={seg.label} className="p-4 text-center">
+            <div className={`w-3 h-3 rounded-full ${seg.color} mx-auto mb-2`} />
+            <div className="font-mono text-2xl font-bold text-foreground">{seg.count}</div>
+            <div className="text-xs font-medium text-foreground">{seg.label}</div>
+            <div className="text-[10px] text-muted-foreground">{seg.desc}</div>
+          </Card>
         ))}
       </div>
 
-      {/* 36:12:3 Model */}
+      {/* 36:12:3 Planning Calculator — honest: agents enter DB size, plan in Command */}
       <Card className="p-6">
-        <h3 className="font-display text-lg font-semibold mb-4 flex items-center gap-2">
+        <h3 className="font-display text-lg font-semibold mb-2 flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-[#DC143C]" />
-          36:12:3 Database Income Model
+          36:12:3 Database Planning Calculator
         </h3>
+        <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+          Enter your full Met database size (managed in Command).
+          AgentOS calculates the contact cadence and projected production
+          the 36:12:3 model recommends.
+        </p>
         <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-            <span className="text-sm text-muted-foreground">Database Size</span>
-            <span className="font-mono text-lg font-bold text-foreground">{dbSize}</span>
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-muted-foreground w-36">Your database size</label>
+            <input
+              type="number"
+              value={dbSize}
+              onChange={e => setDbSize(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-28 h-9 border border-border rounded-lg px-3 text-sm font-mono bg-background"
+            />
+            <span className="text-xs text-muted-foreground">contacts in Command</span>
           </div>
-          <div className="flex items-center justify-center text-muted-foreground text-xs">× 12% conversion rate</div>
           <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-            <span className="text-sm text-muted-foreground">Projected Transactions</span>
+            <span className="text-sm text-muted-foreground">Contacts needed per year (36×)</span>
+            <span className="font-mono text-lg font-bold text-foreground">{contactsPerYear.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+            <span className="text-sm text-muted-foreground">Weekly contact target</span>
+            <span className="font-mono text-lg font-bold text-[#DC143C]">{contactsPerWeek} contacts/week</span>
+          </div>
+          <div className="flex items-center justify-center text-muted-foreground text-xs">
+            → at 36:12:3 model rate (3 transactions per 100 people)
+          </div>
+          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+            <span className="text-sm text-muted-foreground">Projected annual transactions</span>
             <span className="font-mono text-lg font-bold text-foreground">{projectedTx}</span>
           </div>
-          <div className="flex items-center justify-center text-muted-foreground text-xs">× ${avgGCI.toLocaleString()} avg GCI</div>
           <div className="flex items-center justify-between p-3 rounded-lg bg-[#DC143C]/5 border border-[#DC143C]/10">
-            <span className="text-sm font-medium text-foreground">Projected Annual GCI</span>
+            <span className="text-sm font-medium text-foreground">Projected annual GCI</span>
             <span className="font-mono text-xl font-bold text-[#DC143C]">${projectedIncome.toLocaleString()}</span>
           </div>
+          <p className="text-[10px] text-muted-foreground leading-relaxed pt-1">
+            Execute your 36:12:3 contact plan in Command or your preferred CRM.
+            Use the 4-1-1 in your Goal Center to track weekly contact activity against this target.
+          </p>
         </div>
       </Card>
     </div>

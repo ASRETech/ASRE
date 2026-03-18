@@ -8,7 +8,6 @@ import {
   transactions, InsertTransaction,
   financialEntries, InsertFinancialEntry,
   sops, InsertSOP,
-  complianceLogs, InsertComplianceLog,
   cultureDocs, InsertCultureDoc,
   aiCoachingLogs, InsertAICoachingLog,
   // Phase 4
@@ -35,6 +34,17 @@ import {
   toolUpvotes,
   toolSubmissions, InsertToolSubmission,
   coachToolRecommendations, InsertCoachToolRecommendation,
+  // Phase 11
+  oneThing, InsertOneThing,
+  gpsPlans, InsertGpsPlan,
+  eightByEight, InsertEightByEight,
+  thirtyThreeTouch, InsertThirtyThreeTouch,
+  boldGoal, InsertBoldGoal,
+  ttsaProfiles, InsertTtsaProfile,
+  teamEconomicModel, InsertTeamEconomicModel,
+  sessionRunnerState, InsertSessionRunnerState,
+  accountabilityAssessments, InsertAccountabilityAssessment,
+  modelLibrary, InsertModelLibraryEntry,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -286,21 +296,6 @@ export async function updateSOP(userId: number, sopId: string, updates: Partial<
   const db = await getDb();
   if (!db) return;
   await db.update(sops).set(updates).where(and(eq(sops.userId, userId), eq(sops.sopId, sopId)));
-}
-
-// ============================================================
-// COMPLIANCE
-// ============================================================
-export async function getUserComplianceLogs(userId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  return db.select().from(complianceLogs).where(eq(complianceLogs.userId, userId)).orderBy(desc(complianceLogs.timestamp));
-}
-
-export async function insertComplianceLog(data: InsertComplianceLog) {
-  const db = await getDb();
-  if (!db) return;
-  await db.insert(complianceLogs).values(data);
 }
 
 // ============================================================
@@ -1177,4 +1172,332 @@ export async function getAgentToolRecommendations(agentId: number) {
     const coach = await getAgentProfile(rec.coachId);
     return { ...rec, tool, coach };
   }));
+}
+
+// ============================================================
+// PHASE 11 — KW MODEL LIBRARY
+// ============================================================
+
+// ── One Thing ──────────────────────────────────────────────
+export async function getUserOneThings(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(oneThing)
+    .where(and(eq(oneThing.userId, userId), eq(oneThing.isActive, true)))
+    .orderBy(asc(oneThing.period));
+}
+
+export async function createOneThing(data: InsertOneThing) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(oneThing).values(data);
+}
+
+export async function deactivateOneThing(userId: number, period: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(oneThing)
+    .set({ isActive: false })
+    .where(and(eq(oneThing.userId, userId), eq(oneThing.period, period as InsertOneThing['period'])));
+}
+
+export async function completeOneThing(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(oneThing)
+    .set({ completedAt: new Date() })
+    .where(and(eq(oneThing.id, id), eq(oneThing.userId, userId)));
+}
+
+// ── GPS Plans ──────────────────────────────────────────────
+export async function getUserGPSPlans(userId: number, quarter?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(gpsPlans.userId, userId)];
+  if (quarter) conditions.push(eq(gpsPlans.quarter, quarter));
+  return db.select().from(gpsPlans)
+    .where(and(...conditions))
+    .orderBy(desc(gpsPlans.createdAt));
+}
+
+export async function upsertGPSPlan(data: InsertGpsPlan) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(gpsPlans)
+    .where(eq(gpsPlans.planId, data.planId))
+    .limit(1);
+  if (existing.length > 0) {
+    await db.update(gpsPlans).set(data).where(eq(gpsPlans.planId, data.planId));
+  } else {
+    await db.insert(gpsPlans).values(data);
+  }
+}
+
+// ── Bold Goal ──────────────────────────────────────────────
+export async function getUserBoldGoal(userId: number, year: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(boldGoal)
+    .where(and(eq(boldGoal.userId, userId), eq(boldGoal.year, year)))
+    .limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function upsertBoldGoal(data: InsertBoldGoal) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(boldGoal)
+    .where(and(eq(boldGoal.userId, data.userId), eq(boldGoal.year, data.year)))
+    .limit(1);
+  if (existing.length > 0) {
+    await db.update(boldGoal).set(data)
+      .where(and(eq(boldGoal.userId, data.userId), eq(boldGoal.year, data.year)));
+  } else {
+    await db.insert(boldGoal).values(data);
+  }
+}
+
+// ── 8x8 ────────────────────────────────────────────────────
+export async function getUserActive8x8(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(eightByEight)
+    .where(and(eq(eightByEight.userId, userId), eq(eightByEight.status, 'active')))
+    .orderBy(desc(eightByEight.startedAt));
+}
+
+export async function createEightByEight(data: InsertEightByEight) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(eightByEight).values(data);
+}
+
+export async function completeEightByEightTouch(
+  enrollmentId: string,
+  userId: number,
+  touchNumber: number,
+  note?: string
+) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(eightByEight)
+    .where(and(eq(eightByEight.enrollmentId, enrollmentId), eq(eightByEight.userId, userId)))
+    .limit(1);
+  if (existing.length === 0) return;
+  const current = existing[0];
+  const completedTouches = (current.completedTouches as Array<{ touch: number; note?: string; date: string }>) || [];
+  completedTouches.push({ touch: touchNumber, note, date: new Date().toISOString() });
+  const nextTouch = touchNumber + 1;
+  const isComplete = nextTouch > 8;
+  await db.update(eightByEight)
+    .set({
+      completedTouches,
+      currentTouch: isComplete ? 8 : nextTouch,
+      status: isComplete ? 'complete' : 'active',
+      completedAt: isComplete ? new Date() : undefined,
+    })
+    .where(eq(eightByEight.enrollmentId, enrollmentId));
+}
+
+// ── 33 Touch ───────────────────────────────────────────────
+export async function getUserThirtyThreeTouchStatus(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(thirtyThreeTouch)
+    .where(and(eq(thirtyThreeTouch.userId, userId), eq(thirtyThreeTouch.isActive, true)));
+}
+
+export async function createThirtyThreeTouch(data: InsertThirtyThreeTouch) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(thirtyThreeTouch).values(data);
+}
+
+export async function logThirtyThreeTouch(
+  userId: number,
+  leadId: string,
+  entry: { type: string; date: Date; note?: string }
+) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(thirtyThreeTouch)
+    .where(and(
+      eq(thirtyThreeTouch.userId, userId),
+      eq(thirtyThreeTouch.leadId, leadId),
+      eq(thirtyThreeTouch.isActive, true)
+    ))
+    .limit(1);
+  if (existing.length === 0) return;
+  const current = existing[0];
+  const touchLog = (current.touchLog as Array<typeof entry>) || [];
+  touchLog.push(entry);
+  const nextTouchDue = new Date(Date.now() + 11 * 24 * 60 * 60 * 1000);
+  await db.update(thirtyThreeTouch)
+    .set({
+      touchesCompleted: current.touchesCompleted + 1,
+      lastTouchDate: entry.date,
+      nextTouchDue,
+      touchLog,
+    })
+    .where(and(eq(thirtyThreeTouch.userId, userId), eq(thirtyThreeTouch.leadId, leadId)));
+}
+
+// ── TTSA Profiles ──────────────────────────────────────────
+export async function getUserTTSAProfiles(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(ttsaProfiles)
+    .where(eq(ttsaProfiles.userId, userId))
+    .orderBy(asc(ttsaProfiles.teamMemberName));
+}
+
+export async function upsertTTSA(data: Partial<InsertTtsaProfile> & { userId: number; teamMemberName: string }) {
+  const db = await getDb();
+  if (!db) return;
+  if (data.id) {
+    await db.update(ttsaProfiles).set(data).where(and(eq(ttsaProfiles.id, data.id), eq(ttsaProfiles.userId, data.userId)));
+  } else {
+    await db.insert(ttsaProfiles).values(data as InsertTtsaProfile);
+  }
+}
+
+export async function deleteTTSAProfile(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(ttsaProfiles).where(and(eq(ttsaProfiles.id, id), eq(ttsaProfiles.userId, userId)));
+}
+
+// ── Team Economic Model ────────────────────────────────────
+export async function getTeamEconomicModel(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(teamEconomicModel)
+    .where(eq(teamEconomicModel.userId, userId))
+    .limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function upsertTeamEconomicModel(data: InsertTeamEconomicModel) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await getTeamEconomicModel(data.userId);
+  if (existing) {
+    await db.update(teamEconomicModel).set(data).where(eq(teamEconomicModel.userId, data.userId));
+  } else {
+    await db.insert(teamEconomicModel).values(data);
+  }
+}
+
+// ── Session Runner ─────────────────────────────────────────
+export async function initSessionRunner(data: InsertSessionRunnerState) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(sessionRunnerState)
+    .where(eq(sessionRunnerState.sessionId, data.sessionId))
+    .limit(1);
+  if (existing.length > 0) {
+    await db.update(sessionRunnerState)
+      .set({ currentSegment: 0, segmentStartedAt: new Date(), isComplete: false, notes: data.notes })
+      .where(eq(sessionRunnerState.sessionId, data.sessionId));
+  } else {
+    await db.insert(sessionRunnerState).values(data);
+  }
+}
+
+export async function advanceSessionSegment(sessionId: string, noteForCurrentSegment?: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const existing = await db.select().from(sessionRunnerState)
+    .where(eq(sessionRunnerState.sessionId, sessionId))
+    .limit(1);
+  if (existing.length === 0) return null;
+  const current = existing[0];
+  const notes = (current.notes as Record<string, string>) || {};
+  if (noteForCurrentSegment) {
+    notes[`segment_${current.currentSegment}`] = noteForCurrentSegment;
+  }
+  const nextSegment = current.currentSegment + 1;
+  const isComplete = nextSegment >= 6; // 6 segments total
+  await db.update(sessionRunnerState)
+    .set({
+      currentSegment: isComplete ? 5 : nextSegment,
+      segmentStartedAt: new Date(),
+      notes,
+      isComplete,
+    })
+    .where(eq(sessionRunnerState.sessionId, sessionId));
+  return { currentSegment: isComplete ? 5 : nextSegment, isComplete };
+}
+
+export async function getSessionRunnerState(sessionId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(sessionRunnerState)
+    .where(eq(sessionRunnerState.sessionId, sessionId))
+    .limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+// ── Accountability Assessments ─────────────────────────────
+export async function createAccountabilityAssessment(data: InsertAccountabilityAssessment) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(accountabilityAssessments).values(data);
+}
+
+export async function getAgentAccountabilityHistory(agentId: number, coachId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(accountabilityAssessments)
+    .where(and(
+      eq(accountabilityAssessments.agentId, agentId),
+      eq(accountabilityAssessments.coachId, coachId)
+    ))
+    .orderBy(desc(accountabilityAssessments.createdAt));
+}
+
+// ── Model Library ──────────────────────────────────────────
+export async function getModelLibrary(category?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(modelLibrary.isActive, true)];
+  if (category) conditions.push(eq(modelLibrary.category, category as InsertModelLibraryEntry['category']));
+  return db.select().from(modelLibrary)
+    .where(and(...conditions))
+    .orderBy(asc(modelLibrary.sortOrder));
+}
+
+export async function getModel(modelId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(modelLibrary)
+    .where(eq(modelLibrary.modelId, modelId))
+    .limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+// ── Database Health Score ──────────────────────────────────
+export async function getDatabaseHealthScore(userId: number) {
+  const leads = await getUserLeads(userId);
+  const thirtyThreeTouchEnrolled = await getUserThirtyThreeTouchStatus(userId);
+  const eightByEightActive = await getUserActive8x8(userId);
+
+  const inProgram = thirtyThreeTouchEnrolled.length + eightByEightActive.length;
+  const programCoverage = leads.length > 0 ? inProgram / leads.length : 0;
+
+  const healthScore = Math.min(100,
+    Math.round(
+      (programCoverage * 40) +
+      (leads.length > 50 ? 20 : leads.length / 50 * 20) +
+      (eightByEightActive.length > 0 ? 20 : 0) +
+      (thirtyThreeTouchEnrolled.length > 0 ? 20 : 0)
+    )
+  );
+
+  return {
+    totalLeads: leads.length,
+    inProgram,
+    programCoverage: Math.round(programCoverage * 100),
+    healthScore,
+  };
 }

@@ -124,8 +124,6 @@ Return ONLY the message text. Write in first person as the agent.`,
       budget: parseInt(newLead.budget) || 0,
       timeline: newLead.timeline || 'Not specified',
       tags: [],
-      lastContactedAt: new Date().toISOString(),
-      nextAction: 'Initial contact',
       notes: newLead.notes,
       createdAt: new Date().toISOString(),
     };
@@ -133,8 +131,6 @@ Return ONLY the message text. Write in first person as the agent.`,
     setShowAddLead(false);
     setNewLead({ firstName: '', lastName: '', email: '', phone: '', type: 'buyer', source: '', budget: '', timeline: '', notes: '' });
     toast.success('Lead added!', { description: `${lead.firstName} ${lead.lastName}` });
-    // Auto-generate AI response
-    generateResponse(lead);
   };
 
   const handleMoveStage = (leadId: string, newStage: string) => {
@@ -143,12 +139,6 @@ Return ONLY the message text. Write in first person as the agent.`,
     if (selectedLead?.id === leadId) {
       setSelectedLead({ ...selectedLead, stage: newStage });
     }
-  };
-
-  const daysSince = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const now = new Date();
-    return Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
   };
 
   return (
@@ -237,7 +227,7 @@ Return ONLY the message text. Write in first person as the agent.`,
                             <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                               <span className="flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
-                                {daysSince(lead.lastContactedAt)}d ago
+                                Added {new Date(lead.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                               </span>
                               {lead.budget > 0 && (
                                 <span className="font-mono">${(lead.budget / 1000).toFixed(0)}K</span>
@@ -266,8 +256,7 @@ Return ONLY the message text. Write in first person as the agent.`,
                 <th className="pb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">Source</th>
                 <th className="pb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">Stage</th>
                 <th className="pb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">Budget</th>
-                <th className="pb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">Last Contact</th>
-                <th className="pb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">Next Action</th>
+                <th className="pb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">Added</th>
               </tr>
             </thead>
             <tbody>
@@ -293,8 +282,7 @@ Return ONLY the message text. Write in first person as the agent.`,
                     </Badge>
                   </td>
                   <td className="py-2.5 font-mono text-xs">{lead.budget > 0 ? `$${(lead.budget / 1000).toFixed(0)}K` : '—'}</td>
-                  <td className="py-2.5 text-xs text-muted-foreground">{daysSince(lead.lastContactedAt)}d ago</td>
-                  <td className="py-2.5 text-xs text-muted-foreground truncate max-w-[150px]">{lead.nextAction}</td>
+                  <td className="py-2.5 text-xs text-muted-foreground">{new Date(lead.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}</td>
                 </tr>
               ))}
             </tbody>

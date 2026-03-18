@@ -119,3 +119,47 @@
 - [x] Frontend: Coach recommendations banner
 - [x] Routing: Add /tools route, AI Tools nav item, page title
 - [x] Vitest: 8 new Phase 10 tests (57 total passing)
+
+## Phase 11 — KW Model Library
+
+- [x] Schema: 9 new tables (oneThingEntries, gpsPlans, eightByEight, thirtyThreeTouch, boldGoals, ttsaProfiles, teamEconomicModel, sessionRunnerState, modelLibraryEntries)
+- [x] Migration: pnpm db:push applied
+- [x] Seed: 25 KW model library entries seeded on startup
+- [x] DB helpers: getOneThing, upsertOneThing, completeOneThing, getGPSPlan, upsertGPSPlan, getBoldGoal, upsertBoldGoal, getTTSAProfile, upsertTTSAProfile, getTeamEconomicModel, upsertTeamEconomicModel, getSessionRunnerState, upsertSessionRunnerState, getModelLibraryEntries, getModelLibraryEntry, upsertModelLibraryEntry
+- [x] Server: models router (oneThing, gps, boldGoal, ttsa, teamEcon, sessionRunner, accountability, modelLibrary procedures)
+- [x] Frontend: Library.tsx — KW model browser with category filter + SOPs tab
+- [x] Frontend: Goals.tsx — BOLD Goal + GPS Quarterly Plan + One Thing + 4-1-1 Tracker
+- [x] Routing: /goals route, Goals nav item (OPERATIONS section), Model Library renamed in sidebar
+
+## Compliance Removal (17 files)
+
+- [x] Schema: complianceLogs table removed
+- [x] DB: getUserComplianceLogs, logCompliance helpers removed
+- [x] Server: compliance router removed from routers.ts
+- [x] Tests: compliance describe block removed from routers.test.ts
+- [x] Frontend: Compliance.tsx page deleted
+- [x] Frontend: App.tsx — Compliance route removed
+- [x] Frontend: AppSidebar.tsx — Shield import + Compliance nav item removed
+- [x] Frontend: DashboardLayout.tsx — Compliance page title removed
+- [x] Frontend: AppContext.tsx — ComplianceLog state removed
+- [x] Frontend: store.ts — ComplianceLog interface removed
+- [x] Frontend: mockData.ts — ComplianceLog import removed
+- [x] Frontend: Dashboard.tsx — compliance widget card removed
+- [x] Frontend: Analytics.tsx — complianceLogs dependency removed from health score
+- [x] Frontend: Marketing.tsx — auto-screen compliance mutation removed
+- [x] Frontend: Settings.tsx — compliance screening alert notification removed, data privacy text cleaned
+- [x] Frontend: Certification.tsx — Module 5 renamed to "Professional Standards"
+- [x] Frontend: SubscriptionCard.tsx — "Compliance logging" replaced with "Goal tracking (GPS + One Thing)"
+
+## CRM Field Removal (9 files)
+
+- [x] Schema: lastContactedAt + nextAction removed from leads table
+- [x] Migration: pnpm db:push applied (0007_blushing_swarm.sql)
+- [x] Server: nextAction removed from leads.create; nextAction + lastContactedAt removed from leads.update
+- [x] Frontend: store.ts — lastContactedAt + nextAction removed from Lead interface
+- [x] Frontend: mockData.ts — lastContactedAt + nextAction removed from mock leads
+- [x] Frontend: Pipeline.tsx — auto-generate on lead creation removed; kanban shows "Added [date]"; list view "Last Contact"/"Next Action" columns removed; AI draft button kept as manual-only
+- [x] Frontend: Dashboard.tsx — "DB Contacts Touched" replaced with "Leads Added (30 days)"
+- [x] Frontend: Analytics.tsx — "Follow-Up" dimension replaced with "Goal Setting" (GPS deliverables-based)
+- [x] Frontend: Marketing.tsx — DatabaseMarketingTab rewritten as honest 36:12:3 planning calculator
+- [x] Tests: 55/55 passing, 0 TypeScript errors

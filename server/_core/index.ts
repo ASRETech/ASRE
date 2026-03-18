@@ -11,6 +11,7 @@ import { serveStatic, setupVite } from "./vite";
 import * as db from "../db";
 import { nanoid } from "nanoid";
 import { seedTools } from "../tools/seedTools";
+import { seedModelLibrary } from "../models/seedModelLibrary";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -97,6 +98,7 @@ async function startServer() {
     console.log(`Server running on http://localhost:${port}/`);
     // Seed AI tools directory on first start (idempotent via upsert)
     seedTools().catch(e => console.warn('[Seed] Tools seed failed:', e.message));
+    seedModelLibrary().catch(e => console.warn('[Seed] Model library seed failed:', e.message));
   });
 }
 

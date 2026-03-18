@@ -17,7 +17,7 @@ const TIERS = [
       'AI coaching assistant',
       'Pipeline & financial tracking',
       'SOP library',
-      'Compliance logging',
+      'Goal tracking (GPS + One Thing)',
     ],
   },
   {

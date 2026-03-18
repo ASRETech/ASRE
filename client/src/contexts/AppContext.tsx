@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
-import type { User, Lead, Transaction, FinancialEntry, SOP, ComplianceLog, CultureDoc, LevelDeliverable } from '@/lib/store';
+import React, { createContext, useContext, useReducer } from 'react';
+import type { User, Lead, Transaction, FinancialEntry, SOP, CultureDoc, LevelDeliverable } from '@/lib/store';
 
 interface AppState {
   user: User | null;
@@ -8,7 +8,6 @@ interface AppState {
   transactions: Transaction[];
   financials: FinancialEntry[];
   sops: SOP[];
-  complianceLogs: ComplianceLog[];
   cultureDoc: CultureDoc;
   deliverables: LevelDeliverable[];
   sidebarCollapsed: boolean;
@@ -27,7 +26,6 @@ type AppAction =
   | { type: 'ADD_FINANCIAL'; payload: FinancialEntry }
   | { type: 'ADD_SOP'; payload: SOP }
   | { type: 'UPDATE_SOP'; payload: { id: string; updates: Partial<SOP> } }
-  | { type: 'ADD_COMPLIANCE_LOG'; payload: ComplianceLog }
   | { type: 'UPDATE_CULTURE'; payload: Partial<CultureDoc> }
   | { type: 'TOGGLE_DELIVERABLE'; payload: string }
   | { type: 'SET_DELIVERABLES'; payload: LevelDeliverable[] }
@@ -41,7 +39,6 @@ const initialState: AppState = {
   transactions: [],
   financials: [],
   sops: [],
-  complianceLogs: [],
   cultureDoc: {
     missionStatement: '',
     visionStatement: '',
@@ -89,8 +86,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         sops: state.sops.map(s => s.id === action.payload.id ? { ...s, ...action.payload.updates } : s),
       };
-    case 'ADD_COMPLIANCE_LOG':
-      return { ...state, complianceLogs: [action.payload, ...state.complianceLogs] };
     case 'UPDATE_CULTURE':
       return { ...state, cultureDoc: { ...state.cultureDoc, ...action.payload } };
     case 'TOGGLE_DELIVERABLE': {
