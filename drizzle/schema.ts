@@ -161,6 +161,21 @@ export type SOP = typeof sops.$inferSelect;
 export type InsertSOP = typeof sops.$inferInsert;
 
 /**
+ * Compliance logs
+ */
+export const complianceLogs = mysqlTable("compliance_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  inputText: text("inputText").notNull(),
+  result: mysqlEnum("result", ["pass", "warning", "fail"]).notNull(),
+  flaggedItems: json("flaggedItems"),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+export type ComplianceLog = typeof complianceLogs.$inferSelect;
+export type InsertComplianceLog = typeof complianceLogs.$inferInsert;
+
+/**
  * Culture documents (mission, vision, values)
  */
 export const cultureDocs = mysqlTable("culture_docs", {

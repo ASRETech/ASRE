@@ -249,7 +249,7 @@ export default function Pipeline() {
                     </Badge>
                   </td>
                   <td className="py-2.5 font-mono text-xs">{lead.budget > 0 ? `$${(lead.budget / 1000).toFixed(0)}K` : '—'}</td>
-                  <td className="py-2.5 text-xs text-muted-foreground">{formatAddedDate(lead.createdAt)}</td>
+                  <td className="py-2.5 text-xs text-muted-foreground">Added {formatAddedDate(lead.createdAt)}</td>
                 </tr>
               ))}
             </tbody>
@@ -344,6 +344,8 @@ export default function Pipeline() {
                   className="text-sm min-h-[80px]"
                 />
               </div>
+
+
             </div>
           )}
         </SheetContent>

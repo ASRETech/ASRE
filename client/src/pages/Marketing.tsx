@@ -66,6 +66,7 @@ function ContentStudioTab() {
   const [context, setContext] = useState('');
   const [generated, setGenerated] = useState('');
   const [generating, setGenerating] = useState(false);
+
   const coachMutation = trpc.coaching.ask.useMutation();
 
   const generate = () => {
@@ -197,6 +198,7 @@ Return ONLY the content. No explanation or preamble.`,
         <Card className="p-6">
           <div className="flex items-center justify-between mb-3">
             <h4 className="font-display text-sm font-semibold">Generated Content</h4>
+
           </div>
 
           {generating ? (
@@ -237,7 +239,6 @@ Return ONLY the content. No explanation or preamble.`,
             </div>
           )}
         </Card>
-
 
       </div>
     </div>
@@ -383,6 +384,7 @@ function DatabaseMarketingTab({ leads }: { leads: any[] }) {
     </div>
   );
 }
+
 
 // ─── Tab 4: Lead Magnets ─────────────────────────────────────────────
 function LeadMagnetsTab() {
