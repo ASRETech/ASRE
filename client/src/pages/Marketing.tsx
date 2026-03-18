@@ -1,4 +1,4 @@
-// Marketing / Content Studio — AI content generation
+// Marketing / Content Studio — AI content generation with auto-compliance screening
 import { useState, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { trpc } from '@/lib/trpc';
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Sparkles, Copy, RefreshCw,
+  Sparkles, Shield, CheckCircle, AlertTriangle, Copy, RefreshCw,
   Loader2, Megaphone, CalendarDays, Database, Magnet, FileText,
   Mail, Share2, Users, TrendingUp
 } from 'lucide-react';
@@ -197,7 +197,6 @@ Return ONLY the content. No explanation or preamble.`,
         <Card className="p-6">
           <div className="flex items-center justify-between mb-3">
             <h4 className="font-display text-sm font-semibold">Generated Content</h4>
-
           </div>
 
           {generating ? (
@@ -297,9 +296,20 @@ function CalendarTab() {
   );
 }
 
-// ─── Tab 3: Database Marketing ───────────────────────────────────────
+// ─── Tab 3: Database Marketing ────────────────────────────────────────────────
 function DatabaseMarketingTab({ leads }: { leads: any[] }) {
   const [dbSize, setDbSize] = useState(100);
+
+  // Stage-based segments — calculated from what agents manually enter
+  const pastClients = leads.filter(l => l.stage === 'Closed');
+  const sphere = leads.filter(l => l.source === 'Sphere of Influence');
+  const active = leads.filter(l => !['Closed', 'Dead'].includes(l.stage));
+
+  const segments = [
+    { label: 'Past Clients', count: pastClients.length, color: 'bg-emerald-500', desc: 'Stage: Closed' },
+    { label: 'Sphere', count: sphere.length, color: 'bg-violet-500', desc: 'Source: Sphere of Influence' },
+    { label: 'Active Pipeline', count: active.length, color: 'bg-blue-500', desc: 'All non-closed records' },
+  ];
 
   // 36:12:3 calculator — manual input, honest planning tool
   const contactsPerYear = dbSize * 36;
@@ -308,45 +318,40 @@ function DatabaseMarketingTab({ leads }: { leads: any[] }) {
   const avgGCI = 9500;
   const projectedIncome = projectedTx * avgGCI;
 
-  const segments = [
-    { label: 'Past Clients', count: leads.filter(l => l.stage === 'Closed').length, color: 'bg-emerald-500', desc: 'Previous closings in pipeline' },
-    { label: 'Sphere', count: leads.filter(l => l.source === 'Sphere of Influence').length, color: 'bg-violet-500', desc: 'Sphere of Influence tagged' },
-    { label: 'Active', count: leads.filter(l => !['Closed', 'Dead'].includes(l.stage)).length, color: 'bg-blue-500', desc: 'Active pipeline records' },
-  ];
-
   return (
     <div className="space-y-6">
-      {/* Pipeline segments — based on stage, not contact timing */}
+      {/* Stage-based pipeline segments */}
       <div className="grid grid-cols-3 gap-3">
         {segments.map(seg => (
-          <Card key={seg.label} className="p-4 text-center">
-            <div className={`w-3 h-3 rounded-full ${seg.color} mx-auto mb-2`} />
-            <div className="font-mono text-2xl font-bold text-foreground">{seg.count}</div>
-            <div className="text-xs font-medium text-foreground">{seg.label}</div>
-            <div className="text-[10px] text-muted-foreground">{seg.desc}</div>
-          </Card>
+          <motion.div key={seg.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <Card className="p-4 text-center">
+              <div className={`w-3 h-3 rounded-full ${seg.color} mx-auto mb-2`} />
+              <div className="font-mono text-2xl font-bold text-foreground">{seg.count}</div>
+              <div className="text-xs font-medium text-foreground">{seg.label}</div>
+              <div className="text-[10px] text-muted-foreground">{seg.desc}</div>
+            </Card>
+          </motion.div>
         ))}
       </div>
 
-      {/* 36:12:3 Planning Calculator — honest: agents enter DB size, plan in Command */}
+      {/* 36:12:3 Planning Calculator — manual input */}
       <Card className="p-6">
-        <h3 className="font-display text-lg font-semibold mb-2 flex items-center gap-2">
+        <h3 className="font-display text-lg font-semibold mb-1 flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-[#DC143C]" />
           36:12:3 Database Planning Calculator
         </h3>
         <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
-          Enter your full Met database size (managed in Command).
-          AgentOS calculates the contact cadence and projected production
-          the 36:12:3 model recommends.
+          Enter your full Met database size from Command. AgentOS calculates the contact
+          cadence and projected production the 36:12:3 model recommends.
         </p>
         <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <label className="text-sm text-muted-foreground w-36">Your database size</label>
-            <input
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-sm text-muted-foreground w-44 shrink-0">Your database size</span>
+            <Input
               type="number"
               value={dbSize}
               onChange={e => setDbSize(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-28 h-9 border border-border rounded-lg px-3 text-sm font-mono bg-background"
+              className="w-28 h-9 font-mono"
             />
             <span className="text-xs text-muted-foreground">contacts in Command</span>
           </div>
@@ -359,7 +364,7 @@ function DatabaseMarketingTab({ leads }: { leads: any[] }) {
             <span className="font-mono text-lg font-bold text-[#DC143C]">{contactsPerWeek} contacts/week</span>
           </div>
           <div className="flex items-center justify-center text-muted-foreground text-xs">
-            → at 36:12:3 model rate (3 transactions per 100 people)
+            → at 36:12:3 rate (3 transactions per 100 people annually)
           </div>
           <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
             <span className="text-sm text-muted-foreground">Projected annual transactions</span>
@@ -370,8 +375,8 @@ function DatabaseMarketingTab({ leads }: { leads: any[] }) {
             <span className="font-mono text-xl font-bold text-[#DC143C]">${projectedIncome.toLocaleString()}</span>
           </div>
           <p className="text-[10px] text-muted-foreground leading-relaxed pt-1">
-            Execute your 36:12:3 contact plan in Command or your preferred CRM.
-            Use the 4-1-1 in your Goal Center to track weekly contact activity against this target.
+            Execute your contact plan in Command. Use the 4-1-1 in your Goal Center to
+            track weekly contact activity against this target.
           </p>
         </div>
       </Card>

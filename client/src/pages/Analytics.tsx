@@ -373,18 +373,19 @@ function HealthTab() {
   const dimensions = useMemo(() => {
     const now = Date.now();
     const d30 = 30 * 24 * 60 * 60 * 1000;
-    const d7 = 7 * 24 * 60 * 60 * 1000;
 
     const leadGen = Math.min(25, leads.filter(l => new Date(l.createdAt).getTime() > now - d30).length * 2);
     const goalScore = Math.min(25, deliverables.filter(d => d.isComplete && ['economic-model', 'lead-gen-plan', '411-tracker'].includes(d.id)).length * 8);
     const txScore = Math.min(20, transactions.filter(t => t.status !== 'closed').length * 4);
-    const delScore = Math.min(30, deliverables.filter(d => d.isComplete).length * 3);
+    const delScore = Math.min(15, deliverables.filter(d => d.isComplete).length * 2);
+    const base = 15;
 
     return [
       { label: 'Lead Generation', score: Math.round(leadGen), max: 25 },
       { label: 'Goal Setting', score: Math.round(goalScore), max: 25 },
       { label: 'Transactions', score: Math.round(txScore), max: 20 },
-      { label: 'Deliverables', score: Math.round(delScore), max: 30 },
+      { label: 'Deliverables', score: Math.round(delScore), max: 15 },
+      { label: 'Foundation', score: base, max: 15 },
     ];
   }, [leads, transactions, deliverables]);
 

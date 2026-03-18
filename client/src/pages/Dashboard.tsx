@@ -13,7 +13,7 @@ import {
   DollarSign, Users, TrendingUp, Activity,
   Phone, Calendar, FileText, ChevronRight,
   ArrowUpRight, ArrowDownRight, MapPin,
-  Mail, BarChart3, RefreshCw, Loader2,
+  Mail, Shield, BarChart3, RefreshCw, Loader2,
   CheckSquare, Sparkles
 } from 'lucide-react';
 import { Link } from 'wouter';
@@ -392,7 +392,6 @@ export default function Dashboard() {
 
           {/* Coaching Commitments (Phase 6) */}
           <CommitmentsWidget />
-
 
         </div>
       </div>

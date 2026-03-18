@@ -1,4 +1,4 @@
-import type { Lead, Transaction, FinancialEntry, SOP, LevelDeliverable } from './store';
+import type { Lead, Transaction, FinancialEntry, SOP, ComplianceLog, LevelDeliverable } from './store';
 import { LEVELS, PIPELINE_STAGES, LEAD_SOURCES } from './store';
 
 const firstNames = ['Sarah', 'Michael', 'Jennifer', 'David', 'Emily', 'James', 'Ashley', 'Robert', 'Jessica', 'William', 'Amanda', 'Christopher', 'Stephanie', 'Daniel', 'Nicole', 'Matthew', 'Lisa', 'Andrew', 'Rachel', 'Joshua'];

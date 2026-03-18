@@ -105,6 +105,15 @@ export interface SOPStep {
   isAutomated: boolean;
 }
 
+export interface ComplianceLog {
+  id: string;
+  type: string;
+  inputText: string;
+  flaggedTerms: string[];
+  result: 'pass' | 'flagged';
+  timestamp: string;
+}
+
 export interface FlaggedItem {
   term: string;
   reason: string;
@@ -263,6 +272,7 @@ export const TOP_PROBLEMS = [
   'Time management is a constant struggle',
   'No accountability structure',
   'Don\'t know my numbers',
+  'Compliance concerns',
   'Burnout / working too many hours',
 ];
 

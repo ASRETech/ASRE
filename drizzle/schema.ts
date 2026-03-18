@@ -160,8 +160,6 @@ export const sops = mysqlTable("sops", {
 export type SOP = typeof sops.$inferSelect;
 export type InsertSOP = typeof sops.$inferInsert;
 
-
-
 /**
  * Culture documents (mission, vision, values)
  */
@@ -806,14 +804,6 @@ export const coachToolRecommendations = mysqlTable('coach_tool_recommendations',
 
 export type CoachToolRecommendation = typeof coachToolRecommendations.$inferSelect;
 export type InsertCoachToolRecommendation = typeof coachToolRecommendations.$inferInsert;
-
-// ─────────────────────────────────────────────────────────────
-// PHASE 11 — KW Model Library
-// ─────────────────────────────────────────────────────────────
-
-/**
- * Agent's One Thing — weekly, monthly, annual focusing questions
- */
 export const oneThing = mysqlTable('one_thing', {
   id: int('id').autoincrement().primaryKey(),
   userId: int('userId').notNull(),

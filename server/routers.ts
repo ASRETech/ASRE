@@ -1479,8 +1479,6 @@ Be warm, professional, and informative. Include next steps when applicable.`,
         return db.getToolClickStats(input.toolId);
       }),
   }),
-
-  // ── Phase 11 — KW Model Library ──────────────────────────────
   models: router({
     list: protectedProcedure
       .input(z.object({
