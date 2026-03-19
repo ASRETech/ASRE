@@ -30,11 +30,13 @@ import Reviews from "./pages/Reviews";
 import Certification from "./pages/Certification";
 import Tools from './pages/Tools';
 import Goals from './pages/Goals';
+import Login from './pages/Login';
 function AppRoutes() {
   // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path="/" component={() => <Redirect to="/onboarding" />} />
+      <Route path="/login" component={Login} />
       <Route path="/onboarding" component={Onboarding} />
       <Route path="/journey">
         <DashboardLayout><Journey /></DashboardLayout>

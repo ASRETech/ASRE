@@ -38,7 +38,7 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  // OAuth callback under /api/oauth/callback
+  // Standalone auth routes: POST /api/auth/login, /api/auth/register, /api/auth/logout
   registerOAuthRoutes(app);
 
   // Affiliate redirect endpoint — tracks click then redirects to tool URL

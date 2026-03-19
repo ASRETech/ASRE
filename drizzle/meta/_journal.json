@@ -64,6 +64,13 @@
       "when": 1773804724020,
       "tag": "0008_fine_molten_man",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1773888279013,
+      "tag": "0009_wonderful_celestials",
+      "breakpoints": true
     }
   ]
 }
