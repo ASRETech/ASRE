@@ -1025,3 +1025,36 @@ export const modelLibrary = mysqlTable('model_library', {
 
 export type ModelLibraryEntry = typeof modelLibrary.$inferSelect;
 export type InsertModelLibraryEntry = typeof modelLibrary.$inferInsert;
+
+// ============================================================
+// Phase 7 — Google Drive Integration
+// ============================================================
+
+export const driveTokens = mysqlTable("drive_tokens", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  accessToken: text("accessToken").notNull(),
+  refreshToken: text("refreshToken").notNull(),
+  expiresAt: timestamp("expiresAt"),
+  rootFolderId: varchar("rootFolderId", { length: 64 }),
+  sheetIds: json("sheetIds"),
+  rollupSheetId: varchar("rollupSheetId", { length: 64 }),
+  rollupFolderId: varchar("rollupFolderId", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DriveToken = typeof driveTokens.$inferSelect;
+export type InsertDriveToken = typeof driveTokens.$inferInsert;
+
+export const driveSyncLog = mysqlTable("drive_sync_log", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  syncType: varchar("syncType", { length: 64 }).notNull(),
+  status: mysqlEnum("status", ["success", "failed"]).notNull(),
+  error: text("error"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DriveSyncLog = typeof driveSyncLog.$inferSelect;
+export type InsertDriveSyncLog = typeof driveSyncLog.$inferInsert;

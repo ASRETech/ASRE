@@ -11,4 +11,7 @@ export const ENV = {
   stripePriceOneOnOne: process.env.STRIPE_PRICE_ONE_ON_ONE ?? "",
   resendApiKey: process.env.RESEND_API_KEY ?? "",
   appUrl: process.env.APP_URL ?? "",
+  googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+  googleRedirectUri: process.env.GOOGLE_REDIRECT_URI ?? "https://asre-production.up.railway.app/api/drive/callback",
 };

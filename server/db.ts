@@ -1498,3 +1498,113 @@ export async function getDatabaseHealthScore(userId: number) {
     healthScore,
   };
 }
+
+// ============================================================
+// Phase 7 — Google Drive helpers
+// ============================================================
+import {
+  driveTokens, InsertDriveToken,
+  driveSyncLog,
+} from "../drizzle/schema";
+
+export async function getDriveTokens(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(driveTokens).where(eq(driveTokens.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function saveDriveTokens(
+  userId: number,
+  accessToken: string,
+  refreshToken: string,
+  expiresAt?: Date
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await getDriveTokens(userId);
+  if (existing) {
+    await db.update(driveTokens)
+      .set({ accessToken, refreshToken, expiresAt: expiresAt ?? null, updatedAt: new Date() })
+      .where(eq(driveTokens.userId, userId));
+  } else {
+    const row: InsertDriveToken = { userId, accessToken, refreshToken, expiresAt: expiresAt ?? null };
+    await db.insert(driveTokens).values(row);
+  }
+}
+
+export async function saveDriveFolderIds(
+  userId: number,
+  rootFolderId: string,
+  sheetIds: Record<string, string>
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(driveTokens)
+    .set({ rootFolderId, sheetIds, updatedAt: new Date() })
+    .where(eq(driveTokens.userId, userId));
+}
+
+export async function saveMCRollupSheetId(
+  userId: number,
+  rollupSheetId: string,
+  rollupFolderId: string
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(driveTokens)
+    .set({ rollupSheetId, rollupFolderId, updatedAt: new Date() })
+    .where(eq(driveTokens.userId, userId));
+}
+
+export async function logDriveSync(
+  userId: number,
+  syncType: string,
+  status: 'success' | 'failed',
+  error?: string
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(driveSyncLog).values({ userId, syncType, status, error: error ?? null });
+}
+
+/**
+ * Returns users who have a Drive rollupSheetId set (i.e., MC-level users with a rollup sheet).
+ */
+export async function getMCAccounts(): Promise<Array<{ userId: number; rollupSheetId: string | null }>> {
+  const db = await getDb();
+  if (!db) return [];
+  const result = await db.select({
+    userId: driveTokens.userId,
+    rollupSheetId: driveTokens.rollupSheetId,
+  }).from(driveTokens).where(sql`${driveTokens.rollupSheetId} IS NOT NULL`);
+  return result;
+}
+
+/**
+ * Returns agent user IDs that share the same marketCenter as the MC user.
+ * Falls back to empty array if no profile found.
+ */
+export async function getMCAgentIds(mcUserId: number): Promise<number[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const mcProfile = await getAgentProfile(mcUserId);
+  if (!mcProfile?.marketCenter) return [];
+  const agents = await db.select({ userId: agentProfiles.userId })
+    .from(agentProfiles)
+    .where(and(
+      eq(agentProfiles.marketCenter, mcProfile.marketCenter),
+      sql`${agentProfiles.userId} != ${mcUserId}`
+    ));
+  return agents.map(a => a.userId);
+}
+
+/**
+ * Returns the last N weekly pulse records for a user.
+ * Returns empty array if no weekly_pulses table exists yet.
+ */
+export async function getWeeklyPulses(userId: number, limit: number): Promise<unknown[]> {
+  // Weekly pulses are stored in the pipeline/leads system for now.
+  // This stub returns empty until a dedicated weeklyPulses table is added in Phase 7b.
+  return [];
+}

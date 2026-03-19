@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, Bell, Calendar, Building2, Shield, Zap, Save, Check, Palette, Crown } from 'lucide-react';
+import { User, Bell, Calendar, Building2, Shield, Zap, Save, Check, Palette, Crown, HardDrive } from 'lucide-react';
 import { SubscriptionCard } from '@/components/SubscriptionCard';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
@@ -34,6 +34,10 @@ export default function SettingsPage() {
   const [valuesFramework, setValuesFramework] = useState('WI4C2TES');
   const [showKWContent, setShowKWContent] = useState(true);
   const [coachingProgramName, setCoachingProgramName] = useState('BOLD / Productivity Coaching');
+
+  // Google Drive state
+  const driveStatus = trpc.drive.getStatus.useQuery(undefined, { retry: false });
+  const driveAuthUrl = trpc.drive.getAuthUrl.useQuery(undefined, { retry: false });
 
   const calendarMutation = trpc.calendar.upsertToken.useMutation({
     onSuccess: () => toast.success('Calendar settings saved'),
@@ -403,6 +407,43 @@ export default function SettingsPage() {
                   </div>
                 ))}
               </div>
+
+                {/* Google Drive — live OAuth integration */}
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border/50">
+                  <div className="flex items-center gap-2">
+                    <HardDrive className="w-4 h-4 text-[#DC143C]" />
+                    <div>
+                      <div className="text-sm font-medium text-foreground">Google Drive</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {driveStatus.isLoading ? 'Checking...' :
+                          driveStatus.data?.connected
+                            ? driveStatus.data.hasFolders ? '✓ Connected — AgentOS folder provisioned' : '✓ Connected — provisioning folders...'
+                            : 'Not connected — click to authorize'}
+                      </div>
+                    </div>
+                  </div>
+                  {driveStatus.data?.connected ? (
+                    <Button variant="outline" size="sm" className="text-xs h-7 border-green-500 text-green-400" disabled>
+                      <Check className="w-3 h-3 mr-1" /> Connected
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-7"
+                      disabled={!driveAuthUrl.data?.url}
+                      onClick={() => {
+                        if (driveAuthUrl.data?.url) {
+                          window.location.href = driveAuthUrl.data.url;
+                        } else {
+                          toast.error('Google Drive is not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to Railway.');
+                        }
+                      }}
+                    >
+                      <HardDrive className="w-3 h-3 mr-1" /> Connect Drive
+                    </Button>
+                  )}
+                </div>
             </Card>
           </TabsContent>
         </Tabs>

@@ -9,6 +9,9 @@ import * as db from "./db";
 import { nanoid } from "nanoid";
 import * as schema from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
+import { getAuthUrl, exchangeCodeForTokens } from "./drive/googleDrive";
+import { provisionAgentFolder, syncEconomicModel } from "./drive/driveSync";
+import { buildMCRollup } from "./drive/mcRollup";
 
 export const appRouter = router({
   system: systemRouter,
@@ -1775,6 +1778,64 @@ Be warm, professional, and informative. Include next steps when applicable.`,
     getDatabaseHealthScore: protectedProcedure.query(async ({ ctx }) => {
       return db.getDatabaseHealthScore(ctx.user.id);
     }),
+  }),
+
+  // ============================================================
+  // GOOGLE DRIVE INTEGRATION (Phase 7)
+  // ============================================================
+  drive: router({
+    getAuthUrl: protectedProcedure.query(() => {
+      return { url: getAuthUrl() };
+    }),
+    callback: protectedProcedure
+      .input(z.object({ code: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const tokens = await exchangeCodeForTokens(input.code);
+        await db.saveDriveTokens(
+          ctx.user.id,
+          tokens.access_token!,
+          tokens.refresh_token!,
+          tokens.expiry_date ? new Date(tokens.expiry_date) : undefined
+        );
+        const profile = await db.getAgentProfile(ctx.user.id);
+        await provisionAgentFolder(
+          ctx.user.id,
+          (profile as any)?.name ?? 'Agent',
+          (profile as any)?.email ?? ''
+        );
+        return { success: true };
+      }),
+    getStatus: protectedProcedure.query(async ({ ctx }) => {
+      const tokens = await db.getDriveTokens(ctx.user.id);
+      return { connected: !!tokens, hasFolders: !!tokens?.rootFolderId };
+    }),
+    syncNow: protectedProcedure.mutation(async ({ ctx }) => {
+      const [profile, deliverables, leads] = await Promise.all([
+        db.getAgentProfile(ctx.user.id),
+        db.getUserDeliverables(ctx.user.id),
+        db.getLeads(ctx.user.id),
+      ]);
+      if (profile) {
+        await syncEconomicModel(ctx.user.id, {
+          'Income Goal': (profile as any).incomeGoal ?? 0,
+          'Current Level': (profile as any).currentLevel ?? 1,
+          'Deliverables Complete': deliverables.filter((d: any) => d.isComplete).length,
+          'Active Leads': leads.filter((l: any) => l.stage !== 'closed').length,
+        });
+      }
+      return { success: true };
+    }),
+    buildMCDashboard: protectedProcedure
+      .input(z.object({ agentUserIds: z.array(z.number()) }))
+      .mutation(async ({ ctx, input }) => {
+        const profile = await db.getAgentProfile(ctx.user.id);
+        const result = await buildMCRollup(
+          ctx.user.id,
+          (profile as any)?.marketCenter ?? 'Market Center',
+          input.agentUserIds
+        );
+        return result;
+      }),
   }),
 });
 

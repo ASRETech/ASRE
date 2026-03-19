@@ -5,10 +5,14 @@ import net from "net";
 import crypto from "crypto";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
+import { startDriveScheduler } from "../drive/driveScheduler";
+import { exchangeCodeForTokens } from "../drive/googleDrive";
+import { provisionAgentFolder } from "../drive/driveSync";
+import { sdk } from "./sdk";
+import * as db from "../db";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import * as db from "../db";
 import { nanoid } from "nanoid";
 import { seedTools } from "../tools/seedTools";
 import { seedModelLibrary } from "../models/seedModelLibrary";
@@ -40,6 +44,29 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // Standalone auth routes: POST /api/auth/login, /api/auth/register, /api/auth/logout
   registerOAuthRoutes(app);
+
+  // Google Drive OAuth callback — GET /api/drive/callback?code=...
+  app.get('/api/drive/callback', async (req, res) => {
+    const code = req.query.code as string;
+    if (!code) return res.status(400).send('Missing code');
+    try {
+      const user = await sdk.authenticateRequest(req);
+      if (!user) return res.redirect('/login?error=unauthenticated');
+      const tokens = await exchangeCodeForTokens(code);
+      await db.saveDriveTokens(
+        user.id,
+        tokens.access_token!,
+        tokens.refresh_token!,
+        tokens.expiry_date ? new Date(tokens.expiry_date) : undefined
+      );
+      const profile = await db.getAgentProfile(user.id);
+      await provisionAgentFolder(user.id, (profile as any)?.name ?? 'Agent', (profile as any)?.email ?? '');
+      return res.redirect('/settings?tab=integrations&drive=connected');
+    } catch (err) {
+      console.error('[Drive] OAuth callback error:', err);
+      return res.redirect('/settings?tab=integrations&drive=error');
+    }
+  });
 
   // Affiliate redirect endpoint — tracks click then redirects to tool URL
   app.get('/api/tools/click/:toolId', async (req, res) => {
@@ -99,6 +126,7 @@ async function startServer() {
     // Seed AI tools directory on first start (idempotent via upsert)
     seedTools().catch(e => console.warn('[Seed] Tools seed failed:', e.message));
     seedModelLibrary().catch(e => console.warn('[Seed] Model library seed failed:', e.message));
+    startDriveScheduler();
   });
 }
 
