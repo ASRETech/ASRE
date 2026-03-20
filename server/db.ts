@@ -1505,6 +1505,7 @@ export async function getDatabaseHealthScore(userId: number) {
 import {
   driveTokens, InsertDriveToken,
   driveSyncLog,
+  weeklyPulses, InsertWeeklyPulse, WeeklyPulse,
 } from "../drizzle/schema";
 
 export async function getDriveTokens(userId: number) {
@@ -1599,12 +1600,27 @@ export async function getMCAgentIds(mcUserId: number): Promise<number[]> {
   return agents.map(a => a.userId);
 }
 
-/**
- * Returns the last N weekly pulse records for a user.
- * Returns empty array if no weekly_pulses table exists yet.
- */
-export async function getWeeklyPulses(userId: number, limit: number): Promise<unknown[]> {
-  // Weekly pulses are stored in the pipeline/leads system for now.
-  // This stub returns empty until a dedicated weeklyPulses table is added in Phase 7b.
-  return [];
+// ============================================================
+// WEEKLY PULSES (Phase 7b)
+// ============================================================
+export async function saveWeeklyPulse(data: InsertWeeklyPulse): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(weeklyPulses).values(data);
+}
+
+export async function getWeeklyPulses(userId: number, limit = 12): Promise<WeeklyPulse[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(weeklyPulses)
+    .where(eq(weeklyPulses.userId, userId))
+    .orderBy(desc(weeklyPulses.createdAt))
+    .limit(limit);
+}
+
+export async function getUsersWithDriveTokens(): Promise<Array<{ id: number }>> {
+  const db = await getDb();
+  if (!db) return [];
+  const results = await db.select({ userId: driveTokens.userId }).from(driveTokens);
+  return results.map(r => ({ id: r.userId }));
 }

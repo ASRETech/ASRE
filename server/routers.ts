@@ -10,7 +10,7 @@ import { nanoid } from "nanoid";
 import * as schema from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { getAuthUrl, exchangeCodeForTokens } from "./drive/googleDrive";
-import { provisionAgentFolder, syncEconomicModel } from "./drive/driveSync";
+import { provisionAgentFolder, syncEconomicModel, syncWeeklyPulse } from "./drive/driveSync";
 import { buildMCRollup } from "./drive/mcRollup";
 
 export const appRouter = router({
@@ -1781,6 +1781,59 @@ Be warm, professional, and informative. Include next steps when applicable.`,
   }),
 
   // ============================================================
+  // WEEKLY PULSE (Phase 7b)
+  // ============================================================
+  weeklyPulse: router({
+    save: protectedProcedure
+      .input(z.object({
+        contactsMade: z.number().default(0),
+        appointmentsSet: z.number().default(0),
+        appointmentsHeld: z.number().default(0),
+        buyerAgreements: z.number().default(0),
+        listingAppointments: z.number().default(0),
+        listingAgreements: z.number().default(0),
+        contractsWritten: z.number().default(0),
+        closings: z.number().default(0),
+        notes: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const weekEnding = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+        await db.saveWeeklyPulse({
+          userId: ctx.user.id,
+          weekEnding,
+          contactsMade: input.contactsMade,
+          appointmentsSet: input.appointmentsSet,
+          appointmentsHeld: input.appointmentsHeld,
+          buyerAgreements: input.buyerAgreements,
+          listingAppointments: input.listingAppointments,
+          listingAgreements: input.listingAgreements,
+          contractsWritten: input.contractsWritten,
+          closings: input.closings,
+          notes: input.notes,
+        });
+        // Fire-and-forget Drive sync — don't let Drive failure break the save
+        syncWeeklyPulse(ctx.user.id, {
+          weekEnding,
+          contactsMade: input.contactsMade ?? 0,
+          appointmentsSet: input.appointmentsSet ?? 0,
+          appointmentsHeld: input.appointmentsHeld ?? 0,
+          buyerAgreements: input.buyerAgreements ?? 0,
+          listingAppointments: input.listingAppointments ?? 0,
+          listingAgreements: input.listingAgreements ?? 0,
+          contractsWritten: input.contractsWritten ?? 0,
+          closings: input.closings ?? 0,
+          notes: input.notes ?? '',
+        }).catch(err => console.error('[Drive] Weekly pulse sync failed:', err));
+        return { success: true, weekEnding };
+      }),
+    history: protectedProcedure
+      .input(z.object({ limit: z.number().default(12) }))
+      .query(async ({ ctx, input }) => {
+        return db.getWeeklyPulses(ctx.user.id, input.limit);
+      }),
+  }),
+
+  // ============================================================
   // GOOGLE DRIVE INTEGRATION (Phase 7)
   // ============================================================
   drive: router({
@@ -1813,7 +1866,7 @@ Be warm, professional, and informative. Include next steps when applicable.`,
       const [profile, deliverables, leads] = await Promise.all([
         db.getAgentProfile(ctx.user.id),
         db.getUserDeliverables(ctx.user.id),
-        db.getLeads(ctx.user.id),
+        db.getUserLeads(ctx.user.id),
       ]);
       if (profile) {
         await syncEconomicModel(ctx.user.id, {

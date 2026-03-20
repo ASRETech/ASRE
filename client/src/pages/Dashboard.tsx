@@ -14,7 +14,7 @@ import {
   Phone, Calendar, FileText, ChevronRight,
   ArrowUpRight, ArrowDownRight, MapPin,
   Mail, Shield, BarChart3, RefreshCw, Loader2,
-  CheckSquare, Sparkles
+  CheckSquare, Sparkles, FolderSync
 } from 'lucide-react';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
@@ -42,6 +42,12 @@ export default function Dashboard() {
   const [aiFocus, setAiFocus] = useState<FocusItem[]>([]);
   const [focusLoading, setFocusLoading] = useState(false);
   const coachMutation = trpc.coaching.ask.useMutation();
+  // Google Drive sync
+  const { data: driveStatus } = trpc.drive.getStatus.useQuery(undefined, { retry: false });
+  const syncDrive = trpc.drive.syncNow.useMutation({
+    onSuccess: () => toast.success('Synced to Google Drive'),
+    onError: () => toast.error('Drive sync failed — is Drive connected in Settings?'),
+  });
 
   // Calculate KPIs
   const gciThisMonth = financials
@@ -157,7 +163,21 @@ export default function Dashboard() {
             </div>
           </div>
         </Link>
-
+        {/* Sync to Drive button — only shown when Drive is connected */}
+        {driveStatus?.connected && (
+          <div className="flex justify-end mb-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-7 gap-1.5"
+              onClick={() => syncDrive.mutate()}
+              disabled={syncDrive.isPending}
+            >
+              <FolderSync className="h-3 w-3" />
+              {syncDrive.isPending ? 'Syncing...' : 'Sync to Drive'}
+            </Button>
+          </div>
+        )}
         {/* KPI Strip */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {[

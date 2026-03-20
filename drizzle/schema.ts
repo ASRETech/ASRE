@@ -1058,3 +1058,24 @@ export const driveSyncLog = mysqlTable("drive_sync_log", {
 
 export type DriveSyncLog = typeof driveSyncLog.$inferSelect;
 export type InsertDriveSyncLog = typeof driveSyncLog.$inferInsert;
+
+// ============================================================
+// WEEKLY PULSES (Phase 7b)
+// ============================================================
+export const weeklyPulses = mysqlTable("weekly_pulses", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  weekEnding: varchar("weekEnding", { length: 20 }).notNull(),
+  contactsMade: int("contactsMade").default(0).notNull(),
+  appointmentsSet: int("appointmentsSet").default(0).notNull(),
+  appointmentsHeld: int("appointmentsHeld").default(0).notNull(),
+  buyerAgreements: int("buyerAgreements").default(0).notNull(),
+  listingAppointments: int("listingAppointments").default(0).notNull(),
+  listingAgreements: int("listingAgreements").default(0).notNull(),
+  contractsWritten: int("contractsWritten").default(0).notNull(),
+  closings: int("closings").default(0).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type WeeklyPulse = typeof weeklyPulses.$inferSelect;
+export type InsertWeeklyPulse = typeof weeklyPulses.$inferInsert;

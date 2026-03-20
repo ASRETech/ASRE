@@ -55,8 +55,8 @@ export async function refreshMCRollup(
       const [profile, deliverables, leads, transactions, pulses] = await Promise.all([
         db.getAgentProfile(agentId),
         db.getUserDeliverables(agentId),
-        db.getLeads(agentId),
-        db.getTransactions(agentId),
+        db.getUserLeads(agentId),
+        db.getUserTransactions(agentId),
         db.getWeeklyPulses(agentId, 4),
       ]);
       if (!profile) continue;
@@ -73,7 +73,7 @@ export async function refreshMCRollup(
         ? Math.round(pulses.reduce((s, p) => s + ((p as any).appointmentsSet ?? 0), 0) / pulses.length)
         : 0;
       const activePipeline = leads.filter(l => l.stage !== 'closed').length;
-      const openTx = transactions.filter(t => t.status === 'active').length;
+      const openTx = transactions.filter(t => t.status === 'under-contract' || t.status === 'pre-contract').length;
       const goalPace = (profile as any).incomeGoal
         ? Math.round((ytdGci / ((profile as any).incomeGoal * (new Date().getMonth() + 1) / 12)) * 100)
         : null;
