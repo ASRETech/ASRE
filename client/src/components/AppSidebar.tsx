@@ -5,6 +5,7 @@ import {
   DollarSign, BookOpen, Heart, Settings,
   Zap, BarChart3, UsersRound, GraduationCap,
   Handshake, Star, UserPlus, Award, Wrench, Crosshair, TrendingUp,
+  CalendarDays, LayoutGrid,
 } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
 import { trpc } from '@/lib/trpc';
@@ -15,6 +16,13 @@ const NAV_ITEMS = [
     items: [
       { label: 'My Journey', icon: Map, path: '/journey', accent: true },
       { label: 'Current Level', icon: Target, path: '/level', accent: true },
+    ],
+  },
+  {
+    section: 'AUTOMATION',
+    items: [
+      { label: 'Action Engine', icon: Zap, path: '/action-engine' },
+      { label: 'Schedule Creator', icon: CalendarDays, path: '/schedule-creator' },
     ],
   },
   {

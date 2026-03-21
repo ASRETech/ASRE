@@ -1149,3 +1149,77 @@ export const investmentProperties = mysqlTable("investmentProperties", {
 });
 export type InvestmentProperty = typeof investmentProperties.$inferSelect;
 export type InsertInvestmentProperty = typeof investmentProperties.$inferInsert;
+
+// ── CALENDAR EVENTS (Phase 9 — Action Engine) ──
+export const calendarEvents = mysqlTable("calendarEvents", {
+  id: int("id").primaryKey().autoincrement(),
+  userId: int("userId").notNull(),
+  eventType: mysqlEnum("eventType", ["financial", "milestone", "deliverable", "lead_gen_block", "pulse_reminder"]).notNull(),
+  sourceType: varchar("sourceType", { length: 50 }),
+  sourceKey: varchar("sourceKey", { length: 100 }),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  suggestedDate: varchar("suggestedDate", { length: 10 }),
+  suggestedStartTime: varchar("suggestedStartTime", { length: 5 }),
+  durationMinutes: int("durationMinutes").default(60),
+  isRecurring: boolean("isRecurring").default(false),
+  recurrenceRule: varchar("recurrenceRule", { length: 255 }),
+  gcalColorId: varchar("gcalColorId", { length: 5 }),
+  remindMinutesBefore: int("remindMinutesBefore").default(30),
+  status: mysqlEnum("calEventStatus", ["pending", "pushed", "skipped", "completed", "cancelled"]).default("pending"),
+  gcalEventId: varchar("gcalEventId", { length: 255 }),
+  gcalCalendarId: varchar("gcalCalendarId", { length: 255 }),
+  pushedAt: timestamp("pushedAt"),
+  completedAt: timestamp("completedAt"),
+  isPreferredWindow: boolean("isPreferredWindow").default(true),
+  fallbackReason: varchar("fallbackReason", { length: 100 }),
+  createdAt: timestamp("createdAt").defaultNow(),
+});
+export type CalendarEvent = typeof calendarEvents.$inferSelect;
+export type InsertCalendarEvent = typeof calendarEvents.$inferInsert;
+
+// ── CALENDAR SETTINGS (Phase 9 — Action Engine) ──
+export const calendarSettings = mysqlTable("calendarSettings", {
+  id: int("id").primaryKey().autoincrement(),
+  userId: int("userId").notNull().unique(),
+  gcalAccessToken: text("gcalAccessToken"),
+  gcalRefreshToken: text("gcalRefreshToken"),
+  gcalCalendarId: varchar("gcalCalendarId", { length: 255 }),
+  gcalWatchChannelId: varchar("gcalWatchChannelId", { length: 255 }),
+  gcalWatchExpiry: timestamp("gcalWatchExpiry"),
+  leadGenEnabled: boolean("leadGenEnabled").default(true),
+  leadGenStartTime: varchar("leadGenStartTime", { length: 5 }).default("07:00"),
+  leadGenDays: varchar("leadGenDays", { length: 50 }).default("MO,TU,WE,TH,FR"),
+  contactsPerHour: decimal("contactsPerHour", { precision: 4, scale: 1 }).default("2.0"),
+  requireApprovalBeforePush: boolean("requireApprovalBeforePush").default(true),
+  notifyFinancialDeadlines: boolean("notifyFinancialDeadlines").default(true),
+  notifyMilestones: boolean("notifyMilestones").default(true),
+  notifyDeliverables: boolean("notifyDeliverables").default(true),
+  notifyPulseReminder: boolean("notifyPulseReminder").default(true),
+  pulseReminderTime: varchar("pulseReminderTime", { length: 5 }).default("17:00"),
+  updatedAt: timestamp("calSettingsUpdatedAt").defaultNow(),
+});
+export type CalendarSettings = typeof calendarSettings.$inferSelect;
+export type InsertCalendarSettings = typeof calendarSettings.$inferInsert;
+
+// ── SCHEDULE PREFERENCES (Phase 10 — Schedule Creator) ──
+export const schedulePreferences = mysqlTable("schedulePreferences", {
+  id: int("id").primaryKey().autoincrement(),
+  userId: int("userId").notNull().unique(),
+  weeklyGrid: json("weeklyGrid"),
+  templateApplied: varchar("templateApplied", { length: 50 }),
+  updatedAt: timestamp("schedPrefUpdatedAt").defaultNow(),
+});
+export type SchedulePreference = typeof schedulePreferences.$inferSelect;
+export type InsertSchedulePreference = typeof schedulePreferences.$inferInsert;
+
+// ── SCHEDULE BUCKET CUSTOMIZATIONS (Phase 10 — Schedule Creator) ──
+export const scheduleBucketCustomizations = mysqlTable("scheduleBucketCustomizations", {
+  id: int("id").primaryKey().autoincrement(),
+  userId: int("userId").notNull(),
+  bucketKey: varchar("bucketKey", { length: 50 }).notNull(),
+  label: varchar("label", { length: 100 }),
+  color: varchar("color", { length: 20 }),
+  updatedAt: timestamp("bucketCustUpdatedAt").defaultNow(),
+});
+export type ScheduleBucketCustomization = typeof scheduleBucketCustomizations.$inferSelect;

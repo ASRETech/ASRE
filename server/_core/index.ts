@@ -6,6 +6,7 @@ import crypto from "crypto";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { startDriveScheduler } from "../drive/driveScheduler";
+import { startCalendarScheduler } from "../calendar/calendarScheduler";
 import { exchangeCodeForTokens } from "../drive/googleDrive";
 import { provisionAgentFolder } from "../drive/driveSync";
 import { sdk } from "./sdk";
@@ -16,6 +17,11 @@ import { serveStatic, setupVite } from "./vite";
 import { nanoid } from "nanoid";
 import { seedTools } from "../tools/seedTools";
 import { seedModelLibrary } from "../models/seedModelLibrary";
+import { google } from "googleapis";
+import { ENV } from "./env";
+import { getDb } from "../db";
+import * as schema from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -66,6 +72,55 @@ async function startServer() {
       console.error('[Drive] OAuth callback error:', err);
       return res.redirect('/settings?tab=integrations&drive=error');
     }
+  });
+
+  // Google Calendar OAuth callback — GET /api/calendar/callback?code=...&state=cal:{userId}
+  app.get('/api/calendar/callback', async (req, res) => {
+    const code = req.query.code as string;
+    if (!code) return res.status(400).send('Missing code');
+    try {
+      const user = await sdk.authenticateRequest(req);
+      if (!user) return res.redirect('/login?error=unauthenticated');
+
+      const auth = new google.auth.OAuth2(
+        ENV.googleClientId,
+        ENV.googleClientSecret,
+        ENV.googleRedirectUri
+      );
+      const { tokens } = await auth.getToken(code);
+      const dbConn = await getDb();
+      if (!dbConn) throw new Error('Database not available');
+
+      const existing = await dbConn.select().from(schema.calendarSettings)
+        .where(eq(schema.calendarSettings.userId, user.id)).limit(1);
+
+      if (existing[0]) {
+        await dbConn.update(schema.calendarSettings)
+          .set({
+            gcalAccessToken: tokens.access_token ?? null,
+            gcalRefreshToken: tokens.refresh_token ?? null,
+          })
+          .where(eq(schema.calendarSettings.userId, user.id));
+      } else {
+        await dbConn.insert(schema.calendarSettings).values({
+          userId: user.id,
+          gcalAccessToken: tokens.access_token ?? null,
+          gcalRefreshToken: tokens.refresh_token ?? null,
+        });
+      }
+      return res.redirect('/action-engine?cal=connected');
+    } catch (err) {
+      console.error('[Calendar] OAuth callback error:', err);
+      return res.redirect('/action-engine?cal=error');
+    }
+  });
+
+  // Google Calendar webhook — POST /api/calendar/webhook
+  app.post('/api/calendar/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+    // Acknowledge immediately — process async
+    res.status(200).send('ok');
+    const channelId = req.headers['x-goog-channel-id'] as string;
+    console.log('[Calendar] Webhook received for channel:', channelId);
   });
 
   // Affiliate redirect endpoint — tracks click then redirects to tool URL
@@ -127,6 +182,7 @@ async function startServer() {
     seedTools().catch(e => console.warn('[Seed] Tools seed failed:', e.message));
     seedModelLibrary().catch(e => console.warn('[Seed] Model library seed failed:', e.message));
     startDriveScheduler();
+    startCalendarScheduler();
   });
 }
 

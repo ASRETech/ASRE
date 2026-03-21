@@ -92,6 +92,13 @@
       "when": 1774101289810,
       "tag": "0012_broad_mephisto",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1774136238294,
+      "tag": "0013_sudden_white_tiger",
+      "breakpoints": true
     }
   ]
 }

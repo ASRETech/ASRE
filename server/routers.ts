@@ -13,6 +13,8 @@ import { getAuthUrl, exchangeCodeForTokens } from "./drive/googleDrive";
 import { provisionAgentFolder, syncEconomicModel, syncWeeklyPulse } from "./drive/driveSync";
 import { buildMCRollup } from "./drive/mcRollup";
 import { wealthRouter } from "./routers/wealth";
+import { calendarRouter } from "./routers/calendar";
+import { scheduleRouter } from "./routers/schedule";
 
 export const appRouter = router({
   system: systemRouter,
@@ -1827,6 +1829,8 @@ Be warm, professional, and informative. Include next steps when applicable.`,
   // WEALTH JOURNEY (Phase 8)
   // ============================================================
   wealth: wealthRouter,
+  calendar: calendarRouter,
+  schedule: scheduleRouter,
 
   // ============================================================
   // WEEKLY PULSE (Phase 7b)

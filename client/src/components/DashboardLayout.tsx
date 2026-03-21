@@ -23,6 +23,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/tools': 'AI Tools Directory',
   '/settings': 'Settings',
   '/wealth': 'Wealth Journey',
+  '/action-engine': 'Action Engine',
+  '/schedule-creator': 'Schedule Creator',
 };
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
