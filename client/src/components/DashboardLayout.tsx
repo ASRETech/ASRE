@@ -22,6 +22,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/culture': 'Culture OS',
   '/tools': 'AI Tools Directory',
   '/settings': 'Settings',
+  '/wealth': 'Wealth Journey',
 };
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {

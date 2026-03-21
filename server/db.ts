@@ -1624,3 +1624,113 @@ export async function getUsersWithDriveTokens(): Promise<Array<{ id: number }>> 
   const results = await db.select({ userId: driveTokens.userId }).from(driveTokens);
   return results.map(r => ({ id: r.userId }));
 }
+
+// ============================================================
+// PHASE 8 — WEALTH JOURNEY helpers
+// ============================================================
+import {
+  wealthMilestones, InsertWealthMilestone, WealthMilestone,
+  wealthProfile, InsertWealthProfile, WealthProfile,
+  investmentProperties, InsertInvestmentProperty, InvestmentProperty,
+} from '../drizzle/schema';
+
+export async function getWealthMilestones(userId: number): Promise<WealthMilestone[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(wealthMilestones).where(eq(wealthMilestones.userId, userId));
+}
+
+export async function upsertWealthMilestone(
+  userId: number,
+  input: { milestoneKey: string; status: 'not_started' | 'in_progress' | 'done'; notes?: string; completedDate?: string }
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(wealthMilestones)
+    .where(and(eq(wealthMilestones.userId, userId), eq(wealthMilestones.milestoneKey, input.milestoneKey)))
+    .limit(1);
+  const completedDateVal = (input.completedDate ?? null) as any;
+  if (existing.length > 0) {
+    await db.update(wealthMilestones)
+      .set({ status: input.status, notes: input.notes ?? null, completedDate: completedDateVal })
+      .where(eq(wealthMilestones.id, existing[0].id));
+  } else {
+    await (db.insert(wealthMilestones) as any).values({
+      userId,
+      milestoneKey: input.milestoneKey,
+      status: input.status,
+      notes: input.notes ?? null,
+      completedDate: completedDateVal,
+    });
+  }
+}
+
+export async function getWealthProfile(userId: number): Promise<WealthProfile | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select().from(wealthProfile).where(eq(wealthProfile.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function upsertWealthProfile(
+  userId: number,
+  input: Partial<InsertWealthProfile> & { fiNumber?: number }
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select({ id: wealthProfile.id }).from(wealthProfile)
+    .where(eq(wealthProfile.userId, userId)).limit(1);
+  if (existing.length > 0) {
+    await db.update(wealthProfile).set({ ...input, updatedAt: new Date() })
+      .where(eq(wealthProfile.userId, userId));
+  } else {
+    await db.insert(wealthProfile).values({ userId, ...input } as InsertWealthProfile);
+  }
+}
+
+export async function setWealthProfileFlag(userId: number, flag: string, value: boolean): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select({ id: wealthProfile.id }).from(wealthProfile)
+    .where(eq(wealthProfile.userId, userId)).limit(1);
+  const update = { [flag]: value, updatedAt: new Date() };
+  if (existing.length > 0) {
+    await db.update(wealthProfile).set(update).where(eq(wealthProfile.userId, userId));
+  } else {
+    await db.insert(wealthProfile).values({ userId, [flag]: value } as InsertWealthProfile);
+  }
+}
+
+export async function getInvestmentProperties(userId: number): Promise<InvestmentProperty[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(investmentProperties).where(eq(investmentProperties.userId, userId));
+}
+
+export async function addInvestmentProperty(
+  userId: number,
+  input: Omit<InsertInvestmentProperty, 'userId' | 'id' | 'createdAt'>
+): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.insert(investmentProperties).values({ userId, ...input } as InsertInvestmentProperty);
+  return (result as any).insertId ?? 0;
+}
+
+export async function updateInvestmentProperty(
+  userId: number,
+  id: number,
+  input: Partial<InsertInvestmentProperty>
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(investmentProperties).set(input)
+    .where(and(eq(investmentProperties.id, id), eq(investmentProperties.userId, userId)));
+}
+
+export async function deleteInvestmentProperty(userId: number, id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(investmentProperties)
+    .where(and(eq(investmentProperties.id, id), eq(investmentProperties.userId, userId)));
+}

@@ -31,6 +31,7 @@ import Certification from "./pages/Certification";
 import Tools from './pages/Tools';
 import Goals from './pages/Goals';
 import Login from './pages/Login';
+import Wealth from './pages/Wealth';
 function AppRoutes() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -94,6 +95,9 @@ function AppRoutes() {
       </Route>
       <Route path="/goals">
         <DashboardLayout><Goals /></DashboardLayout>
+      </Route>
+      <Route path="/wealth">
+        <Wealth />
       </Route>
       <Route path="/settings">
         <DashboardLayout><SettingsPage /></DashboardLayout>

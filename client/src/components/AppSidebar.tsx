@@ -4,7 +4,7 @@ import {
   Map, Target, LayoutDashboard, Users, FileText,
   DollarSign, BookOpen, Heart, Settings,
   Zap, BarChart3, UsersRound, GraduationCap,
-  Handshake, Star, UserPlus, Award, Wrench, Crosshair,
+  Handshake, Star, UserPlus, Award, Wrench, Crosshair, TrendingUp,
 } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
 import { trpc } from '@/lib/trpc';
@@ -31,6 +31,7 @@ const NAV_ITEMS = [
     section: 'GOALS',
     items: [
       { label: 'Goal Center', icon: Crosshair, path: '/goals' },
+      { label: 'Wealth Journey', icon: TrendingUp, path: '/wealth' },
     ],
   },
   {

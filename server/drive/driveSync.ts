@@ -14,6 +14,7 @@ const SHEET_NAMES = [
   '90-Day Sprint',
   'Pipeline Tracker',
   'Commission Log',
+  'Financial Milestones',
 ] as const;
 
 const SHEET_HEADERS: Record<string, string[]> = {
@@ -32,6 +33,7 @@ const SHEET_HEADERS: Record<string, string[]> = {
     'Date', 'Property Address', 'Sale Price', 'Commission Rate',
     'Gross Commission', 'Split %', 'Net Commission', 'Source',
   ],
+  'Financial Milestones': ['Track', 'Milestone', 'Status', 'Completed Date', 'Notes'],
 };
 
 export async function provisionAgentFolder(
@@ -117,6 +119,39 @@ export async function syncPipelineLead(
   await appendSheetRow(tokens.accessToken, tokens.refreshToken, sheetId, 'A:G', [
     lead.name, lead.source, lead.stage, lead.addedDate,
     lead.estClose ?? '', lead.propertyValue ?? '', lead.notes ?? '',
+  ]);
+}
+
+export async function syncWealthMilestone(
+  userId: number,
+  milestone: {
+    milestoneKey: string;
+    status: string;
+    completedDate?: string;
+    notes?: string;
+  }
+): Promise<void> {
+  const tokens = await db.getDriveTokens(userId);
+  if (!tokens) return;
+  const sheetIds = tokens.sheetIds as Record<string, string> | null;
+  const sheetId = sheetIds?.['Financial Milestones'];
+  if (!sheetId) return;
+
+  // Convert milestone key to display name: 't2_llc_formed' -> 'LLC Formed'
+  const displayName = milestone.milestoneKey
+    .replace(/^t\d_/, '')
+    .split('_')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+  const trackNum = milestone.milestoneKey.match(/^t(\d)/)?.[1] ?? '?';
+  const track = `Track ${trackNum}`;
+
+  await appendSheetRow(tokens.accessToken, tokens.refreshToken, sheetId, 'A:E', [
+    track,
+    displayName,
+    milestone.status,
+    milestone.completedDate ?? '',
+    milestone.notes ?? '',
   ]);
 }
 

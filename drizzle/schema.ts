@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, json, boolean, decimal } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, json, boolean, decimal, date } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -1079,3 +1079,73 @@ export const weeklyPulses = mysqlTable("weekly_pulses", {
 });
 export type WeeklyPulse = typeof weeklyPulses.$inferSelect;
 export type InsertWeeklyPulse = typeof weeklyPulses.$inferInsert;
+
+// ============================================================
+// PHASE 8 — WEALTH JOURNEY
+// ============================================================
+
+export const wealthTracks = mysqlTable("wealthTracks", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  trackNumber: int("trackNumber").notNull(),
+  isUnlocked: boolean("isUnlocked").default(false),
+  unlockedAt: timestamp("unlockedAt"),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow(),
+});
+export type WealthTrack = typeof wealthTracks.$inferSelect;
+export type InsertWealthTrack = typeof wealthTracks.$inferInsert;
+
+export const wealthMilestones = mysqlTable("wealthMilestones", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  milestoneKey: varchar("milestoneKey", { length: 100 }).notNull(),
+  status: mysqlEnum("status", ["not_started", "in_progress", "done"]).default("not_started"),
+  completedDate: date("completedDate"),
+  notes: text("notes"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow(),
+  createdAt: timestamp("createdAt").defaultNow(),
+});
+export type WealthMilestone = typeof wealthMilestones.$inferSelect;
+export type InsertWealthMilestone = typeof wealthMilestones.$inferInsert;
+
+export const wealthProfile = mysqlTable("wealthProfile", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  annualExpenses: decimal("annualExpenses", { precision: 12, scale: 2 }),
+  fiNumber: decimal("fiNumber", { precision: 12, scale: 2 }),
+  savingsRatePct: decimal("savingsRatePct", { precision: 5, scale: 2 }),
+  tithePct: decimal("tithePct", { precision: 5, scale: 2 }).default("10"),
+  expectedReturnPct: decimal("expectedReturnPct", { precision: 5, scale: 2 }).default("8"),
+  hasLLC: boolean("hasLLC").default(false),
+  llcName: varchar("llcName", { length: 200 }),
+  llcFormDate: date("llcFormDate"),
+  hasSCorp: boolean("hasSCorp").default(false),
+  scorp2553FiledDate: date("scorp2553FiledDate"),
+  hasSepIra: boolean("hasSepIra").default(false),
+  hasRothIra: boolean("hasRothIra").default(false),
+  hasInvestmentProperty: boolean("hasInvestmentProperty").default(false),
+  hasEmergencyFund3Mo: boolean("hasEmergencyFund3Mo").default(false),
+  hasBasicWill: boolean("hasBasicWill").default(false),
+  hasCPA: boolean("hasCPA").default(false),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow(),
+});
+export type WealthProfile = typeof wealthProfile.$inferSelect;
+export type InsertWealthProfile = typeof wealthProfile.$inferInsert;
+
+export const investmentProperties = mysqlTable("investmentProperties", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  address: varchar("address", { length: 300 }),
+  purchaseDate: date("purchaseDate"),
+  purchasePrice: decimal("purchasePrice", { precision: 12, scale: 2 }),
+  currentValue: decimal("currentValue", { precision: 12, scale: 2 }),
+  monthlyRent: decimal("monthlyRent", { precision: 10, scale: 2 }),
+  monthlyExpenses: decimal("monthlyExpenses", { precision: 10, scale: 2 }),
+  strategy: mysqlEnum("strategy", ["brrrr", "buy_hold", "flip", "other"]).default("buy_hold"),
+  status: mysqlEnum("status", ["active", "sold", "under_contract"]).default("active"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow(),
+});
+export type InvestmentProperty = typeof investmentProperties.$inferSelect;
+export type InsertInvestmentProperty = typeof investmentProperties.$inferInsert;

@@ -12,6 +12,7 @@ import { eq, and } from "drizzle-orm";
 import { getAuthUrl, exchangeCodeForTokens } from "./drive/googleDrive";
 import { provisionAgentFolder, syncEconomicModel, syncWeeklyPulse } from "./drive/driveSync";
 import { buildMCRollup } from "./drive/mcRollup";
+import { wealthRouter } from "./routers/wealth";
 
 export const appRouter = router({
   system: systemRouter,
@@ -674,12 +675,54 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
         return { success: true };
       }),
 
-    myCohort: protectedProcedure.query(async ({ ctx }) => {
+     myCohort: protectedProcedure.query(async ({ ctx }) => {
       const cohort = await db.getAgentActiveCohort(ctx.user.id);
       return cohort ?? null;
     }),
-  }),
 
+    // Wealth view — coach sees all clients' wealth health scores and alert flags
+    getClientsWithWealth: protectedProcedure.query(async ({ ctx }) => {
+      const relationships = await db.getCoachRelationships(ctx.user.id);
+      const agentIds = relationships.map(r => r.agentId);
+      if (agentIds.length === 0) return [];
+
+      const results = await Promise.all(
+        agentIds.map(async (agentId) => {
+          const profile = await db.getAgentProfile(agentId);
+          const milestones = await db.getWealthMilestones(agentId);
+          const properties = await db.getInvestmentProperties(agentId);
+
+          const doneCount = milestones.filter(m => m.status === 'done').length;
+          const totalCount = 33;
+          const healthScore = Math.round((doneCount / totalCount) * 100);
+
+          // Alert flags for coaching conversations
+          const alerts: string[] = [];
+          const hasSepIra = milestones.find(m => m.milestoneKey === 't3_sep_ira' && m.status === 'done');
+          const hasLLC = milestones.find(m => m.milestoneKey === 't2_llc_formed' && m.status === 'done');
+          const hasEmergencyFund = milestones.find(m => m.milestoneKey === 't1_emergency_fund_3mo' && m.status === 'done');
+          const hasFiNumber = milestones.find(m => m.milestoneKey === 't4_fi_number_defined' && m.status === 'done');
+
+          if (!hasEmergencyFund) alerts.push('No emergency fund');
+          if (!hasLLC) alerts.push('No LLC');
+          if (!hasSepIra) alerts.push('No SEP-IRA');
+          if (!hasFiNumber) alerts.push('FI number not defined');
+
+          return {
+            agentId,
+            agentName: profile?.name ?? 'Unknown Agent',
+            healthScore,
+            doneCount,
+            propertyCount: properties.length,
+            alerts,
+            incomeGoal: profile?.incomeGoal ?? null,
+          };
+        })
+      );
+
+      return results.sort((a, b) => a.healthScore - b.healthScore);
+    }),
+  }),
   // ============================================================
   // RECRUITS (Phase 4)
   // ============================================================
@@ -1779,6 +1822,11 @@ Be warm, professional, and informative. Include next steps when applicable.`,
       return db.getDatabaseHealthScore(ctx.user.id);
     }),
   }),
+
+  // ============================================================
+  // WEALTH JOURNEY (Phase 8)
+  // ============================================================
+  wealth: wealthRouter,
 
   // ============================================================
   // WEEKLY PULSE (Phase 7b)
