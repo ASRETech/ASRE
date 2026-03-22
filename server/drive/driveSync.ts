@@ -133,8 +133,25 @@ export async function syncWealthMilestone(
 ): Promise<void> {
   const tokens = await db.getDriveTokens(userId);
   if (!tokens) return;
-  const sheetIds = tokens.sheetIds as Record<string, string> | null;
-  const sheetId = sheetIds?.['Financial Milestones'];
+  let sheetIds = tokens.sheetIds as Record<string, string> | null;
+  let sheetId = sheetIds?.['Financial Milestones'];
+  // MED-04: Lazy-provision the Financial Milestones sheet if it doesn't exist yet
+  if (!sheetId && tokens.rootFolderId) {
+    try {
+      const newSheetId = await createSpreadsheet(
+        tokens.accessToken, tokens.refreshToken,
+        'Financial Milestones', tokens.rootFolderId
+      );
+      // Set header row
+      await setSheetValues(tokens.accessToken, tokens.refreshToken, newSheetId, 'A1', [SHEET_HEADERS['Financial Milestones']]);
+      sheetId = newSheetId;
+      const updated = { ...(sheetIds ?? {}), 'Financial Milestones': newSheetId };
+      await db.saveDriveFolderIds(userId, tokens.rootFolderId, updated);
+    } catch (err) {
+      console.error('[Drive] Failed to provision Financial Milestones sheet:', err);
+      return;
+    }
+  }
   if (!sheetId) return;
 
   // Convert milestone key to display name: 't2_llc_formed' -> 'LLC Formed'

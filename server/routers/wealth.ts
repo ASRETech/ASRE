@@ -6,6 +6,10 @@ import * as db from '../db';
 import { computeWealthHealthScore, computeUnlockedTrackNumbers, computeFiProjection } from '../wealth/wealthUtils';
 import { MILESTONE_PROFILE_FLAGS } from '../wealth/milestoneKeys';
 
+// MED-03: In-memory cache for AI insights (7-day TTL per user)
+const aiInsightsCache = new Map<number, { insights: string[]; cachedAt: number }>();
+const AI_INSIGHTS_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
 export const wealthRouter = router({
 
   // ── GET FULL JOURNEY ──
@@ -17,7 +21,8 @@ export const wealthRouter = router({
       db.getAgentProfile(userId),
     ]);
     const incomeGoal = (agentProfile as any)?.incomeGoal ?? null;
-    const unlockedTracks = computeUnlockedTrackNumbers(incomeGoal);
+    // MED-02: Pass milestones so prerequisite completion is enforced
+    const unlockedTracks = computeUnlockedTrackNumbers(incomeGoal, milestones);
     const healthScore = computeWealthHealthScore(milestones);
     return { milestones, profile, unlockedTracks, healthScore };
   }),
@@ -41,6 +46,9 @@ export const wealthRouter = router({
       } else if (flagKey && input.status === 'not_started') {
         await db.setWealthProfileFlag(userId, flagKey, false);
       }
+
+      // MED-03: Invalidate AI insights cache when milestones change
+      aiInsightsCache.delete(userId);
 
       // Drive sync (non-blocking)
       db.getDriveTokens(userId).then(async (tokens) => {
@@ -73,7 +81,8 @@ export const wealthRouter = router({
       scorp2553FiledDate: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const fiNumber = input.annualExpenses ? String(input.annualExpenses * 25) : undefined;
+      // MED-05: Use nullish check (not falsy) so annualExpenses = 0 still computes fiNumber
+      const fiNumber = input.annualExpenses != null ? String(input.annualExpenses * 25) : undefined;
       const payload: any = {
         ...input,
         fiNumber,
@@ -170,12 +179,20 @@ export const wealthRouter = router({
       return { success: true };
     }),
 
-  // ── AI INSIGHTS ──
+  // ── AI INSIGHTS (MED-03: 7-day server-side cache) ──
   getAIInsights: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.user.id;
+
+    // MED-03: Return cached insights if still fresh
+    const cached = aiInsightsCache.get(userId);
+    if (cached && Date.now() - cached.cachedAt < AI_INSIGHTS_TTL_MS) {
+      return { insights: cached.insights, fromCache: true };
+    }
+
     const [milestones, profile, agentProfile] = await Promise.all([
-      db.getWealthMilestones(ctx.user.id),
-      db.getWealthProfile(ctx.user.id),
-      db.getAgentProfile(ctx.user.id),
+      db.getWealthMilestones(userId),
+      db.getWealthProfile(userId),
+      db.getAgentProfile(userId),
     ]);
 
     const done = milestones.filter(m => m.status === 'done').map(m => m.milestoneKey);
@@ -229,9 +246,12 @@ Format as a JSON array of strings.`;
       });
       const content = response.choices?.[0]?.message?.content;
       const parsed = JSON.parse(typeof content === 'string' ? content : '{}');
-      return { insights: parsed.insights ?? [] };
+      const insights = parsed.insights ?? [];
+      // MED-03: Store in cache
+      aiInsightsCache.set(userId, { insights, cachedAt: Date.now() });
+      return { insights, fromCache: false };
     } catch {
-      return { insights: ['Connect with your CPA to review your current tax strategy and identify your highest-impact next step.'] };
+      return { insights: ['Connect with your CPA to review your current tax strategy and identify your highest-impact next step.'], fromCache: false };
     }
   }),
 });

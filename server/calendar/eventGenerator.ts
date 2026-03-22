@@ -7,9 +7,10 @@
  * 4. Lead gen blocks (from economic model)
  * 5. Weekly pulse reminder (recurring Friday)
  */
-import { format, addDays, nextMonday } from 'date-fns';
-import { getPlacementFor } from '../schedule/placementEngine';
+import { format, addDays, nextMonday, isMonday } from 'date-fns';
+import { getPlacementFor, getBusySlots } from '../schedule/placementEngine';
 import { EVENT_TYPE_TO_BUCKET } from '../schedule/buckets';
+import { getGCalClient } from './gcal';
 
 // ── FINANCIAL DEADLINES ──
 export const FINANCIAL_DEADLINES: Array<{
@@ -124,20 +125,43 @@ export async function generateEventQueue(ctx: any, userId: number): Promise<any[
   const today = new Date();
   const year = today.getFullYear();
 
-  // Helper to get placement from schedule engine
+  // MED-01: Batch-fetch busy slots once instead of per-event GCal calls
+  // This prevents N+1 GCal API calls when generating a large queue
+  let busySlots = new Set<string>();
+  try {
+    const gcalSettings = await ctx.db.query.calendarSettings?.findFirst?.({ where: (s: any, { eq }: any) => eq(s.userId, userId) });
+    if (gcalSettings?.gcalAccessToken) {
+      const auth = getGCalClient(gcalSettings.gcalAccessToken, gcalSettings.gcalRefreshToken ?? undefined);
+      const weekStart = isMonday(today) ? addDays(today, 7) : nextMonday(today);
+      busySlots = await getBusySlots(auth, gcalSettings.gcalCalendarId ?? 'primary', weekStart);
+    }
+  } catch { /* non-blocking — queue generation continues without busy data */ }
+
+  // Helper to get placement from schedule engine (MED-01: passes busySlots to avoid N+1 GCal calls)
   const getPlacement = async (eventType: string, durationMinutes: number) => {
     try {
       const bucketKey = EVENT_TYPE_TO_BUCKET[eventType as keyof typeof EVENT_TYPE_TO_BUCKET] ?? 'deepwork';
-      return await getPlacementFor(ctx, userId, bucketKey, durationMinutes);
+      return await getPlacementFor(ctx, userId, bucketKey, durationMinutes, busySlots);
     } catch {
       return null;
     }
   };
 
+  // HIGH-03: Helper to get next occurrence of a deadline (handles year boundary)
+  const getNextDeadlineDate = (month: number, day: number, yearOffset?: number): Date => {
+    if (yearOffset) return new Date(year + yearOffset, month - 1, day);
+    const thisYear = new Date(year, month - 1, day);
+    // If deadline already passed this year, schedule for next year
+    return thisYear > today ? thisYear : new Date(year + 1, month - 1, day);
+  };
+
+  // HIGH-05: Safe nextMonday that handles when today IS Monday
+  const safeNextMonday = (d: Date): Date => isMonday(d) ? addDays(d, 7) : nextMonday(d);
+
   // 1. FINANCIAL DEADLINES
   for (const fd of FINANCIAL_DEADLINES) {
-    const targetYear = fd.year_offset ? year + fd.year_offset : year;
-    const deadlineDate = new Date(targetYear, fd.month - 1, fd.day);
+    const deadlineDate = getNextDeadlineDate(fd.month, fd.day, fd.year_offset);
+    const targetYear = deadlineDate.getFullYear();
     if (deadlineDate > today) {
       const placement = await getPlacement('financial', fd.durationMinutes ?? 0);
       events.push({
@@ -148,7 +172,7 @@ export async function generateEventQueue(ctx: any, userId: number): Promise<any[
         title: fd.title,
         description: fd.description,
         suggestedDate: placement?.date ?? format(deadlineDate, 'yyyy-MM-dd'),
-        suggestedStartTime: placement?.startTime ?? null,
+        suggestedStartTime: placement?.startTime ?? '09:00', // HIGH-04: never null for timed events
         durationMinutes: fd.durationMinutes ?? 0,
         isRecurring: fd.isRecurring,
         gcalColorId: fd.colorId,
@@ -172,7 +196,7 @@ export async function generateEventQueue(ctx: any, userId: number): Promise<any[
         const placement = await getPlacement('milestone', def.durationMinutes);
         const suggestedDate = def.urgencyDays
           ? format(addDays(today, def.urgencyDays), 'yyyy-MM-dd')
-          : placement?.date ?? format(nextMonday(today), 'yyyy-MM-dd');
+          : placement?.date ?? format(safeNextMonday(today), 'yyyy-MM-dd');
         events.push({
           userId,
           eventType: 'milestone',
@@ -181,7 +205,7 @@ export async function generateEventQueue(ctx: any, userId: number): Promise<any[
           title: def.title,
           description: def.description,
           suggestedDate,
-          suggestedStartTime: placement?.startTime ?? null,
+          suggestedStartTime: placement?.startTime ?? '09:00', // HIGH-04: never null
           durationMinutes: def.durationMinutes,
           isRecurring: false,
           gcalColorId: def.colorId,
@@ -211,8 +235,8 @@ export async function generateEventQueue(ctx: any, userId: number): Promise<any[
           sourceKey: key,
           title: def.title,
           description: def.description,
-          suggestedDate: placement?.date ?? format(nextMonday(today), 'yyyy-MM-dd'),
-          suggestedStartTime: placement?.startTime ?? null,
+          suggestedDate: placement?.date ?? format(safeNextMonday(today), 'yyyy-MM-dd'),
+          suggestedStartTime: placement?.startTime ?? '09:00', // HIGH-04: never null
           durationMinutes: def.durationMinutes,
           isRecurring: false,
           gcalColorId: def.colorId,
@@ -235,11 +259,16 @@ export async function generateEventQueue(ctx: any, userId: number): Promise<any[
     });
     if (economicModel?.dailyContactsNeeded && settings?.leadGenEnabled !== false) {
       const dailyNumber = parseFloat(economicModel.dailyContactsNeeded);
-      const contactsPerHr = parseFloat(settings?.contactsPerHour ?? '2');
+      // CRIT-05: Guard against division by zero
+      const contactsPerHrRaw = parseFloat(settings?.contactsPerHour ?? '2');
+      const contactsPerHr = contactsPerHrRaw > 0 ? contactsPerHrRaw : 2;
       const hrsPerDay = Math.ceil((dailyNumber / contactsPerHr) * 10) / 10;
-      const minutesPerDay = Math.ceil(hrsPerDay * 60);
+      const minutesPerDay = Math.max(30, Math.ceil(hrsPerDay * 60)); // minimum 30 min block
       const days = (settings?.leadGenDays ?? 'MO,TU,WE,TH,FR').split(',');
-      const rruleDays = days.join(',');
+      // HIGH-02: Validate RRULE days — only allow valid iCal day codes
+      const VALID_DAYS = new Set(['MO','TU','WE','TH','FR','SA','SU']);
+      const validDays = days.filter((d: string) => VALID_DAYS.has(d.trim().toUpperCase()));
+      const rruleDays = validDays.length > 0 ? validDays.join(',') : 'MO,TU,WE,TH,FR';
       events.push({
         userId,
         eventType: 'lead_gen_block',
@@ -247,11 +276,11 @@ export async function generateEventQueue(ctx: any, userId: number): Promise<any[
         sourceKey: 'lead_gen_recurring',
         title: `📞 Lead Gen Block — ${dailyNumber} contacts`,
         description: `Daily lead generation block. Target: ${dailyNumber} contacts at ${contactsPerHr} contacts/hour = ${hrsPerDay} hours.`,
-        suggestedDate: format(nextMonday(today), 'yyyy-MM-dd'),
+        suggestedDate: format(safeNextMonday(today), 'yyyy-MM-dd'), // HIGH-05
         suggestedStartTime: settings?.leadGenStartTime ?? '07:00',
         durationMinutes: minutesPerDay,
         isRecurring: true,
-        recurrenceRule: `RRULE:FREQ=WEEKLY;BYDAY=${rruleDays}`,
+        recurrenceRule: `RRULE:FREQ=WEEKLY;BYDAY=${rruleDays};COUNT=52`, // HIGH-02: bounded recurrence
         gcalColorId: '11',
         remindMinutesBefore: 10,
         isPreferredWindow: true,

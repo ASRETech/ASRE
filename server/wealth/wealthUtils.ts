@@ -20,21 +20,47 @@ export function computeWealthHealthScore(milestones: MilestoneRow[]): number {
   return Math.min(100, score);
 }
 
+// MED-02: Track milestone keys for completion percentage prerequisite checks
+const T1_KEYS = [
+  't1_business_checking', 't1_business_credit_card', 't1_eo_umbrella_insurance',
+  't1_emergency_fund_3mo', 't1_operating_reserve_1mo', 't1_beneficiary_designations', 't1_basic_will',
+];
+const T2_KEYS = [
+  't2_llc_formed', 't2_operating_agreement', 't2_scorp_2553',
+  't2_cpa_hired', 't2_accounting_software', 't2_quarterly_est_tax',
+];
+
 /**
- * Track unlock logic based on income goal (incomeGoal from agentProfile).
+ * Track unlock logic based on income goal + milestone completion percentage.
  * Track 1 is always unlocked.
  * Track 2: $50K+ income goal
- * Track 3: $75K+ income goal
- * Track 4: $120K+ income goal
- * Track 5: $250K+ income goal
+ * Track 3: $80K+ income goal AND at least 33% of Track 2 milestones done
+ * Track 4: $100K+ income goal AND at least 50% of Track 2 milestones done
+ * Track 5: $250K+ income goal AND at least 85% of Track 1 milestones done
+ *
+ * MED-02: milestones parameter added so prerequisite completion is enforced.
+ * Falls back to income-only gating if milestones not provided.
  */
-export function computeUnlockedTrackNumbers(incomeGoal: number | null): number[] {
+export function computeUnlockedTrackNumbers(
+  incomeGoal: number | null,
+  milestones?: MilestoneRow[]
+): number[] {
   const goal = incomeGoal ?? 0;
   const unlocked = [1];
   if (goal >= 50000) unlocked.push(2);
-  if (goal >= 75000) unlocked.push(3);
-  if (goal >= 120000) unlocked.push(4);
-  if (goal >= 250000) unlocked.push(5);
+  if (milestones) {
+    const doneKeys = new Set(milestones.filter(m => m.status === 'done').map(m => m.milestoneKey));
+    const t1Pct = T1_KEYS.filter(k => doneKeys.has(k)).length / T1_KEYS.length;
+    const t2Pct = T2_KEYS.filter(k => doneKeys.has(k)).length / T2_KEYS.length;
+    if (goal >= 80000 && t2Pct >= 0.33) unlocked.push(3); // at least 2/6 T2 milestones
+    if (goal >= 100000 && t2Pct >= 0.5) unlocked.push(4); // at least 3/6 T2 milestones
+    if (goal >= 250000 && t1Pct >= 0.85) unlocked.push(5); // at least 6/7 T1 milestones
+  } else {
+    // Fallback: income-only gating (used when milestones not available)
+    if (goal >= 75000) unlocked.push(3);
+    if (goal >= 120000) unlocked.push(4);
+    if (goal >= 250000) unlocked.push(5);
+  }
   return unlocked;
 }
 

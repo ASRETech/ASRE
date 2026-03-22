@@ -23,6 +23,7 @@ interface EventQueueItemProps {
   onPush: (id: number) => void;
   onSkip: (id: number) => void;
   isPushing?: boolean;
+  canPush?: boolean;
 }
 
 const SOURCE_COLORS: Record<string, string> = {
@@ -47,7 +48,7 @@ const GCAL_COLORS: Record<string, string> = {
   "9": "#3F51B5", "10": "#0B8043", "11": "#D50000",
 };
 
-export function EventQueueItem({ event, onPush, onSkip, isPushing }: EventQueueItemProps) {
+export function EventQueueItem({ event, onPush, onSkip, isPushing, canPush = true }: EventQueueItemProps) {
   const colorHex = GCAL_COLORS[event.gcalColorId ?? "1"] ?? "#7986CB";
   const sourceColor = SOURCE_COLORS[event.sourceModule] ?? "bg-slate-500/20 text-slate-400 border-slate-500/30";
   const sourceLabel = SOURCE_LABELS[event.sourceModule] ?? event.sourceModule;
@@ -117,8 +118,9 @@ export function EventQueueItem({ event, onPush, onSkip, isPushing }: EventQueueI
           <Button
             size="sm"
             onClick={() => onPush(event.id)}
-            disabled={isPushing}
-            className="h-7 px-3 bg-blue-600 hover:bg-blue-500 text-white text-xs"
+            disabled={isPushing || !canPush}
+            title={!canPush ? "Connect Google Calendar first" : undefined}
+            className="h-7 px-3 bg-blue-600 hover:bg-blue-500 text-white text-xs disabled:opacity-50"
           >
             Push
           </Button>

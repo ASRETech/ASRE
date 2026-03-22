@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -23,6 +23,18 @@ export function WeekGrid({ grid, bucketColors, activeBucket, onChange }: WeekGri
   const isPainting = useRef(false);
   const paintValue = useRef<string>("");
 
+  // LOW-01: Listen for mouseup/touchend on window to prevent stuck painting state
+  // when user releases mouse outside the grid
+  useEffect(() => {
+    const stopPainting = () => { isPainting.current = false; };
+    window.addEventListener("mouseup", stopPainting);
+    window.addEventListener("touchend", stopPainting);
+    return () => {
+      window.removeEventListener("mouseup", stopPainting);
+      window.removeEventListener("touchend", stopPainting);
+    };
+  }, []);
+
   const handleCellMouseDown = useCallback((dayIdx: number, slotIdx: number) => {
     isPainting.current = true;
     const current = grid[dayIdx]?.[slotIdx] ?? "";
@@ -40,9 +52,30 @@ export function WeekGrid({ grid, bucketColors, activeBucket, onChange }: WeekGri
     onChange(newGrid);
   }, [grid, onChange]);
 
-  const handleMouseUp = useCallback(() => {
-    isPainting.current = false;
-  }, []);
+  // HIGH-06: Touch event handlers for mobile painting
+  const handleTouchStart = useCallback((dayIdx: number, slotIdx: number, e: React.TouchEvent) => {
+    e.preventDefault(); // prevent scroll while painting
+    isPainting.current = true;
+    const current = grid[dayIdx]?.[slotIdx] ?? "";
+    paintValue.current = current === activeBucket ? "" : activeBucket;
+    const newGrid = grid.map(row => [...row]);
+    newGrid[dayIdx][slotIdx] = paintValue.current;
+    onChange(newGrid);
+  }, [grid, activeBucket, onChange]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isPainting.current) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY) as HTMLElement | null;
+    if (!el) return;
+    const dayIdx = parseInt(el.dataset.day ?? "-1");
+    const slotIdx = parseInt(el.dataset.slot ?? "-1");
+    if (dayIdx < 0 || slotIdx < 0) return;
+    const newGrid = grid.map(row => [...row]);
+    newGrid[dayIdx][slotIdx] = paintValue.current;
+    onChange(newGrid);
+  }, [grid, onChange]);
 
   // Hour labels (every 2 slots = 1 hour)
   const hourLabels = Array.from({ length: 24 }, (_, i) => {
@@ -53,9 +86,8 @@ export function WeekGrid({ grid, bucketColors, activeBucket, onChange }: WeekGri
 
   return (
     <div
-      className="overflow-auto select-none"
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      className="overflow-auto select-none touch-none"
+      onTouchMove={handleTouchMove}
     >
       <div className="min-w-[640px]">
         {/* Day headers */}
@@ -86,6 +118,8 @@ export function WeekGrid({ grid, bucketColors, activeBucket, onChange }: WeekGri
                 return (
                   <div
                     key={dayIdx}
+                    data-day={dayIdx}
+                    data-slot={slotIdx}
                     className={cn(
                       "flex-1 border-r border-slate-800/50 cursor-crosshair transition-colors",
                       slotIdx % 2 === 0 ? "border-t border-t-slate-700/40" : "",
@@ -94,6 +128,7 @@ export function WeekGrid({ grid, bucketColors, activeBucket, onChange }: WeekGri
                     style={color ? { backgroundColor: color, opacity: 0.85 } : undefined}
                     onMouseDown={() => handleCellMouseDown(dayIdx, slotIdx)}
                     onMouseEnter={() => handleCellMouseEnter(dayIdx, slotIdx)}
+                    onTouchStart={(e) => handleTouchStart(dayIdx, slotIdx, e)}
                   />
                 );
               })}

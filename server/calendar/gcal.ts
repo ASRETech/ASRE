@@ -41,6 +41,7 @@ export interface GCalEventInput {
   startDateTime?: string; // ISO for timed events
   endDateTime?: string;
   recurrenceRule?: string;
+  timezone?: string; // LOW-04: User's timezone (e.g. 'America/New_York')
   extendedProperties?: {
     private?: Record<string, string>;
   };
@@ -64,8 +65,10 @@ export async function insertGCalEvent(auth: Auth.OAuth2Client, input: GCalEventI
     event.start = { date: input.date };
     event.end = { date: input.date };
   } else {
-    event.start = { dateTime: input.startDateTime, timeZone: 'America/New_York' };
-    event.end = { dateTime: input.endDateTime, timeZone: 'America/New_York' };
+    // LOW-04: Use user's configured timezone, fallback to America/New_York
+    const tz = input.timezone ?? 'America/New_York';
+    event.start = { dateTime: input.startDateTime, timeZone: tz };
+    event.end = { dateTime: input.endDateTime, timeZone: tz };
   }
 
   if (input.recurrenceRule) {

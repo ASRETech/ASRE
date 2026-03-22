@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, json, boolean, decimal, date } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, json, boolean, decimal, date, index, uniqueIndex } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -46,6 +46,10 @@ export const agentProfiles = mysqlTable("agent_profiles", {
   coachBio: text("coachBio"),
   googleBusinessUrl: varchar("googleBusinessUrl", { length: 512 }),
   reviewRequestTemplate: text("reviewRequestTemplate"),
+  // HIGH-09: Market Center fields for MC Operator role gate
+  marketCenterId: varchar("marketCenterId", { length: 100 }),
+  marketCenterName: varchar("marketCenterName", { length: 200 }),
+  agentRole: mysqlEnum("agentRole", ["agent", "coach", "mc_op", "team_leader", "admin"]).default("agent"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -1083,19 +1087,8 @@ export type InsertWeeklyPulse = typeof weeklyPulses.$inferInsert;
 // ============================================================
 // PHASE 8 — WEALTH JOURNEY
 // ============================================================
-
-export const wealthTracks = mysqlTable("wealthTracks", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull(),
-  trackNumber: int("trackNumber").notNull(),
-  isUnlocked: boolean("isUnlocked").default(false),
-  unlockedAt: timestamp("unlockedAt"),
-  completedAt: timestamp("completedAt"),
-  createdAt: timestamp("createdAt").defaultNow(),
-});
-export type WealthTrack = typeof wealthTracks.$inferSelect;
-export type InsertWealthTrack = typeof wealthTracks.$inferInsert;
-
+// MED-08: wealthTracks removed — track unlock state is computed dynamically
+// from income data + milestone completion; no need to persist it.
 export const wealthMilestones = mysqlTable("wealthMilestones", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
@@ -1105,7 +1098,10 @@ export const wealthMilestones = mysqlTable("wealthMilestones", {
   notes: text("notes"),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow(),
   createdAt: timestamp("createdAt").defaultNow(),
-});
+}, (table) => ({
+  // MED-09: Index for fast milestone lookups by user + key
+  userKeyIdx: uniqueIndex("wealthMilestones_userId_key_idx").on(table.userId, table.milestoneKey),
+}));
 export type WealthMilestone = typeof wealthMilestones.$inferSelect;
 export type InsertWealthMilestone = typeof wealthMilestones.$inferInsert;
 
@@ -1128,6 +1124,8 @@ export const wealthProfile = mysqlTable("wealthProfile", {
   hasEmergencyFund3Mo: boolean("hasEmergencyFund3Mo").default(false),
   hasBasicWill: boolean("hasBasicWill").default(false),
   hasCPA: boolean("hasCPA").default(false),
+  aiInsightsJson: json("aiInsightsJson").$type<string[]>(),
+  aiInsightsCachedAt: timestamp("aiInsightsCachedAt"),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow(),
 });
 export type WealthProfile = typeof wealthProfile.$inferSelect;
@@ -1174,7 +1172,11 @@ export const calendarEvents = mysqlTable("calendarEvents", {
   isPreferredWindow: boolean("isPreferredWindow").default(true),
   fallbackReason: varchar("fallbackReason", { length: 100 }),
   createdAt: timestamp("createdAt").defaultNow(),
-});
+}, (table) => ({
+  // MED-09: Indexes for fast queue queries (userId + status, userId + sourceKey)
+  userStatusIdx: index("calendarEvents_userId_status_idx").on(table.userId, table.status),
+  sourceKeyIdx: index("calendarEvents_sourceKey_idx").on(table.userId, table.sourceKey),
+}));
 export type CalendarEvent = typeof calendarEvents.$inferSelect;
 export type InsertCalendarEvent = typeof calendarEvents.$inferInsert;
 
@@ -1186,7 +1188,10 @@ export const calendarSettings = mysqlTable("calendarSettings", {
   gcalRefreshToken: text("gcalRefreshToken"),
   gcalCalendarId: varchar("gcalCalendarId", { length: 255 }),
   gcalWatchChannelId: varchar("gcalWatchChannelId", { length: 255 }),
+  gcalWatchChannelToken: varchar("gcalWatchChannelToken", { length: 100 }),
   gcalWatchExpiry: timestamp("gcalWatchExpiry"),
+  hasScopeCalendar: boolean("hasScopeCalendar").default(false),
+  timezone: varchar("timezone", { length: 60 }).default("America/New_York"),
   leadGenEnabled: boolean("leadGenEnabled").default(true),
   leadGenStartTime: varchar("leadGenStartTime", { length: 5 }).default("07:00"),
   leadGenDays: varchar("leadGenDays", { length: 50 }).default("MO,TU,WE,TH,FR"),
@@ -1223,3 +1228,13 @@ export const scheduleBucketCustomizations = mysqlTable("scheduleBucketCustomizat
   updatedAt: timestamp("bucketCustUpdatedAt").defaultNow(),
 });
 export type ScheduleBucketCustomization = typeof scheduleBucketCustomizations.$inferSelect;
+
+// ── APP LOCKS (Phase 11 — distributed cron lock, CRIT-07) ──
+export const appLocks = mysqlTable("appLocks", {
+  lockKey: varchar("lockKey", { length: 100 }).primaryKey(),
+  lockedAt: timestamp("lockedAt").notNull(),
+  lockedBy: varchar("lockedBy", { length: 100 }),
+  expiresAt: timestamp("expiresAt").notNull(),
+});
+export type AppLock = typeof appLocks.$inferSelect;
+export type InsertAppLock = typeof appLocks.$inferInsert;

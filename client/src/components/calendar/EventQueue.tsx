@@ -1,5 +1,9 @@
+/**
+ * EventQueue.tsx
+ * Phase 11 fixes: MED-07 (calendar not-connected banner), LOW-05 (re-auth prompt for scope upgrade)
+ */
 import { useState } from "react";
-import { Zap, RefreshCw, ChevronsRight } from "lucide-react";
+import { Zap, RefreshCw, ChevronsRight, AlertTriangle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
@@ -11,6 +15,10 @@ type FilterTab = "pending" | "pushed" | "skipped" | "all";
 export function EventQueue() {
   const [filter, setFilter] = useState<FilterTab>("pending");
   const utils = trpc.useUtils();
+
+  // MED-07 / LOW-05: Fetch calendar settings to show connection status
+  const { data: calSettings } = trpc.calendar.getSettings.useQuery(undefined, { retry: false });
+  const { data: authUrl } = trpc.calendar.getAuthUrl.useQuery(undefined, { retry: false });
 
   const { data: queue, isLoading } = trpc.calendar.getEventQueue.useQuery({ limit: 200 });
 
@@ -51,8 +59,61 @@ export function EventQueue() {
 
   const pendingCount = queue?.filter(e => e.status === "pending").length ?? 0;
 
+  // MED-07: Determine connection state
+  const isConnected = calSettings?.isCalendarConnected ?? false;
+  const needsScopeUpgrade = calSettings?.calendarScopeNeedsUpgrade ?? false;
+  const notConnectedAtAll = calSettings !== undefined && !calSettings?.gcalCalendarId && !isConnected && !needsScopeUpgrade;
+
   return (
     <div className="space-y-4">
+      {/* MED-07: Not connected banner */}
+      {notConnectedAtAll && (
+        <div className="flex items-start gap-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+          <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-amber-300 font-medium">Google Calendar not connected</p>
+            <p className="text-xs text-amber-400/80 mt-0.5">
+              Connect your Google Calendar in Settings to push events automatically.
+            </p>
+          </div>
+          {authUrl && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-amber-500/50 text-amber-300 hover:text-amber-100 shrink-0 text-xs"
+              onClick={() => window.open(authUrl.url, '_blank')}
+            >
+              <ExternalLink className="w-3 h-3 mr-1" />
+              Connect
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* LOW-05: Scope upgrade needed banner */}
+      {needsScopeUpgrade && (
+        <div className="flex items-start gap-3 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+          <AlertTriangle className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-blue-300 font-medium">Calendar permission upgrade needed</p>
+            <p className="text-xs text-blue-400/80 mt-0.5">
+              Re-authorize Google Calendar to grant calendar write access for pushing events.
+            </p>
+          </div>
+          {authUrl && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-blue-500/50 text-blue-300 hover:text-blue-100 shrink-0 text-xs"
+              onClick={() => window.open(authUrl.url, '_blank')}
+            >
+              <ExternalLink className="w-3 h-3 mr-1" />
+              Re-authorize
+            </Button>
+          )}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-lg font-semibold text-white">Event Queue</h2>
@@ -71,8 +132,9 @@ export function EventQueue() {
             <Button
               size="sm"
               onClick={() => pushAllMutation.mutate()}
-              disabled={pushAllMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-500 text-white"
+              disabled={pushAllMutation.isPending || !isConnected}
+              title={!isConnected ? "Connect Google Calendar first" : undefined}
+              className="bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50"
             >
               <ChevronsRight className="w-3.5 h-3.5 mr-1.5" />
               Push All ({pendingCount})
@@ -114,6 +176,7 @@ export function EventQueue() {
               onPush={(id) => pushMutation.mutate({ eventId: id })}
               onSkip={(id) => skipMutation.mutate({ eventId: id })}
               isPushing={pushMutation.isPending}
+              canPush={isConnected}
             />
           ))
         )}

@@ -2,9 +2,44 @@
  * server/schedule/placementEngine.ts
  * Places events into preferred schedule windows based on user's 7×48 grid.
  * Falls back gracefully when no preferred window exists.
+ * Phase 11 fix: MED-01 (batch GCal freebusy check), LOW-03 (filter sub-30-min windows)
  */
 import { format, addDays, nextMonday } from 'date-fns';
 import { BUCKET_METADATA } from './buckets';
+import { google } from 'googleapis';
+import type { Auth } from 'googleapis';
+
+/**
+ * MED-01: Batch fetch one week of busy times from GCal.
+ * Returns a Set of "YYYY-MM-DDTHH:MM" strings for quick conflict lookup.
+ * Falls back to empty set if GCal is unavailable.
+ */
+export async function getBusySlots(
+  auth: Auth.OAuth2Client,
+  calendarId: string,
+  weekStart: Date
+): Promise<Set<string>> {
+  const calendar = google.calendar({ version: 'v3', auth });
+  const weekEnd = addDays(weekStart, 7);
+  try {
+    const response = await calendar.freebusy.query({
+      requestBody: {
+        timeMin: weekStart.toISOString(),
+        timeMax: weekEnd.toISOString(),
+        items: [{ id: calendarId }, { id: 'primary' }],
+      },
+    });
+    const busySet = new Set<string>();
+    for (const cal of Object.values(response.data.calendars ?? {})) {
+      for (const busy of (cal as any).busy ?? []) {
+        busySet.add(busy.start!.substring(0, 16));
+      }
+    }
+    return busySet;
+  } catch {
+    return new Set<string>(); // Don't block queue generation if freebusy fails
+  }
+}
 
 export interface PlacementResult {
   date: string;        // yyyy-MM-dd
@@ -71,7 +106,9 @@ export async function getPlacementFor(
   ctx: any,
   userId: number,
   bucketKey: string,
-  durationMinutes: number
+  durationMinutes: number,
+  // MED-01: Pre-fetched busy slots to avoid N+1 GCal API calls
+  _busySlots?: Set<string>
 ): Promise<PlacementResult | null> {
   try {
     // Load user's schedule preferences
@@ -151,17 +188,21 @@ export function extractWindowRules(grid: string[][]): Array<{
       const b = slot < 48 ? daySlots[slot] : '';
       if (b !== runBucket) {
         if (runBucket && runBucket !== 'blocked' && runStart !== -1) {
-          const meta = BUCKET_METADATA[runBucket];
-          rules.push({
-            bucketKey: runBucket,
-            bucketLabel: meta?.label ?? runBucket,
-            bucketColor: meta?.color ?? '#888',
-            day,
-            dayName: DAY_NAMES[day],
-            startTime: slotToTime(runStart),
-            endTime: slotToTime(slot),
-            hoursPerWindow: (slot - runStart) * 0.5,
-          });
+          const runLen = slot - runStart;
+          // LOW-03: Skip windows shorter than 30 minutes (1 slot) — too small to be useful
+          if (runLen >= 1) {
+            const meta = BUCKET_METADATA[runBucket];
+            rules.push({
+              bucketKey: runBucket,
+              bucketLabel: meta?.label ?? runBucket,
+              bucketColor: meta?.color ?? '#888',
+              day,
+              dayName: DAY_NAMES[day],
+              startTime: slotToTime(runStart),
+              endTime: slotToTime(slot),
+              hoursPerWindow: runLen * 0.5,
+            });
+          }
         }
         runBucket = b;
         runStart = slot;

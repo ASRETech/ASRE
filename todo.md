@@ -163,3 +163,33 @@
 - [x] Frontend: Analytics.tsx — "Follow-Up" dimension replaced with "Goal Setting" (GPS deliverables-based)
 - [x] Frontend: Marketing.tsx — DatabaseMarketingTab rewritten as honest 36:12:3 planning calculator
 - [x] Tests: 55/55 passing, 0 TypeScript errors
+
+## Phase 11 — Audit Package Fixes
+
+### HIGH Priority
+- [x] HIGH-06: WeekGrid touch events for mobile drag support
+- [x] HIGH-07: No ctx.db.raw() usage — codebase uses Drizzle ORM safely
+- [x] HIGH-09: agentProfiles schema — marketCenterId, marketCenterName, agentRole added; mc router with role gate
+
+### MEDIUM Priority
+- [x] MED-01: Batch GCal freebusy check in eventGenerator — getBusySlots() fetched once per queue generation
+- [x] MED-02: Track unlock logic with milestone completion percentage (T1/T2 keys, pct thresholds)
+- [x] MED-03: AI insights 7-day in-memory cache per user in wealth router
+- [x] MED-04: Lazy-provision Financial Milestones sheet in driveSync.ts if missing
+- [x] MED-05: FI Number null fix — annualExpenses = 0 correctly computes fiNumber
+- [x] MED-06: Auto-save suppression during template apply in ScheduleCreator
+- [x] MED-07: Calendar not-connected amber banner in EventQueue with Connect button
+- [x] MED-08: Dead wealthTracks table removed from schema
+- [x] MED-09: Indexes added to calendarEvents and wealthMilestones tables
+
+### LOW Priority
+- [x] LOW-01: Window blur + visibilitychange handlers in WeekGrid
+- [x] LOW-02: MREA template confirmation dialog before overwriting schedule
+- [x] LOW-03: Filter sub-30-min windows in extractWindowRules
+- [x] LOW-04: Timezone-aware datetime in GCal events
+- [x] LOW-05: hasScopeCalendar flag + re-auth prompt banner in EventQueue
+
+### Verification
+- [x] TypeScript: 0 errors
+- [x] Tests: 55/55 passing
+- [x] DB migration: 0015 applied

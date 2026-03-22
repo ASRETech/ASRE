@@ -9,6 +9,7 @@ import * as db from "./db";
 import { nanoid } from "nanoid";
 import * as schema from "../drizzle/schema";
 import { eq, and } from "drizzle-orm";
+import { TRPCError } from "@trpc/server";
 import { getAuthUrl, exchangeCodeForTokens } from "./drive/googleDrive";
 import { provisionAgentFolder, syncEconomicModel, syncWeeklyPulse } from "./drive/driveSync";
 import { buildMCRollup } from "./drive/mcRollup";
@@ -1026,26 +1027,7 @@ Be warm, professional, and informative. Include next steps when applicable.`,
       }),
   }),
 
-  // ============================================================
-  // CALENDAR (Phase 4) — settings only, no actual Google sync
-  // ============================================================
-  calendar: router({
-    getToken: protectedProcedure.query(async ({ ctx }) => {
-      return db.getCalendarToken(ctx.user.id);
-    }),
-    upsertToken: protectedProcedure
-      .input(z.object({
-        provider: z.string().optional(),
-        calendarId: z.string().optional(),
-        syncEnabled: z.boolean().optional(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        await db.upsertCalendarToken({ ...input, userId: ctx.user.id });
-        return { success: true };
-      }),
-  }),
-
-  // ============================================================
+   // ============================================================
   // SUBSCRIPTIONS (Phase 6)
   // ============================================================
   subscriptions: router({
@@ -1930,7 +1912,7 @@ Be warm, professional, and informative. Include next steps when applicable.`,
       }
       return { success: true };
     }),
-    buildMCDashboard: protectedProcedure
+     buildMCDashboard: protectedProcedure
       .input(z.object({ agentUserIds: z.array(z.number()) }))
       .mutation(async ({ ctx, input }) => {
         const profile = await db.getAgentProfile(ctx.user.id);
@@ -1942,6 +1924,37 @@ Be warm, professional, and informative. Include next steps when applicable.`,
         return result;
       }),
   }),
+  // ============================================================
+  // MARKET CENTER OPERATOR ROUTER (HIGH-09)
+  // ============================================================
+  mc: router({
+    // Gate: only mc_op or admin can list agents in their market center
+    getAgents: protectedProcedure.query(async ({ ctx }) => {
+      const conn = await db.getDb();
+      if (!conn) return [];
+      const [profile] = await conn.select().from(schema.agentProfiles)
+        .where(eq(schema.agentProfiles.userId, ctx.user.id)).limit(1);
+      if (!['mc_op', 'admin'].includes((profile as any)?.agentRole ?? '')) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'MC Operator access required' });
+      }
+      if (!(profile as any)?.marketCenterId) return [];
+      return conn.select().from(schema.agentProfiles)
+        .where(eq(schema.agentProfiles.marketCenterId, (profile as any).marketCenterId));
+    }),
+    updateMarketCenter: protectedProcedure
+      .input(z.object({
+        marketCenterId: z.string().optional(),
+        marketCenterName: z.string().optional(),
+        agentRole: z.enum(['agent', 'coach', 'mc_op', 'team_leader', 'admin']).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const conn = await db.getDb();
+        if (!conn) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+        await conn.update(schema.agentProfiles)
+          .set({ ...input, updatedAt: new Date() } as any)
+          .where(eq(schema.agentProfiles.userId, ctx.user.id));
+        return { success: true };
+      }),
+  }),
 });
-
 export type AppRouter = typeof appRouter;

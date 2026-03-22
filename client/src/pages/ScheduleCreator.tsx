@@ -1,12 +1,23 @@
 /**
  * ScheduleCreator.tsx — Phase 10
  * 7×48 paintable weekly schedule grid with bucket palette and MREA template
+ * Phase 11 fixes: LOW-02 (MREA confirmation dialog), MED-06 (suppress save during template apply)
  */
-import { useState, useMemo, useCallback } from "react";
-import { Save, LayoutTemplate, Info } from "lucide-react";
+import { useState, useMemo, useCallback, useRef } from "react";
+import { Save, LayoutTemplate, Info, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { WeekGrid } from "@/components/schedule/WeekGrid";
@@ -28,6 +39,10 @@ export default function ScheduleCreator() {
   const [grid, setGrid] = useState<string[][]>(() => emptyGrid());
   const [activeBucket, setActiveBucket] = useState<string>("");
   const [initialized, setInitialized] = useState(false);
+  // LOW-02: confirmation dialog state
+  const [showTemplateConfirm, setShowTemplateConfirm] = useState(false);
+  // MED-06: flag to suppress saves while template is being applied
+  const isApplyingTemplate = useRef(false);
 
   // Initialize grid from saved preferences once loaded
   if (prefs && !initialized) {
@@ -48,11 +63,15 @@ export default function ScheduleCreator() {
 
   const applyTemplateMutation = trpc.schedule.applyTemplate.useMutation({
     onSuccess: (data) => {
+      isApplyingTemplate.current = false;
       toast.success("MREA template applied");
       setGrid(data.grid as string[][]);
       utils.schedule.getPreferences.invalidate();
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err) => {
+      isApplyingTemplate.current = false;
+      toast.error(err.message);
+    },
   });
 
   const bucketColors = useMemo(() => {
@@ -66,10 +85,23 @@ export default function ScheduleCreator() {
   }, []);
 
   const handleSave = () => {
+    // MED-06: Suppress save while template is being applied to avoid race condition
+    if (isApplyingTemplate.current) return;
     saveMutation.mutate({ weeklyGrid: grid });
   };
 
-  const handleApplyTemplate = () => {
+  // LOW-02: Show confirmation dialog before overwriting existing schedule
+  const handleApplyTemplateClick = () => {
+    const hasContent = grid.some(row => row.some(cell => cell !== ""));
+    if (hasContent) {
+      setShowTemplateConfirm(true);
+    } else {
+      doApplyTemplate();
+    }
+  };
+
+  const doApplyTemplate = () => {
+    isApplyingTemplate.current = true;
     applyTemplateMutation.mutate({ templateName: "mrea" });
   };
 
@@ -98,7 +130,7 @@ export default function ScheduleCreator() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleApplyTemplate}
+                  onClick={handleApplyTemplateClick}
                   disabled={applyTemplateMutation.isPending}
                   className="border-slate-600 text-slate-300 hover:text-white"
                 >
@@ -113,7 +145,7 @@ export default function ScheduleCreator() {
             <Button
               size="sm"
               onClick={handleSave}
-              disabled={saveMutation.isPending}
+              disabled={saveMutation.isPending || applyTemplateMutation.isPending}
               className="bg-blue-600 hover:bg-blue-500 text-white"
             >
               <Save className="w-3.5 h-3.5 mr-1.5" />
@@ -170,6 +202,34 @@ export default function ScheduleCreator() {
           </Card>
         </div>
       </div>
+
+      {/* LOW-02: Confirmation dialog before overwriting existing schedule */}
+      <AlertDialog open={showTemplateConfirm} onOpenChange={setShowTemplateConfirm}>
+        <AlertDialogContent className="bg-slate-900 border-slate-700 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-400" />
+              Replace Current Schedule?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              Applying the MREA template will overwrite your current schedule. This action cannot be undone.
+              <br /><br />
+              The MREA Ideal Week template allocates time blocks for lead generation, appointments, admin, and personal time following Gary Keller's recommended structure.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-slate-600 text-slate-300 hover:text-white">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={doApplyTemplate}
+              className="bg-[#DC143C] hover:bg-[#B01030] text-white"
+            >
+              Apply Template
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TooltipProvider>
   );
 }

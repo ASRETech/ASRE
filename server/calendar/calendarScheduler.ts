@@ -148,7 +148,7 @@ function buildQueryProxy(conn: Awaited<ReturnType<typeof getDb>>) {
     },
     economicModel: {
       findFirst: async (_opts?: any) => {
-        const results = await conn!.select().from(schema.economicModel).limit(1);
+        const results = await conn!.select().from(schema.teamEconomicModel).limit(1);
         return results[0] ?? null;
       }
     },
