@@ -1238,3 +1238,49 @@ export const appLocks = mysqlTable("appLocks", {
 });
 export type AppLock = typeof appLocks.$inferSelect;
 export type InsertAppLock = typeof appLocks.$inferInsert;
+
+// ═══════════════════════════════════════════════════════════════
+// EXECUTION SYSTEM — Daily Execution OS (ASRE Refactor)
+// ═══════════════════════════════════════════════════════════════
+
+// ── ACTION COMPLETIONS ──
+export const executionActionCompletions = mysqlTable("executionActionCompletions", {
+  id: int("id").primaryKey().autoincrement(),
+  userId: int("userId").notNull(),
+  actionId: varchar("actionId", { length: 100 }).notNull(),
+  actionType: varchar("actionType", { length: 64 }).notNull(),
+  points: int("points").default(10).notNull(),
+  completedAt: timestamp("completedAt").defaultNow().notNull(),
+  metadata: json("metadata"),
+}, (table) => ({
+  userDateIdx: index("execCompletions_userId_completedAt_idx").on(table.userId, table.completedAt),
+}));
+export type ExecutionActionCompletion = typeof executionActionCompletions.$inferSelect;
+export type InsertExecutionActionCompletion = typeof executionActionCompletions.$inferInsert;
+
+// ── STREAKS ──
+export const executionStreaks = mysqlTable("executionStreaks", {
+  id: int("id").primaryKey().autoincrement(),
+  userId: int("userId").notNull().unique(),
+  currentStreak: int("currentStreak").default(0).notNull(),
+  longestStreak: int("longestStreak").default(0).notNull(),
+  lastQualifiedDate: varchar("lastQualifiedDate", { length: 10 }),
+  updatedAt: timestamp("execStreakUpdatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ExecutionStreak = typeof executionStreaks.$inferSelect;
+export type InsertExecutionStreak = typeof executionStreaks.$inferInsert;
+
+// ── DAILY STATS ──
+export const executionDailyStats = mysqlTable("executionDailyStats", {
+  id: int("id").primaryKey().autoincrement(),
+  userId: int("userId").notNull(),
+  date: varchar("date", { length: 10 }).notNull(),
+  actionsCompleted: int("actionsCompleted").default(0).notNull(),
+  qualifiedDay: boolean("qualifiedDay").default(false).notNull(),
+  scoreAtClose: int("scoreAtClose"),
+  createdAt: timestamp("execDailyStatsCreatedAt").defaultNow().notNull(),
+}, (table) => ({
+  userDateUniq: uniqueIndex("execDailyStats_userId_date_uniq").on(table.userId, table.date),
+}));
+export type ExecutionDailyStat = typeof executionDailyStats.$inferSelect;
+export type InsertExecutionDailyStat = typeof executionDailyStats.$inferInsert;

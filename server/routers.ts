@@ -16,9 +16,11 @@ import { buildMCRollup } from "./drive/mcRollup";
 import { wealthRouter } from "./routers/wealth";
 import { calendarRouter } from "./routers/calendar";
 import { scheduleRouter } from "./routers/schedule";
+import { executionRouter } from "./routers/execution";
 
 export const appRouter = router({
   system: systemRouter,
+  execution: executionRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

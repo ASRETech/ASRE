@@ -25,6 +25,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/wealth': 'Wealth Journey',
   '/action-engine': 'Action Engine',
   '/schedule-creator': 'Schedule Creator',
+  '/execution': 'Execution HQ',
+  '/execution/transactions': 'Transactions (Coming Soon)',
 };
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {

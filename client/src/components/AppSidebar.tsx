@@ -5,65 +5,62 @@ import {
   DollarSign, BookOpen, Heart, Settings,
   Zap, BarChart3, UsersRound, GraduationCap,
   Handshake, Star, UserPlus, Award, Wrench, Crosshair, TrendingUp,
-  CalendarDays, LayoutGrid,
+  CalendarDays, LayoutGrid, Flame, Activity, Trophy, Clock,
 } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
 import { trpc } from '@/lib/trpc';
 
+// ── 4-PILLAR NAVIGATION (ASRE Architecture) ──
 const NAV_ITEMS = [
+  // ── PILLAR 1: EXECUTION (CORE) ──
   {
-    section: 'JOURNEY',
+    section: 'EXECUTION',
     items: [
-      { label: 'My Journey', icon: Map, path: '/journey', accent: true },
-      { label: 'Current Level', icon: Target, path: '/level', accent: true },
-    ],
-  },
-  {
-    section: 'AUTOMATION',
-    items: [
+      { label: 'Execution HQ', icon: Flame, path: '/execution', accent: true },
+      { label: 'Pipeline', icon: Users, path: '/pipeline' },
       { label: 'Action Engine', icon: Zap, path: '/action-engine' },
       { label: 'Schedule Creator', icon: CalendarDays, path: '/schedule-creator' },
+      { label: 'Transactions', icon: FileText, path: '/execution/transactions' },
     ],
   },
+  // ── PILLAR 2: PERFORMANCE ──
   {
-    section: 'OPERATIONS',
+    section: 'PERFORMANCE',
     items: [
-      { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-      { label: 'Pipeline', icon: Users, path: '/pipeline' },
-      { label: 'Transactions', icon: FileText, path: '/transactions' },
       { label: 'Financials', icon: DollarSign, path: '/financials' },
       { label: 'Analytics', icon: BarChart3, path: '/analytics' },
+      { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     ],
   },
-  {
-    section: 'GOALS',
-    items: [
-      { label: 'Goal Center', icon: Crosshair, path: '/goals' },
-      { label: 'Wealth Journey', icon: TrendingUp, path: '/wealth' },
-    ],
-  },
-  {
-    section: 'TEAM',
-    items: [
-      { label: 'Team OS', icon: UsersRound, path: '/team' },
-      { label: 'Recruiting', icon: UserPlus, path: '/recruiting' },
-      { label: 'Coach Hub', icon: GraduationCap, path: '/coach' },
-      { label: 'Certification', icon: Award, path: '/certification' },
-    ],
-  },
+  // ── PILLAR 3: GROWTH ──
   {
     section: 'GROWTH',
     items: [
+      { label: 'Coach Hub', icon: GraduationCap, path: '/coach' },
+      { label: 'Certification', icon: Award, path: '/certification' },
+      { label: 'Team OS', icon: UsersRound, path: '/team' },
       { label: 'Referrals', icon: Handshake, path: '/referrals' },
       { label: 'Reviews', icon: Star, path: '/reviews' },
     ],
   },
+  // ── PILLAR 4: VISION ──
+  {
+    section: 'VISION',
+    items: [
+      { label: 'Wealth Journey', icon: TrendingUp, path: '/wealth' },
+      { label: 'Goal Center', icon: Crosshair, path: '/goals' },
+    ],
+  },
+  // ── LEGACY / FOUNDATION ──
   {
     section: 'FOUNDATION',
     items: [
+      { label: 'My Journey', icon: Map, path: '/journey' },
+      { label: 'Current Level', icon: Target, path: '/level' },
       { label: 'Model Library', icon: BookOpen, path: '/library' },
       { label: 'Culture OS', icon: Heart, path: '/culture' },
       { label: 'AI Tools', icon: Wrench, path: '/tools' },
+      { label: 'Recruiting', icon: UserPlus, path: '/recruiting' },
     ],
   },
 ];

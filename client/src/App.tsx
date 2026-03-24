@@ -34,6 +34,8 @@ import Login from './pages/Login';
 import Wealth from './pages/Wealth';
 import ActionEngine from './pages/ActionEngine';
 import ScheduleCreator from './pages/ScheduleCreator';
+import ExecutionHome from './pages/execution/ExecutionHome';
+import TransactionsComingSoon from './pages/execution/TransactionsComingSoon';
 function AppRoutes() {
   // make sure to consider if you need authentication for certain routes
   return (
@@ -103,6 +105,12 @@ function AppRoutes() {
       </Route>
       <Route path="/action-engine">
         <DashboardLayout><ActionEngine /></DashboardLayout>
+      </Route>
+      <Route path="/execution">
+        <DashboardLayout><ExecutionHome /></DashboardLayout>
+      </Route>
+      <Route path="/execution/transactions">
+        <DashboardLayout><TransactionsComingSoon /></DashboardLayout>
       </Route>
       <Route path="/schedule-creator">
         <DashboardLayout><ScheduleCreator /></DashboardLayout>
