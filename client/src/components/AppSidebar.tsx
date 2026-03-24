@@ -1,15 +1,16 @@
 /**
  * AppSidebar.tsx — ASRE 4-Pillar Navigation
  *
- * Sidebar paths EXACTLY match App.tsx routes.
- * No dead links. No duplicate aliases. No FOUNDATION section.
- * Logo routes to /execution.
+ * All paths EXACTLY match App.tsx canonical nested routes.
+ * No dead links. No FOUNDATION section. Logo → /execution.
  *
  * Pillars:
- *   EXECUTION   → /execution, /pipeline, /action-engine, /schedule-creator
- *   PERFORMANCE → /financials, /analytics, /dashboard
- *   GROWTH      → /coach, /team, /referrals, /reviews, /certification
- *   VISION      → /wealth, /goals
+ *   EXECUTION   → /execution, /execution/pipeline, /execution/action-engine,
+ *                 /execution/schedule, /execution/transactions
+ *   PERFORMANCE → /performance/financials, /performance/analytics, /performance/dashboard
+ *   GROWTH      → /growth/coaching, /growth/certification, /growth/team,
+ *                 /growth/referrals, /growth/reviews
+ *   VISION      → /vision/wealth
  */
 
 import { useApp } from '@/contexts/AppContext';
@@ -18,45 +19,45 @@ import {
   LayoutDashboard, Users,
   DollarSign, Settings,
   Zap, BarChart3, UsersRound, GraduationCap,
-  Handshake, Star, Award, Crosshair, TrendingUp,
-  CalendarDays, Flame,
+  Handshake, Star, Award, TrendingUp,
+  CalendarDays, Flame, Receipt,
 } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
 
-// ── 4-PILLAR NAV — paths match App.tsx exactly ──
+// ── 4-PILLAR NAV — paths match App.tsx canonical nested routes exactly ──
 const NAV_ITEMS = [
   {
     section: 'EXECUTION',
     items: [
-      { label: 'Execution HQ', icon: Flame, path: '/execution' },
-      { label: 'Pipeline', icon: Users, path: '/pipeline' },
-      { label: 'Action Engine', icon: Zap, path: '/action-engine' },
-      { label: 'Schedule Creator', icon: CalendarDays, path: '/schedule-creator' },
+      { label: 'Execution HQ',    icon: Flame,        path: '/execution' },
+      { label: 'Pipeline',         icon: Users,        path: '/execution/pipeline' },
+      { label: 'Action Engine',    icon: Zap,          path: '/execution/action-engine' },
+      { label: 'Schedule Creator', icon: CalendarDays, path: '/execution/schedule' },
+      { label: 'Transactions',     icon: Receipt,      path: '/execution/transactions' },
     ],
   },
   {
     section: 'PERFORMANCE',
     items: [
-      { label: 'Financials', icon: DollarSign, path: '/financials' },
-      { label: 'Analytics', icon: BarChart3, path: '/analytics' },
-      { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+      { label: 'Financials', icon: DollarSign,     path: '/performance/financials' },
+      { label: 'Analytics',  icon: BarChart3,       path: '/performance/analytics' },
+      { label: 'Dashboard',  icon: LayoutDashboard, path: '/performance/dashboard' },
     ],
   },
   {
     section: 'GROWTH',
     items: [
-      { label: 'Coach Hub', icon: GraduationCap, path: '/coach' },
-      { label: 'Certification', icon: Award, path: '/certification' },
-      { label: 'Team OS', icon: UsersRound, path: '/team' },
-      { label: 'Referrals', icon: Handshake, path: '/referrals' },
-      { label: 'Reviews', icon: Star, path: '/reviews' },
+      { label: 'Coach Hub',     icon: GraduationCap, path: '/growth/coaching' },
+      { label: 'Certification', icon: Award,         path: '/growth/certification' },
+      { label: 'Team OS',       icon: UsersRound,    path: '/growth/team' },
+      { label: 'Referrals',     icon: Handshake,     path: '/growth/referrals' },
+      { label: 'Reviews',       icon: Star,          path: '/growth/reviews' },
     ],
   },
   {
     section: 'VISION',
     items: [
-      { label: 'Wealth Journey', icon: TrendingUp, path: '/wealth' },
-      { label: 'Goal Center', icon: Crosshair, path: '/goals' },
+      { label: 'Wealth Journey', icon: TrendingUp, path: '/vision/wealth' },
     ],
   },
 ];
@@ -141,7 +142,11 @@ export function AppSidebar() {
             {/* Section items */}
             <ul className="flex flex-col gap-0.5">
               {group.items.map((item) => {
-                const isActive = location === item.path;
+                // Active: exact match OR location starts with path (for nested sub-routes)
+                // Exception: /execution exact only (to avoid matching all /execution/* as HQ active)
+                const isActive =
+                  location === item.path ||
+                  (item.path !== '/execution' && location.startsWith(item.path + '/'));
                 const Icon = item.icon;
                 return (
                   <li key={item.path}>

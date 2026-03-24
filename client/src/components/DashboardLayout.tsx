@@ -3,35 +3,35 @@ import { AppSidebar } from '@/components/AppSidebar';
 import { useLocation } from 'wouter';
 import { PanelLeft } from 'lucide-react';
 
-// PAGE_TITLES — matches App.tsx routes exactly
+// PAGE_TITLES — matches App.tsx canonical nested routes exactly
 const PAGE_TITLES: Record<string, string> = {
   // PILLAR 1: EXECUTION
-  '/execution': 'Execution HQ',
-  '/pipeline': 'Pipeline',
-  '/action-engine': 'Action Engine',
-  '/schedule-creator': 'Schedule Creator',
+  '/execution':                   'Execution HQ',
+  '/execution/pipeline':          'Pipeline',
+  '/execution/action-engine':     'Action Engine',
+  '/execution/schedule':          'Schedule Creator',
+  '/execution/transactions':      'Transactions',
   // PILLAR 2: PERFORMANCE
-  '/financials': 'Financials',
-  '/analytics': 'Analytics',
-  '/dashboard': 'Dashboard',
+  '/performance/financials':      'Financials',
+  '/performance/analytics':       'Analytics',
+  '/performance/dashboard':       'Dashboard',
   // PILLAR 3: GROWTH
-  '/coach': 'Coach Hub',
-  '/certification': 'Coach Certification',
-  '/team': 'Team OS',
-  '/referrals': 'Referral Network',
-  '/reviews': 'Reviews',
+  '/growth/coaching':             'Coach Hub',
+  '/growth/certification':        'Coach Certification',
+  '/growth/team':                 'Team OS',
+  '/growth/referrals':            'Referral Network',
+  '/growth/reviews':              'Reviews',
   // PILLAR 4: VISION
-  '/wealth': 'Wealth Journey',
-  '/goals': 'Goal Center',
+  '/vision/wealth':               'Wealth Journey',
   // SYSTEM
-  '/settings': 'Settings',
+  '/settings':                    'Settings',
   // LEGACY (backward compat — no sidebar links)
-  '/journey': 'My Journey',
-  '/level': 'Current Level',
-  '/library': 'Model Library',
-  '/culture': 'Culture OS',
-  '/tools': 'AI Tools Directory',
-  '/recruiting': 'Recruiting Pipeline',
+  '/journey':                     'My Journey',
+  '/level':                       'Current Level',
+  '/library':                     'Model Library',
+  '/culture':                     'Culture OS',
+  '/tools':                       'AI Tools Directory',
+  '/recruiting':                  'Recruiting Pipeline',
 };
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {

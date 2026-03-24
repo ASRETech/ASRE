@@ -1,16 +1,54 @@
 /**
- * App.tsx — ASRE Unified Routing
+ * App.tsx — ASRE Canonical Route Map
  *
- * Single source of truth for all routes.
- * Entry point: / → /execution
+ * CANONICAL NESTED ROUTE STRUCTURE (4-pillar):
  *
- * 4-Pillar structure:
- *   EXECUTION   → /execution, /pipeline, /action-engine, /schedule-creator
- *   PERFORMANCE → /financials, /analytics, /dashboard
- *   GROWTH      → /coach, /team, /referrals, /reviews, /certification
- *   VISION      → /wealth, /goals
+ *   PILLAR 1 — EXECUTION
+ *     /execution                        → Execution HQ (default entry)
+ *     /execution/pipeline               → Pipeline
+ *     /execution/action-engine          → Action Engine
+ *     /execution/schedule               → Schedule Creator
+ *     /execution/transactions           → Transactions (coming soon)
  *
- * Legacy pages kept but de-prioritized (no sidebar links).
+ *   PILLAR 2 — PERFORMANCE
+ *     /performance/financials           → Financials
+ *     /performance/analytics            → Analytics
+ *     /performance/dashboard            → Dashboard
+ *
+ *   PILLAR 3 — GROWTH
+ *     /growth/coaching                  → Coach Hub
+ *     /growth/coaching/accept/:token    → Coach Accept (no layout)
+ *     /growth/certification             → Certification
+ *     /growth/team                      → Team OS
+ *     /growth/referrals                 → Referral Network
+ *     /growth/reviews                   → Reviews
+ *
+ *   PILLAR 4 — VISION
+ *     /vision/wealth                    → Wealth Journey
+ *
+ *   SYSTEM
+ *     /settings                         → Settings
+ *     /portal/:token                    → Client Portal (no layout)
+ *     /login                            → Login
+ *     /onboarding                       → Onboarding
+ *
+ *   FLAT ALIASES (redirect legacy flat paths → canonical nested)
+ *     /pipeline           → /execution/pipeline
+ *     /action-engine      → /execution/action-engine
+ *     /schedule-creator   → /execution/schedule
+ *     /financials         → /performance/financials
+ *     /analytics          → /performance/analytics
+ *     /dashboard          → /performance/dashboard
+ *     /coach              → /growth/coaching
+ *     /certification      → /growth/certification
+ *     /team               → /growth/team
+ *     /referrals          → /growth/referrals
+ *     /reviews            → /growth/reviews
+ *     /wealth             → /vision/wealth
+ *     /goals              → /execution
+ *
+ *   LEGACY (no sidebar — backward compat only)
+ *     /journey, /level, /library, /culture, /tools, /recruiting
  */
 
 import { Toaster } from "@/components/ui/sonner";
@@ -31,6 +69,7 @@ import ExecutionHome from './pages/execution/ExecutionHome';
 import Pipeline from "./pages/Pipeline";
 import ActionEngine from './pages/ActionEngine';
 import ScheduleCreator from './pages/ScheduleCreator';
+import TransactionsComingSoon from './pages/execution/TransactionsComingSoon';
 
 // ── PILLAR 2: PERFORMANCE ──
 import Financials from "./pages/Financials";
@@ -47,7 +86,6 @@ import Certification from "./pages/Certification";
 
 // ── PILLAR 4: VISION ──
 import Wealth from './pages/Wealth';
-import Goals from './pages/Goals';
 
 // ── SYSTEM ──
 import SettingsPage from "./pages/Settings";
@@ -64,67 +102,67 @@ import Recruiting from "./pages/Recruiting";
 function AppRoutes() {
   return (
     <Switch>
-      {/* ROOT: redirect to execution */}
+      {/* ── ROOT ── */}
       <Route path="/" component={() => <Redirect to="/execution" />} />
 
-      {/* AUTH / ONBOARDING */}
+      {/* ── AUTH / ONBOARDING ── */}
       <Route path="/login" component={Login} />
       <Route path="/onboarding" component={Onboarding} />
 
-      {/* PILLAR 1: EXECUTION */}
+      {/* ── PILLAR 1: EXECUTION ── */}
       <Route path="/execution">
         <DashboardLayout><ExecutionHome /></DashboardLayout>
       </Route>
-      <Route path="/pipeline">
+      <Route path="/execution/pipeline">
         <DashboardLayout><Pipeline /></DashboardLayout>
       </Route>
-      <Route path="/action-engine">
+      <Route path="/execution/action-engine">
         <DashboardLayout><ActionEngine /></DashboardLayout>
       </Route>
-      <Route path="/schedule-creator">
+      <Route path="/execution/schedule">
         <DashboardLayout><ScheduleCreator /></DashboardLayout>
       </Route>
+      <Route path="/execution/transactions">
+        <DashboardLayout><TransactionsComingSoon /></DashboardLayout>
+      </Route>
 
-      {/* PILLAR 2: PERFORMANCE */}
-      <Route path="/financials">
+      {/* ── PILLAR 2: PERFORMANCE ── */}
+      <Route path="/performance/financials">
         <DashboardLayout><Financials /></DashboardLayout>
       </Route>
-      <Route path="/analytics">
+      <Route path="/performance/analytics">
         <DashboardLayout><Analytics /></DashboardLayout>
       </Route>
-      <Route path="/dashboard">
+      <Route path="/performance/dashboard">
         <DashboardLayout><Dashboard /></DashboardLayout>
       </Route>
 
-      {/* PILLAR 3: GROWTH */}
-      <Route path="/coach">
+      {/* ── PILLAR 3: GROWTH ── */}
+      <Route path="/growth/coaching">
         <DashboardLayout><CoachPortal /></DashboardLayout>
       </Route>
-      <Route path="/coach/accept/:token">
+      <Route path="/growth/coaching/accept/:token">
         <CoachAccept />
       </Route>
-      <Route path="/team">
-        <DashboardLayout><TeamOS /></DashboardLayout>
-      </Route>
-      <Route path="/referrals">
-        <DashboardLayout><Referrals /></DashboardLayout>
-      </Route>
-      <Route path="/reviews">
-        <DashboardLayout><Reviews /></DashboardLayout>
-      </Route>
-      <Route path="/certification">
+      <Route path="/growth/certification">
         <DashboardLayout><Certification /></DashboardLayout>
       </Route>
-
-      {/* PILLAR 4: VISION */}
-      <Route path="/wealth">
-        <Wealth />
+      <Route path="/growth/team">
+        <DashboardLayout><TeamOS /></DashboardLayout>
       </Route>
-      <Route path="/goals">
-        <DashboardLayout><Goals /></DashboardLayout>
+      <Route path="/growth/referrals">
+        <DashboardLayout><Referrals /></DashboardLayout>
+      </Route>
+      <Route path="/growth/reviews">
+        <DashboardLayout><Reviews /></DashboardLayout>
       </Route>
 
-      {/* SYSTEM */}
+      {/* ── PILLAR 4: VISION ── */}
+      <Route path="/vision/wealth">
+        <DashboardLayout><Wealth /></DashboardLayout>
+      </Route>
+
+      {/* ── SYSTEM ── */}
       <Route path="/settings">
         <DashboardLayout><SettingsPage /></DashboardLayout>
       </Route>
@@ -132,7 +170,22 @@ function AppRoutes() {
         <ClientPortal />
       </Route>
 
-      {/* LEGACY — no sidebar links, kept for backward compat */}
+      {/* ── FLAT ALIASES → redirect to canonical nested paths ── */}
+      <Route path="/pipeline" component={() => <Redirect to="/execution/pipeline" />} />
+      <Route path="/action-engine" component={() => <Redirect to="/execution/action-engine" />} />
+      <Route path="/schedule-creator" component={() => <Redirect to="/execution/schedule" />} />
+      <Route path="/financials" component={() => <Redirect to="/performance/financials" />} />
+      <Route path="/analytics" component={() => <Redirect to="/performance/analytics" />} />
+      <Route path="/dashboard" component={() => <Redirect to="/performance/dashboard" />} />
+      <Route path="/coach" component={() => <Redirect to="/growth/coaching" />} />
+      <Route path="/certification" component={() => <Redirect to="/growth/certification" />} />
+      <Route path="/team" component={() => <Redirect to="/growth/team" />} />
+      <Route path="/referrals" component={() => <Redirect to="/growth/referrals" />} />
+      <Route path="/reviews" component={() => <Redirect to="/growth/reviews" />} />
+      <Route path="/wealth" component={() => <Redirect to="/vision/wealth" />} />
+      <Route path="/goals" component={() => <Redirect to="/execution" />} />
+
+      {/* ── LEGACY — no sidebar links, kept for backward compat ── */}
       <Route path="/journey">
         <DashboardLayout><Journey /></DashboardLayout>
       </Route>
@@ -152,7 +205,7 @@ function AppRoutes() {
         <DashboardLayout><Recruiting /></DashboardLayout>
       </Route>
 
-      {/* CATCH-ALL */}
+      {/* ── CATCH-ALL ── */}
       <Route component={NotFound} />
     </Switch>
   );
