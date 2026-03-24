@@ -36,3 +36,24 @@ CREATE TABLE IF NOT EXISTS `executionDailyStats` (
   `execDailyStatsCreatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE INDEX `execDailyStats_userId_date_uniq` (`userId`, `date`)
 );
+
+-- executionWeeklyStats: persisted weekly leading indicators for Analytics Pulse tab
+CREATE TABLE IF NOT EXISTS `executionWeeklyStats` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `userId` int NOT NULL,
+  `weekStart` varchar(10) NOT NULL COMMENT 'Monday YYYY-MM-DD UTC',
+  `contacts` int NOT NULL DEFAULT 0,
+  `appointments` int NOT NULL DEFAULT 0,
+  `listings` int NOT NULL DEFAULT 0,
+  `closings` int NOT NULL DEFAULT 0,
+  `reviewRequests` int NOT NULL DEFAULT 0,
+  `referrals` int NOT NULL DEFAULT 0,
+  `actionsCompleted` int NOT NULL DEFAULT 0,
+  `qualifiedDays` int NOT NULL DEFAULT 0,
+  `gciCents` int NOT NULL DEFAULT 0,
+  `notes` varchar(500),
+  `execWeeklyStatsCreatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `execWeeklyStatsUpdatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `execWeeklyStats_userId_weekStart_uniq` (`userId`, `weekStart`)
+);

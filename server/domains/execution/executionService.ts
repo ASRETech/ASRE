@@ -110,19 +110,25 @@ export async function getRecommendedActions(userId: number): Promise<ExecutionAc
   const conn = await requireDb();
   const { start: todayStart, end: todayEnd } = todayRange();
 
-  // Get today's completions to mark which actions are done
-  const todayCompletions = await conn
-    .select({ actionId: schema.executionActionCompletions.actionId })
-    .from(schema.executionActionCompletions)
-    .where(
-      and(
-        eq(schema.executionActionCompletions.userId, userId),
-        gte(schema.executionActionCompletions.completedAt, todayStart),
-        lt(schema.executionActionCompletions.completedAt, todayEnd)
-      )
-    );
-
-  const completedIds = new Set(todayCompletions.map((c) => c.actionId));
+  // Get today's completions to mark which actions are done.
+  // Wrapped in try/catch: if the execution tables don't exist yet (pre-migration),
+  // fall back to empty set so the action list still renders.
+  let completedIds = new Set<string>();
+  try {
+    const todayCompletions = await conn
+      .select({ actionId: schema.executionActionCompletions.actionId })
+      .from(schema.executionActionCompletions)
+      .where(
+        and(
+          eq(schema.executionActionCompletions.userId, userId),
+          gte(schema.executionActionCompletions.completedAt, todayStart),
+          lt(schema.executionActionCompletions.completedAt, todayEnd)
+        )
+      );
+    completedIds = new Set(todayCompletions.map((c) => c.actionId));
+  } catch (err) {
+    console.error('[getRecommendedActions] completions query failed — showing uncompleted actions:', err);
+  }
 
   // Get pipeline context for contextual actions
   let activeLeads = 0;

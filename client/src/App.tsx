@@ -20,8 +20,6 @@
  *     /growth/coaching/accept/:token    → Coach Accept (no layout)
  *     /growth/certification             → Certification
  *     /growth/team                      → Team OS
- *     /growth/referrals                 → Referral Network
- *     /growth/reviews                   → Reviews
  *
  *   PILLAR 4 — VISION
  *     /vision/wealth                    → Wealth Journey
@@ -42,8 +40,6 @@
  *     /coach              → /growth/coaching
  *     /certification      → /growth/certification
  *     /team               → /growth/team
- *     /referrals          → /growth/referrals
- *     /reviews            → /growth/reviews
  *     /wealth             → /vision/wealth
  *     /goals              → /execution
  *
@@ -80,8 +76,6 @@ import Dashboard from "./pages/Dashboard";
 import CoachPortal from "./pages/CoachPortal";
 import CoachAccept from "./pages/CoachAccept";
 import TeamOS from "./pages/TeamOS";
-import Referrals from "./pages/Referrals";
-import Reviews from "./pages/Reviews";
 import Certification from "./pages/Certification";
 
 // ── PILLAR 4: VISION ──
@@ -150,12 +144,6 @@ function AppRoutes() {
       <Route path="/growth/team">
         <DashboardLayout><TeamOS /></DashboardLayout>
       </Route>
-      <Route path="/growth/referrals">
-        <DashboardLayout><Referrals /></DashboardLayout>
-      </Route>
-      <Route path="/growth/reviews">
-        <DashboardLayout><Reviews /></DashboardLayout>
-      </Route>
 
       {/* ── PILLAR 4: VISION ── */}
       <Route path="/vision/wealth">
@@ -180,8 +168,6 @@ function AppRoutes() {
       <Route path="/coach" component={() => <Redirect to="/growth/coaching" />} />
       <Route path="/certification" component={() => <Redirect to="/growth/certification" />} />
       <Route path="/team" component={() => <Redirect to="/growth/team" />} />
-      <Route path="/referrals" component={() => <Redirect to="/growth/referrals" />} />
-      <Route path="/reviews" component={() => <Redirect to="/growth/reviews" />} />
       <Route path="/wealth" component={() => <Redirect to="/vision/wealth" />} />
       <Route path="/goals" component={() => <Redirect to="/execution" />} />
 

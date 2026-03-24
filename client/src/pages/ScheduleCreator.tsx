@@ -107,7 +107,7 @@ export default function ScheduleCreator() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64 text-slate-400 text-sm">
+      <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
         Loading schedule...
       </div>
     );
@@ -119,8 +119,8 @@ export default function ScheduleCreator() {
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-white">Schedule Creator</h1>
-            <p className="text-sm text-slate-400 mt-0.5">
+            <h1 className="text-xl font-bold text-foreground">Schedule Creator</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
               Paint your ideal week. The Action Engine uses this to place events in the right time blocks.
             </p>
           </div>
@@ -132,7 +132,7 @@ export default function ScheduleCreator() {
                   size="sm"
                   onClick={handleApplyTemplateClick}
                   disabled={applyTemplateMutation.isPending}
-                  className="border-slate-600 text-slate-300 hover:text-white"
+                  className="border-border text-muted-foreground hover:text-foreground"
                 >
                   <LayoutTemplate className="w-3.5 h-3.5 mr-1.5" />
                   MREA Template
@@ -146,7 +146,7 @@ export default function ScheduleCreator() {
               size="sm"
               onClick={handleSave}
               disabled={saveMutation.isPending || applyTemplateMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-500 text-white"
+              className="bg-[#DC143C] hover:bg-[#B01030] text-white"
             >
               <Save className="w-3.5 h-3.5 mr-1.5" />
               Save Schedule
@@ -156,7 +156,7 @@ export default function ScheduleCreator() {
 
         <div className="grid grid-cols-1 xl:grid-cols-[200px_1fr_200px] gap-4">
           {/* Bucket palette */}
-          <Card className="bg-slate-800/50 border-slate-700/50 xl:sticky xl:top-4 xl:self-start">
+          <Card className="border-border bg-card xl:sticky xl:top-4 xl:self-start">
             <CardContent className="p-3">
               <BucketPalette
                 buckets={buckets ?? []}
@@ -167,13 +167,13 @@ export default function ScheduleCreator() {
           </Card>
 
           {/* Grid */}
-          <Card className="bg-slate-800/50 border-slate-700/50 overflow-hidden">
-            <CardHeader className="py-3 px-4 border-b border-slate-700/50">
+          <Card className="border-border bg-card overflow-hidden">
+            <CardHeader className="py-3 px-4 border-b border-border">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-sm font-medium text-slate-300">Weekly Grid</CardTitle>
+                <CardTitle className="text-sm font-medium text-foreground">Weekly Grid</CardTitle>
                 <Tooltip>
                   <TooltipTrigger>
-                    <Info className="w-3.5 h-3.5 text-slate-500" />
+                    <Info className="w-3.5 h-3.5 text-muted-foreground" />
                   </TooltipTrigger>
                   <TooltipContent>
                     <p className="text-xs">Click and drag to paint time blocks. Each row = 30 minutes.</p>
@@ -192,9 +192,9 @@ export default function ScheduleCreator() {
           </Card>
 
           {/* Summary */}
-          <Card className="bg-slate-800/50 border-slate-700/50 xl:sticky xl:top-4 xl:self-start">
-            <CardHeader className="py-3 px-4 border-b border-slate-700/50">
-              <CardTitle className="text-sm font-medium text-slate-300">Summary</CardTitle>
+          <Card className="border-border bg-card xl:sticky xl:top-4 xl:self-start">
+            <CardHeader className="py-3 px-4 border-b border-border">
+              <CardTitle className="text-sm font-medium text-foreground">Summary</CardTitle>
             </CardHeader>
             <CardContent className="p-3">
               <ScheduleSummary grid={grid} buckets={buckets ?? []} />
@@ -205,20 +205,20 @@ export default function ScheduleCreator() {
 
       {/* LOW-02: Confirmation dialog before overwriting existing schedule */}
       <AlertDialog open={showTemplateConfirm} onOpenChange={setShowTemplateConfirm}>
-        <AlertDialogContent className="bg-slate-900 border-slate-700 text-white">
+        <AlertDialogContent >
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-amber-400" />
               Replace Current Schedule?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-400">
+            <AlertDialogDescription >
               Applying the MREA template will overwrite your current schedule. This action cannot be undone.
               <br /><br />
               The MREA Ideal Week template allocates time blocks for lead generation, appointments, admin, and personal time following Gary Keller's recommended structure.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-slate-600 text-slate-300 hover:text-white">
+            <AlertDialogCancel className="border-border text-muted-foreground hover:text-foreground">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction

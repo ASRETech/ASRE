@@ -6,10 +6,9 @@
  *
  * Pillars:
  *   EXECUTION   → /execution, /execution/pipeline, /execution/action-engine,
- *                 /execution/schedule, /execution/transactions
+ *                 /execution/schedule
  *   PERFORMANCE → /performance/financials, /performance/analytics, /performance/dashboard
- *   GROWTH      → /growth/coaching, /growth/certification, /growth/team,
- *                 /growth/referrals, /growth/reviews
+ *   GROWTH      → /growth/coaching, /growth/certification, /growth/team
  *   VISION      → /vision/wealth
  */
 
@@ -17,10 +16,10 @@ import { useApp } from '@/contexts/AppContext';
 import { LEVELS } from '@/lib/store';
 import {
   LayoutDashboard, Users,
-  DollarSign, Settings,
+  DollarSign,
   Zap, BarChart3, UsersRound, GraduationCap,
-  Handshake, Star, Award, TrendingUp,
-  CalendarDays, Flame, Receipt,
+  Award, TrendingUp,
+  CalendarDays, Flame,
 } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
 
@@ -33,7 +32,6 @@ const NAV_ITEMS = [
       { label: 'Pipeline',         icon: Users,        path: '/execution/pipeline' },
       { label: 'Action Engine',    icon: Zap,          path: '/execution/action-engine' },
       { label: 'Schedule Creator', icon: CalendarDays, path: '/execution/schedule' },
-      { label: 'Transactions',     icon: Receipt,      path: '/execution/transactions' },
     ],
   },
   {
@@ -50,8 +48,6 @@ const NAV_ITEMS = [
       { label: 'Coach Hub',     icon: GraduationCap, path: '/growth/coaching' },
       { label: 'Certification', icon: Award,         path: '/growth/certification' },
       { label: 'Team OS',       icon: UsersRound,    path: '/growth/team' },
-      { label: 'Referrals',     icon: Handshake,     path: '/growth/referrals' },
-      { label: 'Reviews',       icon: Star,          path: '/growth/reviews' },
     ],
   },
   {

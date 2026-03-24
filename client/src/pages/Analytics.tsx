@@ -11,7 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Activity, BarChart3, TrendingUp, Target, Compass,
+  Activity, BarChart3, TrendingUp, Target,
   ArrowDown, ArrowUp, Minus, Sparkles, Loader2,
   RefreshCw, Users, Phone, Calendar, FileText, DollarSign
 } from 'lucide-react';
@@ -23,7 +23,13 @@ export default function Analytics() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto space-y-5">
+        <div>
+          <h1 className="text-xl font-bold text-foreground">Analytics</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Weekly leading indicators, conversion funnel, source attribution, and business health score.
+          </p>
+        </div>
         <Tabs defaultValue="pulse" className="space-y-4">
           <TabsList className="bg-muted/50 w-full sm:w-auto flex flex-wrap h-auto">
             <TabsTrigger value="pulse" className="text-xs flex-1 sm:flex-initial">
@@ -38,43 +44,83 @@ export default function Analytics() {
             <TabsTrigger value="health" className="text-xs flex-1 sm:flex-initial">
               <Target className="w-3.5 h-3.5 mr-1.5" /> Health
             </TabsTrigger>
-            <TabsTrigger value="frameworks" className="text-xs flex-1 sm:flex-initial">
-              <Compass className="w-3.5 h-3.5 mr-1.5" /> Frameworks
-            </TabsTrigger>
+
           </TabsList>
 
           <TabsContent value="pulse"><PulseTab /></TabsContent>
           <TabsContent value="funnel"><FunnelTab /></TabsContent>
           <TabsContent value="sources"><SourcesTab /></TabsContent>
           <TabsContent value="health"><HealthTab /></TabsContent>
-          <TabsContent value="frameworks"><FrameworksTab /></TabsContent>
+
         </Tabs>
       </div>
     </div>
   );
 }
 
-// ─── Tab 1: Weekly Pulse ─────────────────────────────────────────────
+// ─── Tab 1: Weekly Pulse (persisted via tRPC) ────────────────────────
 function PulseTab() {
   const { state } = useApp();
-  const [pulse, setPulse] = useState({
-    contactsMade: 0, contactsGoal: 40,
-    apptsSet: 0, apptsGoal: 6,
-    apptsHeld: 0, apptsHeldGoal: 4,
-    offersWritten: 0, offersGoal: 3,
-    newLeads: 0, newLeadsGoal: 10,
+  const utils = trpc.useUtils();
+
+  const { data: weeklyData, isLoading: weekLoading } = trpc.execution.getWeeklyStats.useQuery(undefined, {
+    staleTime: 30_000,
   });
+
+  const saveMutation = trpc.execution.saveWeeklyStats.useMutation({
+    onSuccess: () => {
+      toast.success('Weekly stats saved');
+      utils.execution.getWeeklyStats.invalidate();
+    },
+    onError: () => toast.error('Failed to save stats'),
+  });
+
+  const current = weeklyData?.current;
+
+  const [pulse, setPulse] = useState({
+    contacts: 0, contactsGoal: 40,
+    appointments: 0, apptsGoal: 6,
+    listings: 0, listingsGoal: 2,
+    closings: 0, closingsGoal: 1,
+    reviewRequests: 0, reviewsGoal: 1,
+  });
+
+  // Sync from DB once loaded
+  const [synced, setSynced] = useState(false);
+  if (current && !synced) {
+    setPulse(p => ({
+      ...p,
+      contacts: current.contacts,
+      appointments: current.appointments,
+      listings: current.listings,
+      closings: current.closings,
+      reviewRequests: current.reviewRequests,
+    }));
+    setSynced(true);
+  }
+
   const [aiCoaching, setAiCoaching] = useState('');
   const [coachingLoading, setCoachingLoading] = useState(false);
   const coachMutation = trpc.coaching.ask.useMutation();
 
   const metrics = [
-    { key: 'contactsMade', goalKey: 'contactsGoal', label: 'Contacts Made', icon: Phone },
-    { key: 'apptsSet', goalKey: 'apptsGoal', label: 'Appointments Set', icon: Calendar },
-    { key: 'apptsHeld', goalKey: 'apptsHeldGoal', label: 'Appointments Held', icon: Users },
-    { key: 'offersWritten', goalKey: 'offersGoal', label: 'Offers Written', icon: FileText },
-    { key: 'newLeads', goalKey: 'newLeadsGoal', label: 'New Leads', icon: TrendingUp },
+    { key: 'contacts', goalKey: 'contactsGoal', label: 'Contacts Made', icon: Phone, saveKey: 'contacts' as const },
+    { key: 'appointments', goalKey: 'apptsGoal', label: 'Appointments Set', icon: Calendar, saveKey: 'appointments' as const },
+    { key: 'listings', goalKey: 'listingsGoal', label: 'Listings Taken', icon: FileText, saveKey: 'listings' as const },
+    { key: 'closings', goalKey: 'closingsGoal', label: 'Closings', icon: DollarSign, saveKey: 'closings' as const },
+    { key: 'reviewRequests', goalKey: 'reviewsGoal', label: 'Review Requests', icon: Users, saveKey: 'reviewRequests' as const },
   ];
+
+  const handleSave = () => {
+    saveMutation.mutate({
+      contacts: pulse.contacts,
+      appointments: pulse.appointments,
+      listings: pulse.listings,
+      closings: pulse.closings,
+      reviewRequests: pulse.reviewRequests,
+      gciCents: 0,
+    });
+  };
 
   const getCoaching = () => {
     setCoachingLoading(true);
@@ -88,7 +134,6 @@ function PulseTab() {
       onError: () => { setCoachingLoading(false); toast.error('Could not get coaching'); },
     });
   };
-
   return (
     <div className="space-y-6">
       <Card className="p-6 overflow-x-auto">
@@ -144,6 +189,18 @@ function PulseTab() {
         </table>
       </Card>
 
+      {/* Save Button */}
+      <div className="flex justify-end">
+        <Button
+          size="sm"
+          onClick={handleSave}
+          disabled={saveMutation.isPending}
+          className="bg-[#DC143C] hover:bg-[#B01030] text-white text-xs"
+        >
+          {saveMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+          Save This Week
+        </Button>
+      </div>
       {/* AI Coaching */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
@@ -175,6 +232,7 @@ function PulseTab() {
     </div>
   );
 }
+
 
 // ─── Tab 2: Conversion Funnel ────────────────────────────────────────
 function FunnelTab() {
@@ -483,116 +541,3 @@ function HealthTab() {
   );
 }
 
-// ─── Tab 5: Frameworks ───────────────────────────────────────────────
-function FrameworksTab() {
-  const { state } = useApp();
-  const leads = state.leads;
-  const financials = state.financials;
-  const gciGoal = state.user?.incomeGoal ?? 250000;
-
-  // 4-1-1
-  const monthlyNeeded = Math.round(gciGoal / 12);
-  const weeklyFocus = Math.round(gciGoal / 50);
-  const ytdActual = financials.filter(f => f.type === 'income').reduce((s, f) => s + f.amount, 0);
-  const ytdPct = gciGoal > 0 ? Math.round((ytdActual / gciGoal) * 100) : 0;
-
-  // 36:12:3
-  const dbSize = leads.length;
-  const projectedTx = Math.round(dbSize * 0.12);
-  const avgGCI = 9500;
-  const projectedIncome = projectedTx * avgGCI;
-
-  // GPS
-  const [gps, setGps] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('agentos-gps') || '{}');
-    } catch { return {}; }
-  });
-  const saveGps = (field: string, value: string) => {
-    const updated = { ...gps, [field]: value };
-    setGps(updated);
-    localStorage.setItem('agentos-gps', JSON.stringify(updated));
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* 4-1-1 Goal Tracker */}
-      <Card className="p-6">
-        <h3 className="font-display text-lg font-semibold mb-4 flex items-center gap-2">
-          <Target className="w-5 h-5 text-[#DC143C]" /> 4-1-1 Goal Tracker
-        </h3>
-        <div className="grid sm:grid-cols-3 gap-4 mb-4">
-          <div className="p-4 rounded-lg bg-muted/50 text-center">
-            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Annual GCI Goal</div>
-            <div className="font-mono text-xl font-bold text-foreground">${gciGoal.toLocaleString()}</div>
-          </div>
-          <div className="p-4 rounded-lg bg-muted/50 text-center">
-            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Monthly Needed</div>
-            <div className="font-mono text-xl font-bold text-foreground">${monthlyNeeded.toLocaleString()}</div>
-          </div>
-          <div className="p-4 rounded-lg bg-muted/50 text-center">
-            <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Weekly Focus</div>
-            <div className="font-mono text-xl font-bold text-[#DC143C]">${weeklyFocus.toLocaleString()}</div>
-          </div>
-        </div>
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-muted-foreground">YTD Actual vs. Annual Goal</span>
-            <span className="font-mono text-xs text-foreground">${ytdActual.toLocaleString()} / ${gciGoal.toLocaleString()} ({ytdPct}%)</span>
-          </div>
-          <Progress value={Math.min(100, ytdPct)} className="h-2.5" />
-        </div>
-      </Card>
-
-      {/* 36:12:3 Model */}
-      <Card className="p-6">
-        <h3 className="font-display text-lg font-semibold mb-4 flex items-center gap-2">
-          <BarChart3 className="w-5 h-5 text-[#DC143C]" /> 36:12:3 Model
-        </h3>
-        <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-6 justify-center">
-          <div className="text-center p-4 rounded-lg bg-muted/50 min-w-[120px]">
-            <div className="text-xs text-muted-foreground mb-1">Database</div>
-            <div className="font-mono text-2xl font-bold text-foreground">{dbSize}</div>
-          </div>
-          <span className="text-muted-foreground text-lg">×</span>
-          <div className="text-center p-4 rounded-lg bg-muted/50 min-w-[120px]">
-            <div className="text-xs text-muted-foreground mb-1">12% Conv.</div>
-            <div className="font-mono text-2xl font-bold text-foreground">{projectedTx}</div>
-            <div className="text-[10px] text-muted-foreground">transactions</div>
-          </div>
-          <span className="text-muted-foreground text-lg">×</span>
-          <div className="text-center p-4 rounded-lg bg-[#DC143C]/5 border border-[#DC143C]/10 min-w-[120px]">
-            <div className="text-xs text-muted-foreground mb-1">Avg GCI</div>
-            <div className="font-mono text-2xl font-bold text-[#DC143C]">${projectedIncome.toLocaleString()}</div>
-            <div className="text-[10px] text-muted-foreground">projected annual</div>
-          </div>
-        </div>
-      </Card>
-
-      {/* GPS Framework */}
-      <Card className="p-6">
-        <h3 className="font-display text-lg font-semibold mb-4 flex items-center gap-2">
-          <Compass className="w-5 h-5 text-[#DC143C]" /> GPS Framework
-        </h3>
-        <div className="grid sm:grid-cols-3 gap-4">
-          {[
-            { key: 'goal', label: 'Goal', placeholder: 'e.g., Close 36 transactions this year with $340K GCI' },
-            { key: 'priorities', label: 'Priorities', placeholder: 'e.g., 1. Build database to 500\n2. Hire EA by Q2\n3. Master listing presentations' },
-            { key: 'strategies', label: 'Strategies', placeholder: 'e.g., 1. 25 contacts/day minimum\n2. Post 3x/week on social\n3. Host 2 open houses/month' },
-          ].map(f => (
-            <div key={f.key}>
-              <label className="text-xs text-muted-foreground uppercase tracking-wider mb-2 block font-medium">{f.label}</label>
-              <Textarea
-                value={gps[f.key] || ''}
-                onChange={e => saveGps(f.key, e.target.value)}
-                placeholder={f.placeholder}
-                className="min-h-[150px] text-sm"
-              />
-            </div>
-          ))}
-        </div>
-        <p className="text-[10px] text-muted-foreground mt-2">Auto-saved to your browser. Updates persist across sessions.</p>
-      </Card>
-    </div>
-  );
-}

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DashboardLayout } from '@/components/DashboardLayout';
 import { WealthHero } from '@/components/wealth/WealthHero';
 import { TrackCard } from '@/components/wealth/TrackCard';
 import { MilestoneList } from '@/components/wealth/MilestoneList';
@@ -50,20 +49,17 @@ export default function Wealth() {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
-        <div className="p-6">
-          <div className="h-40 rounded-xl bg-muted/40 animate-pulse mb-4" />
-          <div className="grid grid-cols-5 gap-3 mb-4">
-            {[1,2,3,4,5].map(i => <div key={i} className="h-24 rounded-xl bg-muted/40 animate-pulse" />)}
-          </div>
+      <div className="p-6">
+        <div className="h-40 rounded-xl bg-muted/40 animate-pulse mb-4" />
+        <div className="grid grid-cols-5 gap-3 mb-4">
+          {[1,2,3,4,5].map(i => <div key={i} className="h-24 rounded-xl bg-muted/40 animate-pulse" />)}
         </div>
-      </DashboardLayout>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout>
-      <div className="p-4 md:p-6 max-w-6xl mx-auto">
+    <div className="p-4 md:p-6 max-w-6xl mx-auto">
         <WealthHero journey={journey} />
 
         <Tabs defaultValue="milestones" className="space-y-4">
@@ -126,7 +122,6 @@ export default function Wealth() {
             <WealthInsights />
           </TabsContent>
         </Tabs>
-      </div>
-    </DashboardLayout>
+    </div>
   );
 }

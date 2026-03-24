@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   DollarSign, Calculator, PieChart, TrendingUp,
   ArrowUpRight, ArrowDownRight, Target, BarChart3,
-  Receipt, FileDown, Upload, Loader2, Camera, Trash2, Tag
+  FileDown, Upload, Loader2, Trash2, Tag
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
@@ -36,7 +36,7 @@ export default function Financials() {
   // Profit First allocation percentages
   const [allocations, setAllocations] = useState({
     taxes: 21,
-    tithe: 10,
+    giving: 10,
     operating: 15,
     ownerPay: 30,
     profitSavings: 14,
@@ -48,13 +48,13 @@ export default function Financials() {
   const afterSplit = grossCommission * (agentSplit / 100);
   const afterFees = afterSplit - fees;
   const taxReserve = afterFees * (allocations.taxes / 100);
-  const tithe = afterFees * (allocations.tithe / 100);
-  const netDeposit = afterFees - taxReserve - tithe;
+  const giving = afterFees * (allocations.giving / 100);
+  const netDeposit = afterFees - taxReserve - giving;
 
   // Profit First breakdown
   const pfBreakdown = [
     { label: 'Taxes', pct: allocations.taxes, amount: afterFees * (allocations.taxes / 100), color: 'bg-red-500' },
-    { label: 'Tithe', pct: allocations.tithe, amount: afterFees * (allocations.tithe / 100), color: 'bg-violet-500' },
+    { label: 'Giving', pct: allocations.giving, amount: afterFees * (allocations.giving / 100), color: 'bg-violet-500' },
     { label: 'Operating', pct: allocations.operating, amount: afterFees * (allocations.operating / 100), color: 'bg-blue-500' },
     { label: 'Owner Pay', pct: allocations.ownerPay, amount: afterFees * (allocations.ownerPay / 100), color: 'bg-emerald-500' },
     { label: 'Profit/Savings', pct: allocations.profitSavings, amount: afterFees * (allocations.profitSavings / 100), color: 'bg-amber-500' },
@@ -119,8 +119,7 @@ export default function Financials() {
             <TabsTrigger value="pnl" className="text-xs flex-1 sm:flex-initial">P&L</TabsTrigger>
             <TabsTrigger value="model" className="text-xs flex-1 sm:flex-initial">Economic Model</TabsTrigger>
             <TabsTrigger value="forecast" className="text-xs flex-1 sm:flex-initial">90-Day Forecast</TabsTrigger>
-            <TabsTrigger value="receipts" className="text-xs flex-1 sm:flex-initial">Receipts</TabsTrigger>
-            <TabsTrigger value="taxexport" className="text-xs flex-1 sm:flex-initial">Tax Export</TabsTrigger>
+            <TabsTrigger value="taxexport" className="text-xs flex-1 sm:flex-initial">Tax Export &amp; Integrations</TabsTrigger>
           </TabsList>
 
           {/* Commission Calculator */}
@@ -200,8 +199,8 @@ export default function Financials() {
                   <div className="font-mono text-lg font-bold text-red-500">-${taxReserve.toLocaleString()}</div>
                 </Card>
                 <Card className="p-4 border-violet-500/20 bg-violet-500/[0.02]">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Tithe ({allocations.tithe}%)</div>
-                  <div className="font-mono text-lg font-bold text-violet-500">-${tithe.toLocaleString()}</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Giving ({allocations.giving}%)</div>
+                  <div className="font-mono text-lg font-bold text-violet-500">-${giving.toLocaleString()}</div>
                 </Card>
                 <Card className="p-4 border-emerald-500/20 bg-emerald-500/[0.02]">
                   <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Net Deposit</div>
@@ -327,9 +326,6 @@ export default function Financials() {
           </TabsContent>
 
           {/* Receipt Capture */}
-          <TabsContent value="receipts">
-            <ReceiptCaptureTab />
-          </TabsContent>
 
           {/* Tax Export */}
           <TabsContent value="taxexport">
@@ -727,6 +723,13 @@ function ReceiptCaptureTab() {
 
 // ─── Tax Export Tab ──────────────────────────────────────────────────
 function TaxExportTab() {
+  // ── Accounting Integration Stubs ──
+  const integrations = [
+    { name: 'QuickBooks Online', status: 'coming_soon', logo: '📊', description: 'Sync commissions and expenses automatically' },
+    { name: 'Wave Accounting', status: 'coming_soon', logo: '🌊', description: 'Free accounting for self-employed agents' },
+    { name: 'FreshBooks', status: 'coming_soon', logo: '📗', description: 'Invoicing and expense tracking' },
+  ];
+
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
 
@@ -836,6 +839,22 @@ function TaxExportTab() {
         )}
       </Card>
 
+      {/* Accounting Integrations */}
+      <div className="space-y-3">
+        <h4 className="font-display text-xs font-bold uppercase tracking-wider text-muted-foreground">Accounting Integrations</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {integrations.map(integration => (
+            <div key={integration.name} className="rounded-lg border border-border bg-card p-4 flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">{integration.logo}</span>
+                <span className="text-sm font-medium text-foreground">{integration.name}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">{integration.description}</p>
+              <span className="text-[10px] uppercase tracking-wider font-medium text-amber-600 bg-amber-500/10 rounded px-2 py-0.5 w-fit">Coming Soon</span>
+            </div>
+          ))}
+        </div>
+      </div>
       {/* Disclaimer */}
       <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20 text-xs text-muted-foreground">
         <strong className="text-amber-600">Disclaimer:</strong> This export is for informational purposes only. Consult a licensed CPA or tax professional for official tax filing. AgentOS does not provide tax advice.

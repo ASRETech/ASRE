@@ -1290,3 +1290,28 @@ export const executionDailyStats = mysqlTable("executionDailyStats", {
 }));
 export type ExecutionDailyStat = typeof executionDailyStats.$inferSelect;
 export type InsertExecutionDailyStat = typeof executionDailyStats.$inferInsert;
+
+// ── WEEKLY STATS ──
+// Persisted weekly rollup for Analytics Pulse tab.
+// weekStart = ISO date of Monday (YYYY-MM-DD UTC).
+export const executionWeeklyStats = mysqlTable("executionWeeklyStats", {
+  id: int("id").primaryKey().autoincrement(),
+  userId: int("userId").notNull(),
+  weekStart: varchar("weekStart", { length: 10 }).notNull(),
+  contacts: int("contacts").default(0).notNull(),
+  appointments: int("appointments").default(0).notNull(),
+  listings: int("listings").default(0).notNull(),
+  closings: int("closings").default(0).notNull(),
+  reviewRequests: int("reviewRequests").default(0).notNull(),
+  referrals: int("referrals").default(0).notNull(),
+  actionsCompleted: int("actionsCompleted").default(0).notNull(),
+  qualifiedDays: int("qualifiedDays").default(0).notNull(),
+  gciCents: int("gciCents").default(0).notNull(),
+  notes: varchar("notes", { length: 500 }),
+  createdAt: timestamp("execWeeklyStatsCreatedAt").defaultNow().notNull(),
+  updatedAt: timestamp("execWeeklyStatsUpdatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  userWeekUniq: uniqueIndex("execWeeklyStats_userId_weekStart_uniq").on(table.userId, table.weekStart),
+}));
+export type ExecutionWeeklyStat = typeof executionWeeklyStats.$inferSelect;
+export type InsertExecutionWeeklyStat = typeof executionWeeklyStats.$inferInsert;
