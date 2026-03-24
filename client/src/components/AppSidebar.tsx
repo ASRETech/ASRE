@@ -19,7 +19,7 @@ import {
   DollarSign,
   Zap, BarChart3, UsersRound, GraduationCap,
   Award, TrendingUp,
-  CalendarDays, Flame,
+  CalendarDays, Flame, Settings,
 } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
 
