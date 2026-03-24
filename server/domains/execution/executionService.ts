@@ -46,21 +46,25 @@ export interface LeaderboardEntry {
 // HELPERS
 // ─────────────────────────────────────────────────────────────
 
+// DATE STRATEGY: All date logic uses UTC to ensure consistency
+// regardless of Railway server timezone. todayDateString() returns
+// the UTC date (YYYY-MM-DD). todayRange() returns UTC midnight
+// boundaries that exactly match the stored completionDate strings.
 function todayDateString(): string {
-  return new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  return new Date().toISOString().split('T')[0]; // YYYY-MM-DD UTC
 }
 
 function yesterdayDateString(): string {
   const d = new Date();
-  d.setDate(d.getDate() - 1);
+  d.setUTCDate(d.getUTCDate() - 1); // UTC-safe: avoids DST/timezone drift
   return d.toISOString().split('T')[0];
 }
 
 function todayRange(): { start: Date; end: Date } {
-  const today = todayDateString();
+  const today = todayDateString(); // UTC date string
   return {
-    start: new Date(today + 'T00:00:00.000Z'),
-    end: new Date(today + 'T23:59:59.999Z'),
+    start: new Date(today + 'T00:00:00.000Z'), // UTC midnight
+    end: new Date(today + 'T23:59:59.999Z'),   // UTC end of day
   };
 }
 
@@ -375,7 +379,7 @@ export async function completeAction(
   if (existing.length > 0) {
     // Already completed — return current state without double-counting
     const todayRowsCheck = await conn
-      .select({ count: sql<number>\`count(*)\` })
+      .select({ count: sql<number>`count(*)` })
       .from(schema.executionActionCompletions)
       .where(
         and(
