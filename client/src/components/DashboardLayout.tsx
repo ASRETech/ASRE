@@ -3,30 +3,35 @@ import { AppSidebar } from '@/components/AppSidebar';
 import { useLocation } from 'wouter';
 import { PanelLeft } from 'lucide-react';
 
+// PAGE_TITLES — matches App.tsx routes exactly
 const PAGE_TITLES: Record<string, string> = {
-  '/journey': 'My Journey',
-  '/level': 'Current Level',
-  '/dashboard': 'Dashboard',
+  // PILLAR 1: EXECUTION
+  '/execution': 'Execution HQ',
   '/pipeline': 'Pipeline',
-  '/transactions': 'Transactions',
-  '/financials': 'Financials',
-  '/analytics': 'Analytics',
-  '/team': 'Team OS',
-  '/recruiting': 'Recruiting Pipeline',
-  '/referrals': 'Referral Network',
-  '/reviews': 'Reviews',
-  '/coach': 'Coach Hub',
-  '/certification': 'Coach Certification',
-  '/library': 'Model Library',
-  '/goals': 'Goal Center',
-  '/culture': 'Culture OS',
-  '/tools': 'AI Tools Directory',
-  '/settings': 'Settings',
-  '/wealth': 'Wealth Journey',
   '/action-engine': 'Action Engine',
   '/schedule-creator': 'Schedule Creator',
-  '/execution': 'Execution HQ',
-  '/execution/transactions': 'Transactions (Coming Soon)',
+  // PILLAR 2: PERFORMANCE
+  '/financials': 'Financials',
+  '/analytics': 'Analytics',
+  '/dashboard': 'Dashboard',
+  // PILLAR 3: GROWTH
+  '/coach': 'Coach Hub',
+  '/certification': 'Coach Certification',
+  '/team': 'Team OS',
+  '/referrals': 'Referral Network',
+  '/reviews': 'Reviews',
+  // PILLAR 4: VISION
+  '/wealth': 'Wealth Journey',
+  '/goals': 'Goal Center',
+  // SYSTEM
+  '/settings': 'Settings',
+  // LEGACY (backward compat — no sidebar links)
+  '/journey': 'My Journey',
+  '/level': 'Current Level',
+  '/library': 'Model Library',
+  '/culture': 'Culture OS',
+  '/tools': 'AI Tools Directory',
+  '/recruiting': 'Recruiting Pipeline',
 };
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -40,7 +45,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       <div
         className={`
           flex-shrink-0 transition-all duration-200 ease-in-out
-          ${sidebarOpen ? 'w-[220px]' : 'w-0 overflow-hidden'}
+          ${sidebarOpen ? 'w-[224px]' : 'w-0 overflow-hidden'}
         `}
       >
         <AppSidebar />

@@ -31,10 +31,16 @@ export const executionRouter = router({
     return getStreakData(ctx.user.id);
   }),
 
-  // ── GET LEADERBOARD ──
-  getLeaderboard: protectedProcedure.query(async ({ ctx }) => {
-    return getLeaderboard(ctx.user.id);
-  }),
+  // ── GET LEADERBOARD (scope: global | cohort | team | market_center) ──
+  getLeaderboard: protectedProcedure
+    .input(
+      z.object({
+        scope: z.enum(['global', 'cohort', 'team', 'market_center']).optional().default('global'),
+      }).optional()
+    )
+    .query(async ({ ctx, input }) => {
+      return getLeaderboard(ctx.user.id, input?.scope ?? 'global');
+    }),
 
   // ── COMPLETE AN ACTION ──
   completeAction: protectedProcedure

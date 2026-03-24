@@ -73,7 +73,7 @@ export default function Onboarding() {
     generateMockFinancials().forEach(f => dispatch({ type: 'ADD_FINANCIAL', payload: f }));
     generateMockSOPs().forEach(s => dispatch({ type: 'ADD_SOP', payload: s }));
 
-    navigate('/journey');
+    navigate('/execution');
   }, [name, brokerage, marketCenter, stateVal, yearsExp, gciLastYear, teamSize, selectedLevel, operationalScore, incomeGoal, answers, selectedProblems, dispatch, navigate]);
 
   const canProceed = () => {

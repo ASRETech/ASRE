@@ -1250,9 +1250,15 @@ export const executionActionCompletions = mysqlTable("executionActionCompletions
   actionId: varchar("actionId", { length: 100 }).notNull(),
   actionType: varchar("actionType", { length: 64 }).notNull(),
   points: int("points").default(10).notNull(),
+  // date (YYYY-MM-DD) stored separately for idempotency index
+  completionDate: varchar("completionDate", { length: 10 }).notNull(),
   completedAt: timestamp("completedAt").defaultNow().notNull(),
   metadata: json("metadata"),
 }, (table) => ({
+  // Prevents the same action from being completed twice on the same day
+  userActionDateUniq: uniqueIndex("execCompletions_userId_actionId_date_uniq").on(
+    table.userId, table.actionId, table.completionDate
+  ),
   userDateIdx: index("execCompletions_userId_completedAt_idx").on(table.userId, table.completedAt),
 }));
 export type ExecutionActionCompletion = typeof executionActionCompletions.$inferSelect;

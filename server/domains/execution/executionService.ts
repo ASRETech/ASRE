@@ -351,18 +351,55 @@ export async function completeAction(
   completedActionsToday: number;
   qualifiesForStreak: boolean;
   streakUpdated: boolean;
+  alreadyCompleted?: boolean;
 }> {
   const conn = await requireDb();
   const today = todayDateString();
   const now = new Date();
   const { start: todayStart, end: todayEnd } = todayRange();
 
-  // Save completion record
+  // ── IDEMPOTENCY GUARD ──
+  // Check if this action was already completed today (prevents exploit)
+  const existing = await conn
+    .select({ id: schema.executionActionCompletions.id })
+    .from(schema.executionActionCompletions)
+    .where(
+      and(
+        eq(schema.executionActionCompletions.userId, userId),
+        eq(schema.executionActionCompletions.actionId, actionId),
+        eq(schema.executionActionCompletions.completionDate, today)
+      )
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    // Already completed — return current state without double-counting
+    const todayRowsCheck = await conn
+      .select({ count: sql<number>\`count(*)\` })
+      .from(schema.executionActionCompletions)
+      .where(
+        and(
+          eq(schema.executionActionCompletions.userId, userId),
+          gte(schema.executionActionCompletions.completedAt, todayStart),
+          lt(schema.executionActionCompletions.completedAt, todayEnd)
+        )
+      );
+    const completedActionsToday = Number(todayRowsCheck[0]?.count ?? 0);
+    return {
+      completedActionsToday,
+      qualifiesForStreak: completedActionsToday >= QUALIFICATION_THRESHOLD,
+      streakUpdated: false,
+      alreadyCompleted: true,
+    };
+  }
+
+  // Save completion record (completionDate stored for idempotency index)
   await conn.insert(schema.executionActionCompletions).values({
     userId,
     actionId,
     actionType,
     points,
+    completionDate: today,
     completedAt: now,
     metadata: metadata ?? null,
   });
@@ -431,8 +468,28 @@ export async function completeAction(
 // LEADERBOARD
 // ─────────────────────────────────────────────────────────────
 
-export async function getLeaderboard(_currentUserId: number): Promise<LeaderboardEntry[]> {
+/**
+ * Leaderboard scope options:
+ *   "global"        — all users (Phase 1, default)
+ *   "cohort"        — users in same coaching cohort (Phase 2)
+ *   "team"          — users on same team (Phase 2)
+ *   "market_center" — users in same market center (Phase 2)
+ *
+ * Phase 2 scopes are structurally supported but fall back to global
+ * until the corresponding user-grouping tables are implemented.
+ */
+export type LeaderboardScope = 'global' | 'cohort' | 'team' | 'market_center';
+
+export async function getLeaderboard(
+  currentUserId: number,
+  scope: LeaderboardScope = 'global'
+): Promise<LeaderboardEntry[]> {
   const conn = await requireDb();
+
+  // Phase 2: scope-based user filtering (placeholder — falls back to global)
+  // When cohort/team/market_center tables exist, filter userIds here.
+  // For now, all scopes use global leaderboard.
+  const _ = { currentUserId, scope }; // suppress unused warning
 
   // Get top users by streak
   const streakRows = await conn

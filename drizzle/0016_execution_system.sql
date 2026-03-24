@@ -1,5 +1,6 @@
 -- ASRE Execution System: Action Completions, Streaks, Daily Stats
 -- Migration: 0016_execution_system
+-- Updated: adds completionDate column + idempotency unique index
 
 CREATE TABLE IF NOT EXISTS `executionActionCompletions` (
   `id` int AUTO_INCREMENT PRIMARY KEY,
@@ -7,8 +8,11 @@ CREATE TABLE IF NOT EXISTS `executionActionCompletions` (
   `actionId` varchar(100) NOT NULL,
   `actionType` varchar(64) NOT NULL,
   `points` int NOT NULL DEFAULT 10,
+  `completionDate` varchar(10) NOT NULL,
   `completedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `metadata` json,
+  -- Prevents same action being completed twice on the same day
+  UNIQUE INDEX `execCompletions_userId_actionId_date_uniq` (`userId`, `actionId`, `completionDate`),
   INDEX `execCompletions_userId_completedAt_idx` (`userId`, `completedAt`)
 );
 

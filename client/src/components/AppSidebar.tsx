@@ -1,29 +1,39 @@
+/**
+ * AppSidebar.tsx — ASRE 4-Pillar Navigation
+ *
+ * Sidebar paths EXACTLY match App.tsx routes.
+ * No dead links. No duplicate aliases. No FOUNDATION section.
+ * Logo routes to /execution.
+ *
+ * Pillars:
+ *   EXECUTION   → /execution, /pipeline, /action-engine, /schedule-creator
+ *   PERFORMANCE → /financials, /analytics, /dashboard
+ *   GROWTH      → /coach, /team, /referrals, /reviews, /certification
+ *   VISION      → /wealth, /goals
+ */
+
 import { useApp } from '@/contexts/AppContext';
 import { LEVELS } from '@/lib/store';
 import {
-  Map, Target, LayoutDashboard, Users, FileText,
-  DollarSign, BookOpen, Heart, Settings,
+  LayoutDashboard, Users,
+  DollarSign, Settings,
   Zap, BarChart3, UsersRound, GraduationCap,
-  Handshake, Star, UserPlus, Award, Wrench, Crosshair, TrendingUp,
-  CalendarDays, LayoutGrid, Flame, Activity, Trophy, Clock,
+  Handshake, Star, Award, Crosshair, TrendingUp,
+  CalendarDays, Flame,
 } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
-import { trpc } from '@/lib/trpc';
 
-// ── 4-PILLAR NAVIGATION (ASRE Architecture) ──
+// ── 4-PILLAR NAV — paths match App.tsx exactly ──
 const NAV_ITEMS = [
-  // ── PILLAR 1: EXECUTION (CORE) ──
   {
     section: 'EXECUTION',
     items: [
-      { label: 'Execution HQ', icon: Flame, path: '/execution', accent: true },
+      { label: 'Execution HQ', icon: Flame, path: '/execution' },
       { label: 'Pipeline', icon: Users, path: '/pipeline' },
       { label: 'Action Engine', icon: Zap, path: '/action-engine' },
       { label: 'Schedule Creator', icon: CalendarDays, path: '/schedule-creator' },
-      { label: 'Transactions', icon: FileText, path: '/execution/transactions' },
     ],
   },
-  // ── PILLAR 2: PERFORMANCE ──
   {
     section: 'PERFORMANCE',
     items: [
@@ -32,7 +42,6 @@ const NAV_ITEMS = [
       { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     ],
   },
-  // ── PILLAR 3: GROWTH ──
   {
     section: 'GROWTH',
     items: [
@@ -43,24 +52,11 @@ const NAV_ITEMS = [
       { label: 'Reviews', icon: Star, path: '/reviews' },
     ],
   },
-  // ── PILLAR 4: VISION ──
   {
     section: 'VISION',
     items: [
       { label: 'Wealth Journey', icon: TrendingUp, path: '/wealth' },
       { label: 'Goal Center', icon: Crosshair, path: '/goals' },
-    ],
-  },
-  // ── LEGACY / FOUNDATION ──
-  {
-    section: 'FOUNDATION',
-    items: [
-      { label: 'My Journey', icon: Map, path: '/journey' },
-      { label: 'Current Level', icon: Target, path: '/level' },
-      { label: 'Model Library', icon: BookOpen, path: '/library' },
-      { label: 'Culture OS', icon: Heart, path: '/culture' },
-      { label: 'AI Tools', icon: Wrench, path: '/tools' },
-      { label: 'Recruiting', icon: UserPlus, path: '/recruiting' },
     ],
   },
 ];
@@ -69,63 +65,68 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { state } = useApp();
   const user = state.user;
-  const draftsQuery = trpc.journey.getDrafts.useQuery(undefined, {
-    refetchInterval: 60000,
-  });
-  const draftCount = draftsQuery.data?.length ?? 0;
+
   const currentLevel = user?.currentLevel ?? 1;
   const levelData = LEVELS[currentLevel - 1];
-  const progressPercent = ((currentLevel - 1) / 6) * 100;
 
   return (
     <div
-      className="flex flex-col h-full w-full"
-      style={{ background: 'oklch(0.075 0.01 250)' }}
+      className="flex flex-col h-full w-56 shrink-0"
+      style={{ background: 'oklch(0.13 0.01 250)' }}
     >
-      {/* Logo */}
-      <div className="flex items-center gap-2.5 px-4 pt-5 pb-3 shrink-0">
-        <Link href="/journey" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-[#DC143C] flex items-center justify-center shrink-0">
-            <Zap className="w-4 h-4 text-white" />
-          </div>
-          <span
-            className="text-base font-bold tracking-tight"
-            style={{ color: 'oklch(0.95 0.005 250)', fontFamily: 'var(--font-display)' }}
-          >
-            AgentOS
-          </span>
-        </Link>
-      </div>
-
-      {/* Progress spine */}
-      <div className="px-4 pb-3 shrink-0">
+      {/* Logo / Brand — routes to /execution */}
+      <Link href="/execution">
         <div
-          className="h-1 rounded-full overflow-hidden"
-          style={{ background: 'rgba(255,255,255,0.1)' }}
+          className="shrink-0 px-4 py-4 flex items-center gap-2 cursor-pointer select-none"
+          style={{ borderBottom: '1px solid oklch(0.2 0.01 250)' }}
         >
           <div
-            className="h-full rounded-full bg-[#DC143C] transition-all duration-700 ease-out"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-        <div className="mt-1.5 flex items-center justify-between">
-          <span
-            className="text-[10px] font-mono"
-            style={{ color: 'oklch(0.5 0.01 250)' }}
+            className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
+            style={{ background: '#DC143C' }}
           >
-            LVL {currentLevel}
-          </span>
+            <span className="text-white text-xs font-black">A</span>
+          </div>
+          <div className="flex flex-col">
+            <span
+              className="text-[13px] font-bold leading-none"
+              style={{ color: 'oklch(0.95 0.005 250)' }}
+            >
+              ASRE
+            </span>
+            <span
+              className="text-[9px] leading-none mt-0.5 tracking-wide"
+              style={{ color: 'oklch(0.45 0.01 250)' }}
+            >
+              EXECUTION OS
+            </span>
+          </div>
+        </div>
+      </Link>
+
+      {/* Level badge */}
+      {levelData && (
+        <div
+          className="shrink-0 mx-3 mt-3 mb-1 px-2 py-1.5 rounded-md flex items-center gap-2"
+          style={{ background: 'rgba(220,20,60,0.08)', border: '1px solid rgba(220,20,60,0.15)' }}
+        >
+          <div
+            className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+            style={{ background: 'rgba(220,20,60,0.2)', color: '#DC143C' }}
+          >
+            {currentLevel}
+          </div>
           <span
-            className="text-[10px] font-mono"
-            style={{ color: 'oklch(0.5 0.01 250)' }}
+            className="text-[11px] font-medium truncate"
+            style={{ color: 'oklch(0.7 0.005 250)' }}
           >
             {levelData?.name}
           </span>
         </div>
-      </div>
+      )}
 
       {/* Nav — scrollable */}
-      <nav className="flex-1 overflow-y-auto px-2 pb-2"
+      <nav
+        className="flex-1 overflow-y-auto px-2 pb-2"
         style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}
       >
         {NAV_ITEMS.map((group) => (
@@ -137,7 +138,6 @@ export function AppSidebar() {
             >
               {group.section}
             </div>
-
             {/* Section items */}
             <ul className="flex flex-col gap-0.5">
               {group.items.map((item) => {
@@ -178,12 +178,6 @@ export function AppSidebar() {
                       >
                         <Icon className="w-4 h-4 shrink-0" />
                         <span>{item.label}</span>
-                        {item.path === '/journey' && draftCount > 0 && (
-                          <span className="ml-auto text-[9px] font-mono bg-[#DC143C] text-white
-                            rounded-full w-4 h-4 flex items-center justify-center shrink-0">
-                            {draftCount}
-                          </span>
-                        )}
                       </div>
                     </Link>
                   </li>
@@ -218,7 +212,6 @@ export function AppSidebar() {
             <span>Settings</span>
           </div>
         </Link>
-
         {user && (
           <div
             className="flex items-center gap-2 px-2 py-2 rounded-lg"
