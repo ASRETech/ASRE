@@ -25,8 +25,8 @@ export default function Analytics() {
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-6xl mx-auto space-y-5">
         <div>
-          <h1 className="text-xl font-bold text-foreground">Analytics</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
+          <p className="text-base text-muted-foreground mt-0.5">
             Weekly leading indicators, conversion funnel, source attribution, and business health score.
           </p>
         </div>
@@ -158,7 +158,7 @@ function PulseTab() {
                   <td className="py-3">
                     <div className="flex items-center gap-2">
                       <m.icon className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm font-medium text-foreground">{m.label}</span>
+                      <span className="text-base font-medium text-foreground">{m.label}</span>
                     </div>
                   </td>
                   <td className="py-3 text-center">
@@ -306,7 +306,7 @@ function FunnelTab() {
           <div className="mt-6 p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 max-w-xl mx-auto">
             <div className="flex items-center gap-2 mb-1">
               <ArrowDown className="w-4 h-4 text-amber-500" />
-              <span className="text-sm font-semibold text-foreground">Biggest Drop-Off</span>
+              <span className="text-base font-semibold text-foreground">Biggest Drop-Off</span>
             </div>
             <p className="text-xs text-muted-foreground">
               {biggestDrop.from} → {biggestDrop.to}: <span className="font-mono text-amber-500">{biggestDrop.lossPct}% loss</span> ({biggestDrop.loss} leads)

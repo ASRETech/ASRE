@@ -165,7 +165,7 @@ export default function BigWhy() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Heart className="w-5 h-5" style={{ color: '#DC143C' }} />
-            <h1 className="text-xl font-bold text-foreground">My Big Why</h1>
+            <h1 className="text-2xl font-bold text-foreground">My Big Why</h1>
           </div>
           <p className="text-sm text-muted-foreground">
             Your purpose is your foundation. When execution gets hard, your Why pulls you forward.
@@ -218,7 +218,7 @@ export default function BigWhy() {
                   className="w-2.5 h-2.5 rounded-full shrink-0"
                   style={{ background: field.color }}
                 />
-                <Label className="text-sm font-semibold text-foreground">
+                <Label className="text-base font-semibold text-foreground">
                   {field.label}
                 </Label>
               </div>
@@ -245,7 +245,7 @@ export default function BigWhy() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="w-4 h-4 text-[#DC143C]" />
-              <span className="text-sm font-semibold text-foreground">AI Purpose Generator</span>
+              <span className="text-base font-semibold text-foreground">AI Purpose Generator</span>
               <Badge variant="outline" className="text-[10px] h-4 border-[#DC143C]/30 text-[#DC143C]">
                 {filledCount}/6 fields filled
               </Badge>

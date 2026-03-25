@@ -51,10 +51,10 @@ export default function ExecutionHome() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-foreground">
+          <h1 className="text-2xl font-bold text-foreground">
             {user?.name ? `${greeting()}, ${user.name.split(' ')[0]}` : 'Execution HQ'}
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-base text-muted-foreground mt-0.5">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
         </div>
@@ -78,7 +78,7 @@ export default function ExecutionHome() {
         {/* Today's Actions — 8 cols */}
         <div className="lg:col-span-8">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-semibold text-foreground">Today's Actions</h2>
+            <h2 className="text-base font-semibold text-foreground">Today's Actions</h2>
             <span className="text-[11px] text-muted-foreground">
               {summary?.completedActionsToday ?? 0} / {(summary?.actions ?? []).length} complete
             </span>

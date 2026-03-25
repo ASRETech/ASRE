@@ -55,7 +55,7 @@ export default function ActionEngine() {
     <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-5">
       {/* Header */}
       <div>
-        <h1 className="text-xl font-bold text-foreground">Action Engine</h1>
+        <h1 className="text-2xl font-bold text-foreground">Action Engine</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
           Prioritized daily actions + calendar integration. Complete high-priority items first.
         </p>
@@ -124,7 +124,7 @@ export default function ActionEngine() {
         <TabsContent value="actions">
           <Card className="border-border bg-card">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-foreground">Today's Prioritized Actions</CardTitle>
+              <CardTitle className="text-base font-semibold text-foreground">Today's Prioritized Actions</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               {isLoading ? (

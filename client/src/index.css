@@ -172,3 +172,33 @@
     animation: subtle-pulse 2s ease-in-out infinite;
   }
 }
+
+/* ============================================================
+   ASRE MICRO-ANIMATION SYSTEM
+   ============================================================ */
+
+@keyframes asre-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes asre-pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  70%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@layer utilities {
+  .asre-page-enter {
+    animation: asre-fade-in 280ms ease-out both;
+  }
+  .asre-stagger > *:nth-child(1) { animation: asre-fade-in 280ms 0ms ease-out both; }
+  .asre-stagger > *:nth-child(2) { animation: asre-fade-in 280ms 50ms ease-out both; }
+  .asre-stagger > *:nth-child(3) { animation: asre-fade-in 280ms 100ms ease-out both; }
+  .asre-stagger > *:nth-child(4) { animation: asre-fade-in 280ms 150ms ease-out both; }
+  .asre-stagger > *:nth-child(5) { animation: asre-fade-in 280ms 200ms ease-out both; }
+  .asre-stagger > *:nth-child(6) { animation: asre-fade-in 280ms 250ms ease-out both; }
+  .asre-pop {
+    animation: asre-pop 220ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+}

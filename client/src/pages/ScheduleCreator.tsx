@@ -144,12 +144,12 @@ export default function ScheduleCreator() {
 
   return (
     <TooltipProvider>
-      <div className="space-y-4 p-4 md:p-6 max-w-7xl mx-auto">
+      <div className="space-y-4 p-4 md:p-6 max-w-7xl mx-auto asre-page-enter">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-xl font-bold text-foreground">Schedule Creator</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
+            <h1 className="text-2xl font-bold text-foreground">Schedule Creator</h1>
+            <p className="text-base text-muted-foreground mt-0.5">
               Paint your ideal week. The Action Engine uses this to place events in the right time blocks.
             </p>
           </div>
@@ -229,7 +229,7 @@ export default function ScheduleCreator() {
           <Card className="border-border bg-card overflow-hidden">
             <CardHeader className="py-3 px-4 border-b border-border">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-sm font-medium text-foreground">Weekly Grid</CardTitle>
+                <CardTitle className="text-base font-medium text-foreground">Weekly Grid</CardTitle>
                 <Tooltip>
                   <TooltipTrigger>
                     <Info className="w-3.5 h-3.5 text-muted-foreground" />
@@ -253,7 +253,7 @@ export default function ScheduleCreator() {
           {/* Summary */}
           <Card className="border-border bg-card xl:sticky xl:top-4 xl:self-start">
             <CardHeader className="py-3 px-4 border-b border-border">
-              <CardTitle className="text-sm font-medium text-foreground">Summary</CardTitle>
+              <CardTitle className="text-base font-medium text-foreground">Summary</CardTitle>
             </CardHeader>
             <CardContent className="p-3">
               <ScheduleSummary grid={grid} buckets={buckets ?? []} />
@@ -266,7 +266,7 @@ export default function ScheduleCreator() {
         <div className="border border-border rounded-xl overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 bg-muted/30 border-b border-border">
             <HelpCircle className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-semibold text-foreground">Frequently Asked Questions</span>
+            <span className="text-base font-semibold text-foreground">Frequently Asked Questions</span>
           </div>
           <div className="divide-y divide-border">
             {FAQ_ITEMS.map((item, i) => (
@@ -275,7 +275,7 @@ export default function ScheduleCreator() {
                   className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/20 transition-colors"
                   onClick={() => setFaqOpen(faqOpen === i ? null : i)}
                 >
-                  <span className="text-sm font-medium text-foreground">{item.q}</span>
+                  <span className="text-base font-medium text-foreground">{item.q}</span>
                   {faqOpen === i
                     ? <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
                     : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />

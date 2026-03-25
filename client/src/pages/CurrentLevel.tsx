@@ -58,7 +58,7 @@ export default function CurrentLevel() {
   const overallProgress = totalAllDeliverables > 0 ? Math.round((completedAllDeliverables / totalAllDeliverables) * 100) : 0;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8 asre-page-enter">
       <div className="max-w-6xl mx-auto space-y-6">
 
         {/* Advance Banner */}
