@@ -120,167 +120,21 @@ export default function Financials() {
           </Card>
         </div>
 
-        <Tabs defaultValue="calculator" className="space-y-4">
+        <Tabs defaultValue="pnl" className="space-y-4">
           <TabsList className="bg-muted/50 w-full sm:w-auto flex flex-wrap">
-            <TabsTrigger value="calculator" className="text-xs flex-1 sm:flex-initial">Calculator</TabsTrigger>
             <TabsTrigger value="pnl" className="text-xs flex-1 sm:flex-initial">P&L</TabsTrigger>
-            <TabsTrigger value="model" className="text-xs flex-1 sm:flex-initial">Economic Model</TabsTrigger>
+            <TabsTrigger value="model" className="text-xs flex-1 sm:flex-initial">MREA Budget Model</TabsTrigger>
             <TabsTrigger value="forecast" className="text-xs flex-1 sm:flex-initial">90-Day Forecast</TabsTrigger>
             <TabsTrigger value="taxexport" className="text-xs flex-1 sm:flex-initial">Tax Export &amp; Integrations</TabsTrigger>
           </TabsList>
 
-          {/* Commission Calculator */}
-          <TabsContent value="calculator">
-            <div className="grid lg:grid-cols-[1fr_340px] gap-6">
-              <Card className="p-6">
-                <h3 className="font-display text-lg font-semibold mb-6 flex items-center gap-2">
-                  <Calculator className="w-5 h-5 text-[#DC143C]" />
-                  Commission Calculator
-                </h3>
-                <div className="space-y-5">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <Label className="text-xs text-muted-foreground uppercase tracking-wider">Sale Price</Label>
-                      <span className="font-mono text-sm font-semibold">${salePrice.toLocaleString()}</span>
-                    </div>
-                    <Slider
-                      value={[salePrice]}
-                      onValueChange={([v]) => setSalePrice(v)}
-                      min={100000}
-                      max={2000000}
-                      step={10000}
-                    />
-                    <div className="flex justify-between text-[10px] font-mono text-muted-foreground mt-1">
-                      <span>$100K</span><span>$2M</span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">Commission %</Label>
-                      <Input
-                        type="number"
-                        value={commissionPct}
-                        onChange={(e) => setCommissionPct(parseFloat(e.target.value) || 0)}
-                        className="h-9 font-mono"
-                        step={0.5}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">Agent Split %</Label>
-                      <Input
-                        type="number"
-                        value={agentSplit}
-                        onChange={(e) => setAgentSplit(parseFloat(e.target.value) || 0)}
-                        className="h-9 font-mono"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">Fees</Label>
-                      <Input
-                        type="number"
-                        value={fees}
-                        onChange={(e) => setFees(parseFloat(e.target.value) || 0)}
-                        className="h-9 font-mono"
-                      />
-                    </div>
-                  </div>
-                  {/* MREA expanded fields */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-border/40">
-                    <div>
-                      <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">GCI Goal (Annual)</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                        <Input
-                          type="number"
-                          value={gciGoal}
-                          onChange={(e) => setGciGoalCalc(parseFloat(e.target.value) || 0)}
-                          className="h-9 font-mono pl-7"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">Cap Amount (0 = none)</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                        <Input
-                          type="number"
-                          value={capAmount}
-                          onChange={(e) => setCapAmount(parseFloat(e.target.value) || 0)}
-                          className="h-9 font-mono pl-7"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">Annual Expenses</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                        <Input
-                          type="number"
-                          value={annualExpenses}
-                          onChange={(e) => setAnnualExpenses(parseFloat(e.target.value) || 0)}
-                          className="h-9 font-mono pl-7"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  {/* MREA Budget Model auto-fill */}
-                  <div className="flex items-center gap-3 pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs h-8 border-[#DC143C]/30 text-[#DC143C] hover:bg-[#DC143C]/5"
-                      onClick={() => setAllocations({ taxes: 21, giving: 10, operating: 20, ownerPay: 30, investing: 19 })}
-                    >
-                      Use MREA Budget Model
-                    </Button>
-                    <span className="text-[10px] text-muted-foreground">Taxes 21% · Giving 10% · Operating 20% · Owner Pay 30% · Investing 19%</span>
-                  </div>
-                </div>
-              </Card>
 
-              {/* Live output */}
-              <div className="space-y-3">
-                <Card className="p-4">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Gross Commission</div>
-                  <div className="font-mono text-xl font-bold">${grossCommission.toLocaleString()}</div>
-                </Card>
-                <Card className="p-4">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">After Split ({agentSplit}%)</div>
-                  <div className="font-mono text-xl font-bold">${afterSplit.toLocaleString()}</div>
-                </Card>
-                <Card className="p-4">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">After Fees</div>
-                  <div className="font-mono text-xl font-bold">${afterFees.toLocaleString()}</div>
-                </Card>
-                <Card className="p-4 border-[#DC143C]/20 bg-[#DC143C]/[0.02]">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Tax Reserve ({allocations.taxes}%)</div>
-                  <div className="font-mono text-lg font-bold text-red-500">-${taxReserve.toLocaleString()}</div>
-                </Card>
-                <Card className="p-4 border-violet-500/20 bg-violet-500/[0.02]">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Giving ({allocations.giving}%)</div>
-                  <div className="font-mono text-lg font-bold text-violet-500">-${giving.toLocaleString()}</div>
-                </Card>
-                <Card className="p-4 border-emerald-500/20 bg-emerald-500/[0.02]">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Net Deposit</div>
-                  <div className="font-mono text-2xl font-bold text-emerald-500">${netDeposit.toLocaleString()}</div>
-                </Card>
-                {/* MREA projection outputs */}
-                <Card className="p-4 border-border/50">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Deals to Hit Goal</div>
-                  <div className="font-mono text-xl font-bold text-foreground">{dealsNeeded}</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">{monthlyTarget}/mo needed</div>
-                </Card>
-                <Card className="p-4 border-border/50">
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Net Income Projection</div>
-                  <div className="font-mono text-xl font-bold text-foreground">${netIncomeProjection.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">After taxes + expenses</div>
-                </Card>
-              </div>
-            </div>
+
+          {/* P&L — Income, Expenses, and Accounting Integrations */}
+          <TabsContent value="pnl">
+            <PnLTab />
           </TabsContent>
-
-
-          {/* Economic Model — MREA Reverse-Engineered Income */}
+          {/* MREA Budget Model — Reverse-Engineered Income */}
           <TabsContent value="model">
             <EconomicModelTab gciGoal={state.user?.incomeGoal ?? 250000} />
           </TabsContent>
@@ -687,13 +541,111 @@ function ReceiptCaptureTab() {
 }
 
 // ─── Tax Export Tab ──────────────────────────────────────────────────
+// ─── P&L Tab (Income, Expenses, Accounting Integrations) ───────────────────────
+function PnLTab() {
+  const { state } = useApp();
+  const financials = state.financials ?? [];
+  const totalIncome = financials.filter(f => f.type === 'income').reduce((s, f) => s + f.amount, 0);
+  const totalExpenses = financials.filter(f => f.type === 'expense').reduce((s, f) => s + f.amount, 0);
+  const netIncome = totalIncome - totalExpenses;
+
+  const expensesByCategory = Object.entries(
+    financials.filter(f => f.type === 'expense').reduce((cats: Record<string, number>, f) => {
+      cats[f.category] = (cats[f.category] || 0) + f.amount;
+      return cats;
+    }, {})
+  ).sort((a, b) => b[1] - a[1]);
+
+  const incomeByCategory = Object.entries(
+    financials.filter(f => f.type === 'income').reduce((cats: Record<string, number>, f) => {
+      cats[f.category] = (cats[f.category] || 0) + f.amount;
+      return cats;
+    }, {})
+  ).sort((a, b) => b[1] - a[1]);
+
+  const ACCOUNTING_INTEGRATIONS = [
+    { name: 'QuickBooks Online', logo: '📊', description: 'Sync commissions and expenses automatically' },
+    { name: 'Wave Accounting', logo: '🌊', description: 'Free accounting for self-employed agents' },
+    { name: 'FreshBooks', logo: '📗', description: 'Invoicing and expense tracking' },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Card className="p-4 text-center">
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Income</div>
+          <div className="font-mono text-xl font-bold text-emerald-500">${totalIncome.toLocaleString()}</div>
+        </Card>
+        <Card className="p-4 text-center">
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Expenses</div>
+          <div className="font-mono text-xl font-bold text-red-500">${totalExpenses.toLocaleString()}</div>
+        </Card>
+        <Card className="p-4 text-center">
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Net Income</div>
+          <div className={`font-mono text-xl font-bold ${netIncome >= 0 ? "text-[#DC143C]" : "text-red-500"}`}>${netIncome.toLocaleString()}</div>
+        </Card>
+      </div>
+      {incomeByCategory.length > 0 && (
+        <Card className="p-4">
+          <h4 className="font-display text-xs font-bold mb-3 uppercase tracking-wider text-muted-foreground">Income by Category</h4>
+          <div className="space-y-2">
+            {incomeByCategory.map(([cat, amount]) => {
+              const pct = totalIncome > 0 ? (amount / totalIncome) * 100 : 0;
+              return (
+                <div key={cat} className="flex items-center gap-3">
+                  <div className="w-32 sm:w-40 text-xs truncate">{cat}</div>
+                  <div className="flex-1"><div className="h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${pct}%` }} /></div></div>
+                  <div className="font-mono text-xs font-medium w-20 text-right">${amount.toLocaleString()}</div>
+                  <div className="text-[10px] text-muted-foreground w-10 text-right">{pct.toFixed(0)}%</div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+      {expensesByCategory.length > 0 && (
+        <Card className="p-4">
+          <h4 className="font-display text-xs font-bold mb-3 uppercase tracking-wider text-muted-foreground">Expenses by Category</h4>
+          <div className="space-y-2">
+            {expensesByCategory.map(([cat, amount]) => {
+              const pct = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
+              return (
+                <div key={cat} className="flex items-center gap-3">
+                  <div className="w-32 sm:w-40 text-xs truncate">{cat}</div>
+                  <div className="flex-1"><div className="h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-[#DC143C] rounded-full transition-all" style={{ width: `${pct}%` }} /></div></div>
+                  <div className="font-mono text-xs font-medium w-20 text-right">${amount.toLocaleString()}</div>
+                  <div className="text-[10px] text-muted-foreground w-10 text-right">{pct.toFixed(0)}%</div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+      {financials.length === 0 && (
+        <div className="text-center py-8 text-muted-foreground text-sm">No financial entries yet.</div>
+      )}
+      <div className="space-y-3">
+        <h4 className="font-display text-xs font-bold uppercase tracking-wider text-muted-foreground">Accounting Integrations</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {ACCOUNTING_INTEGRATIONS.map(integration => (
+            <div key={integration.name} className="rounded-lg border border-border bg-card p-4 flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">{integration.logo}</span>
+                <span className="text-sm font-medium text-foreground">{integration.name}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">{integration.description}</p>
+              <span className="text-[10px] uppercase tracking-wider font-medium text-amber-600 bg-amber-500/10 rounded px-2 py-0.5 w-fit">Coming Soon</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TaxExportTab() {
   // ── Accounting Integration Stubs ──
-  const integrations = [
-    { name: 'QuickBooks Online', status: 'coming_soon', logo: '📊', description: 'Sync commissions and expenses automatically' },
-    { name: 'Wave Accounting', status: 'coming_soon', logo: '🌊', description: 'Free accounting for self-employed agents' },
-    { name: 'FreshBooks', status: 'coming_soon', logo: '📗', description: 'Invoicing and expense tracking' },
-  ];
+
 
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState(currentYear);
@@ -804,22 +756,7 @@ function TaxExportTab() {
         )}
       </Card>
 
-      {/* Accounting Integrations */}
-      <div className="space-y-3">
-        <h4 className="font-display text-xs font-bold uppercase tracking-wider text-muted-foreground">Accounting Integrations</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {integrations.map(integration => (
-            <div key={integration.name} className="rounded-lg border border-border bg-card p-4 flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">{integration.logo}</span>
-                <span className="text-sm font-medium text-foreground">{integration.name}</span>
-              </div>
-              <p className="text-xs text-muted-foreground">{integration.description}</p>
-              <span className="text-[10px] uppercase tracking-wider font-medium text-amber-600 bg-amber-500/10 rounded px-2 py-0.5 w-fit">Coming Soon</span>
-            </div>
-          ))}
-        </div>
-      </div>
+
       {/* Disclaimer */}
       <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20 text-xs text-muted-foreground">
         <strong className="text-amber-600">Disclaimer:</strong> This export is for informational purposes only. Consult a licensed CPA or tax professional for official tax filing. AgentOS does not provide tax advice.

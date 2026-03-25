@@ -16,7 +16,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/performance/analytics':       'Analytics',
   '/performance/dashboard':       'Dashboard',
   // PILLAR 3: GROWTH (KW order: Vision → Growth → Execution → Performance)
-  '/growth/current-level':        'Current Level',
+  '/growth/current-level':        'Current MREA Level',
   '/growth/coaching':             'Coaching',
   '/growth/team':                 'Team OS',
   // PILLAR 4: VISION
@@ -24,9 +24,10 @@ const PAGE_TITLES: Record<string, string> = {
   '/vision/wealth':               'Wealth Journey',
   // SYSTEM
   '/settings':                    'Settings',
+  '/settings/certification-interest': 'ASRE Coach Certification',
   // LEGACY (backward compat — no sidebar links)
   '/journey':                     'My Journey',
-  '/level':                       'Current Level',
+  '/level':                       'Current MREA Level',
   '/library':                     'Model Library',
   '/culture':                     'Culture OS',
   '/tools':                       'AI Tools Directory',

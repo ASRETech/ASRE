@@ -1,14 +1,11 @@
 /**
  * ExecutionHome — ASRE Command Center
  *
- * Primary screen of the application.
- * Combines: Execution Score, Streak, Action List, Pipeline Snapshot,
- * Weekly Pulse, Financial Snapshot, and Wealth Progress.
- *
- * Widget layout is drag-and-drop reorderable via @dnd-kit.
- * Layout preference persisted to localStorage.
+ * Primary screen of the application. 12-column grid layout:
+ * Row 1: Score (4col) | Today's Actions (8col)
+ * Row 2: Streak (4col) | Leaderboard (4col) | Pipeline (4col)
+ * Row 3: Weekly Pulse (4col) | Financials (4col) | Wealth (4col)
  */
-
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { ExecutionScoreCard } from '@/components/execution/ExecutionScoreCard';
@@ -16,8 +13,7 @@ import { StreakTracker } from '@/components/execution/StreakTracker';
 import { Leaderboard } from '@/components/execution/Leaderboard';
 import { ActionList } from '@/components/execution/ActionList';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, LayoutGrid } from 'lucide-react';
-import { WidgetGrid, WidgetConfig } from '@/components/widgets/WidgetGrid';
+import { AlertCircle } from 'lucide-react';
 import { PipelineWidget } from '@/components/widgets/PipelineWidget';
 import { WeeklyPulseWidget } from '@/components/widgets/WeeklyPulseWidget';
 import { FinancialWidget } from '@/components/widgets/FinancialWidget';
@@ -25,45 +21,23 @@ import { WealthWidget } from '@/components/widgets/WealthWidget';
 
 export default function ExecutionHome() {
   const { user } = useAuth();
-
   const summaryQuery = trpc.execution.getSummary.useQuery(undefined, {
     staleTime: 30_000,
     refetchInterval: 60_000,
     retry: 2,
   });
-
   const { data: summary, isLoading, isError } = summaryQuery;
 
-  // ── Widget definitions for the bottom grid ──
-  const WIDGETS: WidgetConfig[] = [
-    {
-      id: 'pipeline',
-      title: 'Pipeline',
-      component: <PipelineWidget />,
-      span: 1,
-    },
-    {
-      id: 'weekly-pulse',
-      title: 'Weekly Pulse',
-      component: <WeeklyPulseWidget />,
-      span: 1,
-    },
-    {
-      id: 'financials',
-      title: 'Financials',
-      component: <FinancialWidget />,
-      span: 1,
-    },
-    {
-      id: 'wealth',
-      title: 'Wealth Journey',
-      component: <WealthWidget />,
-      span: 1,
-    },
-  ];
+  const greeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
 
   return (
-    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 max-w-[1400px] mx-auto space-y-5">
+
       {/* ── Error Banner ── */}
       {isError && (
         <Alert variant="destructive" className="border-destructive/50">
@@ -78,26 +52,46 @@ export default function ExecutionHome() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-foreground">
-            {user?.name ? `Good morning, ${user.name.split(' ')[0]}` : 'Execution HQ'}
+            {user?.name ? `${greeting()}, ${user.name.split(' ')[0]}` : 'Execution HQ'}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <LayoutGrid className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Drag widgets to rearrange</span>
+        <div className="hidden sm:flex items-center gap-2 text-[11px] text-muted-foreground bg-muted/40 rounded-md px-3 py-1.5 border border-border/50">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          Live
         </div>
       </div>
 
-      {/* ── Top Row: Score + Streak + Leaderboard ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <ExecutionScoreCard
-          score={summary?.score ?? 0}
-          completedActionsToday={summary?.completedActionsToday ?? 0}
-          qualifiesForStreakToday={summary?.qualifiesForStreakToday ?? false}
-          isLoading={isLoading}
-        />
+      {/* ── Row 1: Score (left) + Actions (right) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Score Card — 4 cols */}
+        <div className="lg:col-span-4">
+          <ExecutionScoreCard
+            score={summary?.score ?? 0}
+            completedActionsToday={summary?.completedActionsToday ?? 0}
+            qualifiesForStreakToday={summary?.qualifiesForStreakToday ?? false}
+            isLoading={isLoading}
+          />
+        </div>
+        {/* Today's Actions — 8 cols */}
+        <div className="lg:col-span-8">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-foreground">Today's Actions</h2>
+            <span className="text-[11px] text-muted-foreground">
+              {summary?.completedActionsToday ?? 0} / {(summary?.actions ?? []).length} complete
+            </span>
+          </div>
+          <ActionList
+            actions={summary?.actions ?? []}
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
+
+      {/* ── Row 2: Streak + Leaderboard + Pipeline ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StreakTracker
           currentStreak={summary?.currentStreak ?? 0}
           longestStreak={summary?.longestStreak ?? 0}
@@ -110,22 +104,16 @@ export default function ExecutionHome() {
           currentUserId={user?.id}
           isLoading={isLoading}
         />
+        <PipelineWidget />
       </div>
 
-      {/* ── Action List ── */}
-      <div>
-        <h2 className="text-sm font-semibold text-foreground mb-3">Today's Actions</h2>
-        <ActionList
-          actions={summary?.actions ?? []}
-          isLoading={isLoading}
-        />
+      {/* ── Row 3: Weekly Pulse + Financials + Wealth ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <WeeklyPulseWidget />
+        <FinancialWidget />
+        <WealthWidget />
       </div>
 
-      {/* ── Modular Widget Grid ── */}
-      <div>
-        <h2 className="text-sm font-semibold text-foreground mb-3">Dashboard</h2>
-        <WidgetGrid widgets={WIDGETS} />
-      </div>
     </div>
   );
 }

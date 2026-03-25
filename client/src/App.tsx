@@ -83,6 +83,7 @@ import BigWhy from './pages/vision/BigWhy';
 
 // ── SYSTEM ──
 import SettingsPage from "./pages/Settings";
+import CertificationInterest from "./pages/CertificationInterest";
 import ClientPortal from "./pages/ClientPortal";
 
 // ── LEGACY (no sidebar links — kept for backward compat) ──
@@ -153,6 +154,9 @@ function AppRoutes() {
       {/* ── SYSTEM ── */}
       <Route path="/settings">
         <DashboardLayout><SettingsPage /></DashboardLayout>
+      </Route>
+      <Route path="/settings/certification-interest">
+        <DashboardLayout><CertificationInterest /></DashboardLayout>
       </Route>
       <Route path="/portal/:token">
         <ClientPortal />

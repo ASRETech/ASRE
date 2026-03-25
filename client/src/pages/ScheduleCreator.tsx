@@ -4,7 +4,7 @@
  * Phase 11 fixes: LOW-02 (MREA confirmation dialog), MED-06 (suppress save during template apply)
  */
 import { useState, useMemo, useCallback, useRef } from "react";
-import { Save, LayoutTemplate, Info, AlertTriangle } from "lucide-react";
+import { Save, LayoutTemplate, Info, AlertTriangle, HelpCircle, ChevronDown, ChevronUp, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -43,6 +43,33 @@ export default function ScheduleCreator() {
   const [showTemplateConfirm, setShowTemplateConfirm] = useState(false);
   // MED-06: flag to suppress saves while template is being applied
   const isApplyingTemplate = useRef(false);
+  // FAQ section state
+  const [faqOpen, setFaqOpen] = useState<number | null>(null);
+  // Save feedback state
+  const [saved, setSaved] = useState(false);
+
+  const FAQ_ITEMS = [
+    {
+      q: "Why does my schedule matter?",
+      a: "Your schedule is the physical expression of your priorities. Gary Keller says, 'Time block your priorities before anything else gets on your calendar.' The Action Engine uses your schedule to surface the right actions at the right time."
+    },
+    {
+      q: "What is the MREA Ideal Week?",
+      a: "The Millionaire Real Estate Agent Ideal Week allocates time by activity type: Lead Generation (morning, non-negotiable), Appointments (mid-morning to early afternoon), Admin (afternoon), and Personal/Family (protected evenings and weekends)."
+    },
+    {
+      q: "How often should I update my schedule?",
+      a: "Review your schedule at the start of each 90-day sprint. Your time blocks should evolve as your business grows — a Level 1 Solo Agent has a different ideal week than a Level 4 Team Leader."
+    },
+    {
+      q: "What if I can't stick to the schedule?",
+      a: "The schedule is a target, not a prison. Track your actual time for one week, then adjust your ideal week to be realistic. Consistency over perfection — even 70% adherence compounds dramatically over a year."
+    },
+    {
+      q: "How does this connect to my Action Engine?",
+      a: "The Action Engine reads your time blocks to prioritize and sequence daily actions. Lead Gen blocks trigger prospecting actions. Appointment blocks trigger CRM follow-ups. Admin blocks trigger paperwork and system tasks."
+    },
+  ];
 
   // Initialize grid from saved preferences once loaded
   if (prefs && !initialized) {
@@ -55,6 +82,8 @@ export default function ScheduleCreator() {
   const saveMutation = trpc.schedule.saveGrid.useMutation({
     onSuccess: () => {
       toast.success("Schedule saved");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
       utils.schedule.getPreferences.invalidate();
       utils.schedule.getWindowRules.invalidate();
     },
@@ -146,11 +175,41 @@ export default function ScheduleCreator() {
               size="sm"
               onClick={handleSave}
               disabled={saveMutation.isPending || applyTemplateMutation.isPending}
-              className="bg-[#DC143C] hover:bg-[#B01030] text-white"
+              className={saved ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-[#DC143C] hover:bg-[#B01030] text-white"}
             >
-              <Save className="w-3.5 h-3.5 mr-1.5" />
-              Save Schedule
+              {saveMutation.isPending ? (
+                <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Saving...</>
+              ) : saved ? (
+                <><CheckCircle className="w-3.5 h-3.5 mr-1.5" />Saved</>
+              ) : (
+                <><Save className="w-3.5 h-3.5 mr-1.5" />Save Schedule</>
+              )}
             </Button>
+          </div>
+        </div>
+
+        {/* Block info panel */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="rounded-lg border border-border bg-[#DC143C]/5 border-[#DC143C]/20 p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full bg-[#DC143C]" />
+              <span className="text-xs font-semibold text-foreground">Lead Generation</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground">Your #1 priority. Block 3+ hours every morning before anything else. This is the activity that drives all GCI.</p>
+          </div>
+          <div className="rounded-lg border border-border bg-amber-500/5 border-amber-500/20 p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full bg-amber-500" />
+              <span className="text-xs font-semibold text-foreground">Appointments</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground">Buyer consultations, listing appointments, and closings. Schedule mid-morning through early afternoon when energy is high.</p>
+          </div>
+          <div className="rounded-lg border border-border bg-blue-500/5 border-blue-500/20 p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full bg-blue-500" />
+              <span className="text-xs font-semibold text-foreground">Admin & Systems</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground">CRM updates, paperwork, and team communication. Batch these into afternoon blocks to protect your lead gen time.</p>
           </div>
         </div>
 
@@ -202,6 +261,35 @@ export default function ScheduleCreator() {
           </Card>
         </div>
       </div>
+
+        {/* FAQ Section */}
+        <div className="border border-border rounded-xl overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 bg-muted/30 border-b border-border">
+            <HelpCircle className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-semibold text-foreground">Frequently Asked Questions</span>
+          </div>
+          <div className="divide-y divide-border">
+            {FAQ_ITEMS.map((item, i) => (
+              <div key={i} className="bg-card">
+                <button
+                  className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-muted/20 transition-colors"
+                  onClick={() => setFaqOpen(faqOpen === i ? null : i)}
+                >
+                  <span className="text-sm font-medium text-foreground">{item.q}</span>
+                  {faqOpen === i
+                    ? <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" />
+                    : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                  }
+                </button>
+                {faqOpen === i && (
+                  <div className="px-4 pb-3">
+                    <p className="text-sm text-muted-foreground leading-relaxed">{item.a}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
 
       {/* LOW-02: Confirmation dialog before overwriting existing schedule */}
       <AlertDialog open={showTemplateConfirm} onOpenChange={setShowTemplateConfirm}>

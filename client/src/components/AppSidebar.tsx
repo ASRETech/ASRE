@@ -35,10 +35,10 @@ const NAV_ITEMS = [
   {
     section: 'GROWTH',
     items: [
-      { label: 'Current Level', icon: Star,         path: '/growth/current-level' },
-      { label: 'Coaching',      icon: GraduationCap, path: '/growth/coaching' },
-      { label: 'KW Course Creator', icon: BookOpen, path: 'https://coursecreator360.com', external: true },
-      { label: 'Team OS',       icon: UsersRound,    path: '/growth/team' },
+      { label: 'Current MREA Level', icon: Star,         path: '/growth/current-level' },
+      { label: 'Coaching',           icon: GraduationCap, path: '/growth/coaching' },
+      { label: 'ASRE Coach Certification', icon: BookOpen, path: '/settings/certification-interest', badge: 'Exclusive' },
+      { label: 'Team OS',            icon: UsersRound,    path: '/growth/team' },
     ],
   },
   {
@@ -61,7 +61,7 @@ const NAV_ITEMS = [
 ];
 
 // ── Reusable nav item inner content ──
-function NavItemInner({ isActive, Icon, label }: { isActive: boolean; Icon: React.ElementType; label: string }) {
+function NavItemInner({ isActive, Icon, label, badge }: { isActive: boolean; Icon: React.ElementType; label: string; badge?: string }) {
   return (
     <div
       className={`
@@ -90,7 +90,15 @@ function NavItemInner({ isActive, Icon, label }: { isActive: boolean; Icon: Reac
       }}
     >
       <Icon className="w-4 h-4 shrink-0" />
-      <span>{label}</span>
+      <span className="flex-1 truncate">{label}</span>
+      {badge && (
+        <span
+          className="text-[9px] font-bold px-1 py-0.5 rounded shrink-0"
+          style={{ background: 'rgba(220,20,60,0.2)', color: '#DC143C' }}
+        >
+          {badge}
+        </span>
+      )}
     </div>
   );
 }
@@ -179,6 +187,7 @@ export function AppSidebar() {
                 // Exception: /execution exact only (to avoid matching all /execution/* as HQ active)
                 // External links are never "active"
                 const isExternal = (item as any).external === true;
+                const badge = (item as any).badge as string | undefined;
                 const isActive = !isExternal && (
                   location === item.path ||
                   (item.path !== '/execution' && location.startsWith(item.path + '/'))
@@ -188,11 +197,11 @@ export function AppSidebar() {
                   <li key={item.path}>
                     {isExternal ? (
                       <a href={item.path} target="_blank" rel="noopener noreferrer">
-                      <NavItemInner isActive={isActive} Icon={Icon} label={item.label} />
+                        <NavItemInner isActive={isActive} Icon={Icon} label={item.label} badge={badge} />
                       </a>
                     ) : (
                       <Link href={item.path}>
-                        <NavItemInner isActive={isActive} Icon={Icon} label={item.label} />
+                        <NavItemInner isActive={isActive} Icon={Icon} label={item.label} badge={badge} />
                       </Link>
                     )}
                   </li>
