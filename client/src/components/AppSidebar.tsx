@@ -4,27 +4,43 @@
  * All paths EXACTLY match App.tsx canonical nested routes.
  * No dead links. No FOUNDATION section. Logo → /execution.
  *
- * Pillars:
- *   EXECUTION   → /execution, /execution/pipeline, /execution/action-engine,
- *                 /execution/schedule
+ * Pillar order (KW philosophy): VISION → GROWTH → EXECUTION → PERFORMANCE
+ *   VISION      → /vision/big-why, /vision/wealth
+ *   GROWTH      → /growth/current-level, /growth/coaching, /growth/team
+ *   EXECUTION   → /execution, /execution/pipeline, /execution/action-engine, /execution/schedule
  *   PERFORMANCE → /performance/financials, /performance/analytics, /performance/dashboard
- *   GROWTH      → /growth/coaching, /growth/certification, /growth/team
- *   VISION      → /vision/wealth
  */
 
+import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { LEVELS } from '@/lib/store';
 import {
   LayoutDashboard, Users,
   DollarSign,
   Zap, BarChart3, UsersRound, GraduationCap,
-  Award, TrendingUp,
-  CalendarDays, Flame, Settings,
+  TrendingUp, Heart,
+  CalendarDays, Flame, Settings, Star, BookOpen,
 } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
 
-// ── 4-PILLAR NAV — paths match App.tsx canonical nested routes exactly ──
+// ── 4-PILLAR NAV — KW philosophy order: Vision → Growth → Execution → Performance ──
 const NAV_ITEMS = [
+  {
+    section: 'VISION',
+    items: [
+      { label: 'Big Why',        icon: Heart,      path: '/vision/big-why' },
+      { label: 'Wealth Journey', icon: TrendingUp, path: '/vision/wealth' },
+    ],
+  },
+  {
+    section: 'GROWTH',
+    items: [
+      { label: 'Current Level', icon: Star,         path: '/growth/current-level' },
+      { label: 'Coach Hub',     icon: GraduationCap, path: '/growth/coaching' },
+      { label: 'Coaching Portal', icon: BookOpen,   path: 'https://coursecreator360.com', external: true },
+      { label: 'Team OS',       icon: UsersRound,    path: '/growth/team' },
+    ],
+  },
   {
     section: 'EXECUTION',
     items: [
@@ -42,21 +58,42 @@ const NAV_ITEMS = [
       { label: 'Dashboard',  icon: LayoutDashboard, path: '/performance/dashboard' },
     ],
   },
-  {
-    section: 'GROWTH',
-    items: [
-      { label: 'Coach Hub',     icon: GraduationCap, path: '/growth/coaching' },
-      { label: 'Certification', icon: Award,         path: '/growth/certification' },
-      { label: 'Team OS',       icon: UsersRound,    path: '/growth/team' },
-    ],
-  },
-  {
-    section: 'VISION',
-    items: [
-      { label: 'Wealth Journey', icon: TrendingUp, path: '/vision/wealth' },
-    ],
-  },
 ];
+
+// ── Reusable nav item inner content ──
+function NavItemInner({ isActive, Icon, label }: { isActive: boolean; Icon: React.ElementType; label: string }) {
+  return (
+    <div
+      className={`
+        flex items-center gap-2 px-2 py-2 rounded-md text-[13px]
+        transition-colors duration-100 cursor-pointer
+        ${isActive
+          ? 'border-l-2 border-[#DC143C] rounded-l-none font-medium'
+          : 'border-l-2 border-transparent'
+        }
+      `}
+      style={{
+        color: isActive ? '#DC143C' : 'oklch(0.7 0.005 250)',
+        background: isActive ? 'rgba(220,20,60,0.12)' : 'transparent',
+      }}
+      onMouseEnter={(e) => {
+        if (!isActive) {
+          (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.05)';
+          (e.currentTarget as HTMLDivElement).style.color = 'oklch(0.9 0.005 250)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isActive) {
+          (e.currentTarget as HTMLDivElement).style.background = 'transparent';
+          (e.currentTarget as HTMLDivElement).style.color = 'oklch(0.7 0.005 250)';
+        }
+      }}
+    >
+      <Icon className="w-4 h-4 shrink-0" />
+      <span>{label}</span>
+    </div>
+  );
+}
 
 export function AppSidebar() {
   const [location] = useLocation();
@@ -140,47 +177,24 @@ export function AppSidebar() {
               {group.items.map((item) => {
                 // Active: exact match OR location starts with path (for nested sub-routes)
                 // Exception: /execution exact only (to avoid matching all /execution/* as HQ active)
-                const isActive =
+                // External links are never "active"
+                const isExternal = (item as any).external === true;
+                const isActive = !isExternal && (
                   location === item.path ||
-                  (item.path !== '/execution' && location.startsWith(item.path + '/'));
+                  (item.path !== '/execution' && location.startsWith(item.path + '/'))
+                );
                 const Icon = item.icon;
                 return (
                   <li key={item.path}>
-                    <Link href={item.path}>
-                      <div
-                        className={`
-                          flex items-center gap-2 px-2 py-2 rounded-md text-[13px]
-                          transition-colors duration-100 cursor-pointer
-                          ${isActive
-                            ? 'border-l-2 border-[#DC143C] rounded-l-none font-medium'
-                            : 'border-l-2 border-transparent'
-                          }
-                        `}
-                        style={{
-                          color: isActive
-                            ? '#DC143C'
-                            : 'oklch(0.7 0.005 250)',
-                          background: isActive
-                            ? 'rgba(220,20,60,0.12)'
-                            : 'transparent',
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!isActive) {
-                            (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.05)';
-                            (e.currentTarget as HTMLDivElement).style.color = 'oklch(0.9 0.005 250)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isActive) {
-                            (e.currentTarget as HTMLDivElement).style.background = 'transparent';
-                            (e.currentTarget as HTMLDivElement).style.color = 'oklch(0.7 0.005 250)';
-                          }
-                        }}
-                      >
-                        <Icon className="w-4 h-4 shrink-0" />
-                        <span>{item.label}</span>
-                      </div>
-                    </Link>
+                    {isExternal ? (
+                      <a href={item.path} target="_blank" rel="noopener noreferrer">
+                      <NavItemInner isActive={isActive} Icon={Icon} label={item.label} />
+                      </a>
+                    ) : (
+                      <Link href={item.path}>
+                        <NavItemInner isActive={isActive} Icon={Icon} label={item.label} />
+                      </Link>
+                    )}
                   </li>
                 );
               })}

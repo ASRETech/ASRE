@@ -15,13 +15,12 @@ const PAGE_TITLES: Record<string, string> = {
   '/performance/financials':      'Financials',
   '/performance/analytics':       'Analytics',
   '/performance/dashboard':       'Dashboard',
-  // PILLAR 3: GROWTH
+  // PILLAR 3: GROWTH (KW order: Vision → Growth → Execution → Performance)
+  '/growth/current-level':        'Current Level',
   '/growth/coaching':             'Coach Hub',
-  '/growth/certification':        'Coach Certification',
   '/growth/team':                 'Team OS',
-  '/growth/referrals':            'Referral Network',
-  '/growth/reviews':              'Reviews',
   // PILLAR 4: VISION
+  '/vision/big-why':              'Big Why',
   '/vision/wealth':               'Wealth Journey',
   // SYSTEM
   '/settings':                    'Settings',

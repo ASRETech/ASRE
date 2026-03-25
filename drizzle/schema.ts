@@ -50,6 +50,13 @@ export const agentProfiles = mysqlTable("agent_profiles", {
   marketCenterId: varchar("marketCenterId", { length: 100 }),
   marketCenterName: varchar("marketCenterName", { length: 200 }),
   agentRole: mysqlEnum("agentRole", ["agent", "coach", "mc_op", "team_leader", "admin"]).default("agent"),
+  // Big Why — Vision layer
+  bigWhy: text("bigWhy"),
+  bigWhyFaith: text("bigWhyFaith"),
+  bigWhyFamily: text("bigWhyFamily"),
+  bigWhyFinancial: text("bigWhyFinancial"),
+  bigWhyFulfillment: text("bigWhyFulfillment"),
+  bigWhyFun: text("bigWhyFun"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

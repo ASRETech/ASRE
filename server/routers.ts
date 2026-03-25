@@ -57,6 +57,13 @@ export const appRouter = router({
         coachMode: z.boolean().optional(),
         googleBusinessUrl: z.string().optional(),
         reviewRequestTemplate: z.string().optional(),
+        // Big Why fields
+        bigWhy: z.string().optional(),
+        bigWhyFaith: z.string().optional(),
+        bigWhyFamily: z.string().optional(),
+        bigWhyFinancial: z.string().optional(),
+        bigWhyFulfillment: z.string().optional(),
+        bigWhyFun: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         await db.upsertAgentProfile({ ...input, userId: ctx.user.id });

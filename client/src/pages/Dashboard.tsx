@@ -143,6 +143,14 @@ export default function Dashboard() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
+        {/* Deprecation notice — this page is being replaced by Execution HQ */}
+        <div className="mb-4 p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 flex items-center justify-between gap-3">
+          <p className="text-xs text-amber-600 dark:text-amber-400">
+            <strong>Heads up:</strong> This Dashboard is being replaced by{' '}
+            <a href="/execution" className="underline font-medium">Execution HQ</a>{' '}
+            — your new command center with live data, streaks, and drag-and-drop widgets.
+          </p>
+        </div>
         {/* Journey context banner */}
         <Link href="/level">
           <div className="mb-6 p-3 rounded-xl bg-[#DC143C]/[0.04] border border-[#DC143C]/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 cursor-pointer hover:bg-[#DC143C]/[0.06] transition-colors">

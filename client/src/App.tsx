@@ -16,12 +16,13 @@
  *     /performance/dashboard            → Dashboard
  *
  *   PILLAR 3 — GROWTH
+ *     /growth/current-level             → Current Level
  *     /growth/coaching                  → Coach Hub
  *     /growth/coaching/accept/:token    → Coach Accept (no layout)
- *     /growth/certification             → Certification
  *     /growth/team                      → Team OS
  *
  *   PILLAR 4 — VISION
+ *     /vision/big-why                   → Big Why
  *     /vision/wealth                    → Wealth Journey
  *
  *   SYSTEM
@@ -38,7 +39,6 @@
  *     /analytics          → /performance/analytics
  *     /dashboard          → /performance/dashboard
  *     /coach              → /growth/coaching
- *     /certification      → /growth/certification
  *     /team               → /growth/team
  *     /wealth             → /vision/wealth
  *     /goals              → /execution
@@ -76,10 +76,10 @@ import Dashboard from "./pages/Dashboard";
 import CoachPortal from "./pages/CoachPortal";
 import CoachAccept from "./pages/CoachAccept";
 import TeamOS from "./pages/TeamOS";
-import Certification from "./pages/Certification";
 
 // ── PILLAR 4: VISION ──
 import Wealth from './pages/Wealth';
+import BigWhy from './pages/vision/BigWhy';
 
 // ── SYSTEM ──
 import SettingsPage from "./pages/Settings";
@@ -138,14 +138,14 @@ function AppRoutes() {
       <Route path="/growth/coaching/accept/:token">
         <CoachAccept />
       </Route>
-      <Route path="/growth/certification">
-        <DashboardLayout><Certification /></DashboardLayout>
-      </Route>
       <Route path="/growth/team">
         <DashboardLayout><TeamOS /></DashboardLayout>
       </Route>
 
       {/* ── PILLAR 4: VISION ── */}
+      <Route path="/vision/big-why">
+        <DashboardLayout><BigWhy /></DashboardLayout>
+      </Route>
       <Route path="/vision/wealth">
         <DashboardLayout><Wealth /></DashboardLayout>
       </Route>
@@ -166,7 +166,6 @@ function AppRoutes() {
       <Route path="/analytics" component={() => <Redirect to="/performance/analytics" />} />
       <Route path="/dashboard" component={() => <Redirect to="/performance/dashboard" />} />
       <Route path="/coach" component={() => <Redirect to="/growth/coaching" />} />
-      <Route path="/certification" component={() => <Redirect to="/growth/certification" />} />
       <Route path="/team" component={() => <Redirect to="/growth/team" />} />
       <Route path="/wealth" component={() => <Redirect to="/vision/wealth" />} />
       <Route path="/goals" component={() => <Redirect to="/execution" />} />
@@ -175,9 +174,10 @@ function AppRoutes() {
       <Route path="/journey">
         <DashboardLayout><Journey /></DashboardLayout>
       </Route>
-      <Route path="/level">
+      <Route path="/growth/current-level">
         <DashboardLayout><CurrentLevel /></DashboardLayout>
       </Route>
+      <Route path="/level" component={() => <Redirect to="/growth/current-level" />} />
       <Route path="/library">
         <DashboardLayout><Library /></DashboardLayout>
       </Route>
