@@ -36,8 +36,8 @@ const NAV_ITEMS = [
     section: 'GROWTH',
     items: [
       { label: 'Current Level', icon: Star,         path: '/growth/current-level' },
-      { label: 'Coach Hub',     icon: GraduationCap, path: '/growth/coaching' },
-      { label: 'Coaching Portal', icon: BookOpen,   path: 'https://coursecreator360.com', external: true },
+      { label: 'Coaching',      icon: GraduationCap, path: '/growth/coaching' },
+      { label: 'KW Course Creator', icon: BookOpen, path: 'https://coursecreator360.com', external: true },
       { label: 'Team OS',       icon: UsersRound,    path: '/growth/team' },
     ],
   },

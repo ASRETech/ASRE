@@ -13,7 +13,7 @@ import {
   Users, UserPlus, MessageSquare, Target, Send,
   ChevronRight, ArrowLeft, Copy, Check, TrendingUp,
   Award, Calendar, ClipboardList, Zap,
-  BookOpen, Mail, Circle,
+  BookOpen, Mail, Circle, GraduationCap, ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { trpc } from '@/lib/trpc';
@@ -31,6 +31,8 @@ const SESSION_TYPE_LABELS: Record<string, string> = {
 };
 
 export default function CoachPortalPage() {
+  const profileQuery = trpc.profile.get.useQuery(undefined, { staleTime: 60_000 });
+  const isCoach = !!(profileQuery.data as any)?.coachMode;
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -112,6 +114,46 @@ export default function CoachPortalPage() {
   const upcoming = upcomingQuery.data || [];
   const allSessions = allSessionsQuery.data || [];
   const detail = detailQuery.data;
+
+  // ── Non-coach state ──────────────────────────────────────────────
+  if (!profileQuery.isLoading && !isCoach) {
+    return (
+      <div className="p-4 md:p-6 max-w-2xl mx-auto">
+        <div className="flex flex-col items-center justify-center py-16 text-center space-y-5">
+          <div className="w-16 h-16 rounded-2xl bg-[#DC143C]/10 flex items-center justify-center">
+            <GraduationCap className="w-8 h-8 text-[#DC143C]" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-foreground mb-2">Coaching Hub</h2>
+            <p className="text-sm text-muted-foreground max-w-md">
+              You're currently in agent mode. This area is for KW Productivity Coaches managing their agents.
+              If you have a coach, they'll use this portal to track your progress and leave feedback.
+            </p>
+          </div>
+          <div className="grid gap-3 w-full max-w-sm">
+            <a
+              href="https://coursecreator360.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between p-4 rounded-xl border border-border/60 bg-card hover:border-[#DC143C]/30 transition-colors group"
+            >
+              <div className="text-left">
+                <div className="text-sm font-semibold text-foreground">KW Course Creator</div>
+                <div className="text-xs text-muted-foreground">Access your KW training library</div>
+              </div>
+              <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-[#DC143C] transition-colors" />
+            </a>
+            <div className="p-4 rounded-xl border border-border/60 bg-card">
+              <div className="text-sm font-semibold text-foreground mb-1">Want to become a coach?</div>
+              <div className="text-xs text-muted-foreground">
+                Contact your Market Center ALC or regional leadership to get set up as a Productivity Coach.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ── Agent detail drill-down ──────────────────────────────────────
   if (selectedAgentId && detail) {

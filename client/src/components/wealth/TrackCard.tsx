@@ -26,6 +26,14 @@ const TRACK_ACCENT: Record<number, string> = {
   5: 'text-rose-400',
 };
 
+const TRACK_UNLOCK_HINT: Record<number, string> = {
+  1: 'Always unlocked',
+  2: 'Complete T1 foundation milestones',
+  3: 'Reach $80K income + T2 progress',
+  4: 'Reach $100K income + T2 complete',
+  5: 'Reach $250K income + T1 mastery',
+};
+
 export function TrackCard({ trackNumber, milestones, unlocked, selected, onClick }: TrackCardProps) {
   const total = TRACK_MILESTONE_COUNTS[trackNumber] ?? 0;
   const trackMilestones = milestones.filter(m => m.milestoneKey.startsWith(`t${trackNumber}_`));
@@ -39,14 +47,18 @@ export function TrackCard({ trackNumber, milestones, unlocked, selected, onClick
       disabled={!unlocked}
       className={`
         relative w-full rounded-xl border p-3 text-left transition-all
-        ${unlocked ? 'cursor-pointer hover:border-primary/50' : 'cursor-not-allowed opacity-50'}
+        ${unlocked ? 'cursor-pointer hover:border-primary/50' : 'cursor-not-allowed'}
         ${selected && unlocked ? 'ring-2 ring-primary border-primary/60' : ''}
         ${TRACK_COLORS[trackNumber] ?? 'border-border bg-card'}
+        ${!unlocked ? 'opacity-60' : ''}
       `}
     >
       {!unlocked && (
-        <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-background/60 backdrop-blur-[1px]">
-          <Lock className="h-5 w-5 text-muted-foreground" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center rounded-xl bg-background/75 backdrop-blur-[1px] p-2 text-center gap-1">
+          <Lock className="h-4 w-4 text-muted-foreground" />
+          <span className="text-[9px] text-muted-foreground leading-tight max-w-[90px]">
+            {TRACK_UNLOCK_HINT[trackNumber]}
+          </span>
         </div>
       )}
       <div className={`text-xs font-bold mb-1 ${TRACK_ACCENT[trackNumber]}`}>T{trackNumber}</div>

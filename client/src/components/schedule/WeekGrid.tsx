@@ -94,7 +94,7 @@ export function WeekGrid({ grid, bucketColors, activeBucket, onChange }: WeekGri
         <div className="flex">
           <div className="w-12 flex-shrink-0" />
           {DAYS.map(day => (
-            <div key={day} className="flex-1 text-center text-xs font-medium text-slate-400 py-1 border-b border-slate-700">
+            <div key={day} className="flex-1 text-center text-xs font-medium text-muted-foreground py-1 border-b border-border">
               {day}
             </div>
           ))}
@@ -107,7 +107,7 @@ export function WeekGrid({ grid, bucketColors, activeBucket, onChange }: WeekGri
               {/* Time label — only on hour boundaries */}
               <div className="w-12 flex-shrink-0 flex items-center justify-end pr-1.5">
                 {slotIdx % 2 === 0 && (
-                  <span className="text-[9px] text-slate-600 leading-none">
+                  <span className="text-[9px] text-muted-foreground/50 leading-none">
                     {hourLabels[slotIdx / 2]}
                   </span>
                 )}
@@ -121,9 +121,9 @@ export function WeekGrid({ grid, bucketColors, activeBucket, onChange }: WeekGri
                     data-day={dayIdx}
                     data-slot={slotIdx}
                     className={cn(
-                      "flex-1 border-r border-slate-800/50 cursor-crosshair transition-colors",
+                      "flex-1 border-r border-border/50 cursor-crosshair transition-colors",
                       slotIdx % 2 === 0 ? "border-t border-t-slate-700/40" : "",
-                      !bucket && "hover:bg-slate-700/30"
+                      !bucket && "hover:bg-muted/30"
                     )}
                     style={color ? { backgroundColor: color, opacity: 0.85 } : undefined}
                     onMouseDown={() => handleCellMouseDown(dayIdx, slotIdx)}

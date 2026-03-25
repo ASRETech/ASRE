@@ -17,7 +17,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/performance/dashboard':       'Dashboard',
   // PILLAR 3: GROWTH (KW order: Vision → Growth → Execution → Performance)
   '/growth/current-level':        'Current Level',
-  '/growth/coaching':             'Coach Hub',
+  '/growth/coaching':             'Coaching',
   '/growth/team':                 'Team OS',
   // PILLAR 4: VISION
   '/vision/big-why':              'Big Why',

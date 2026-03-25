@@ -195,29 +195,63 @@ export default function CurrentLevel() {
                             )}
                           </div>
                           <p className="text-xs text-muted-foreground">{d.description}</p>
-                          {/* Mobile: build button below text */}
-                          {!isComplete && (
+                          {/* Mobile: build/view button below text */}
+                          {hasBuilder && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={`text-xs h-8 px-3 mt-2 sm:hidden ${
+                                isComplete
+                                  ? 'text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/5'
+                                  : 'text-[#DC143C] hover:text-[#DC143C]/80 hover:bg-[#DC143C]/5'
+                              }`}
+                              onClick={() => handleBuildClick(d.id, d.moduleRoute)}
+                            >
+                              {isComplete
+                                ? <><CheckCircle className="w-3.5 h-3.5 mr-1" /> View</>
+                                : <><Wrench className="w-3.5 h-3.5 mr-1" /> Build This</>
+                              }
+                            </Button>
+                          )}
+                          {!hasBuilder && !isComplete && (
                             <Button
                               variant="ghost"
                               size="sm"
                               className="text-[#DC143C] hover:text-[#DC143C]/80 hover:bg-[#DC143C]/5 text-xs h-8 px-3 mt-2 sm:hidden"
                               onClick={() => handleBuildClick(d.id, d.moduleRoute)}
                             >
-                              {hasBuilder ? <Wrench className="w-3.5 h-3.5 mr-1" /> : <ChevronRight className="w-3.5 h-3.5 mr-1" />}
-                              {hasBuilder ? 'Build This' : 'Go to Module'}
+                              <ChevronRight className="w-3.5 h-3.5 mr-1" />
+                              Go to Module
                             </Button>
                           )}
                         </div>
-                        {/* Desktop: build button right-aligned */}
-                        {!isComplete && (
+                        {/* Desktop: build/view button right-aligned */}
+                        {hasBuilder && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`text-xs h-8 px-3 hidden sm:flex shrink-0 ${
+                              isComplete
+                                ? 'text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/5'
+                                : 'text-[#DC143C] hover:text-[#DC143C]/80 hover:bg-[#DC143C]/5'
+                            }`}
+                            onClick={() => handleBuildClick(d.id, d.moduleRoute)}
+                          >
+                            {isComplete
+                              ? <><CheckCircle className="w-3.5 h-3.5 mr-1" /> View</>
+                              : <><Wrench className="w-3.5 h-3.5 mr-1" /> Build This</>
+                            }
+                          </Button>
+                        )}
+                        {!hasBuilder && !isComplete && (
                           <Button
                             variant="ghost"
                             size="sm"
                             className="text-[#DC143C] hover:text-[#DC143C]/80 hover:bg-[#DC143C]/5 text-xs h-8 px-3 hidden sm:flex shrink-0"
                             onClick={() => handleBuildClick(d.id, d.moduleRoute)}
                           >
-                            {hasBuilder ? <Wrench className="w-3.5 h-3.5 mr-1" /> : <ChevronRight className="w-3.5 h-3.5 mr-1" />}
-                            {hasBuilder ? 'Build This' : 'Go to Module'}
+                            <ChevronRight className="w-3.5 h-3.5 mr-1" />
+                            Go to Module
                           </Button>
                         )}
                       </div>

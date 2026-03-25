@@ -32,15 +32,18 @@ export default function Financials() {
   const [commissionPct, setCommissionPct] = useState(3);
   const [agentSplit, setAgentSplit] = useState(75);
   const [fees, setFees] = useState(500);
+  // Extended Commission Calculator state
+  const [gciGoal, setGciGoalCalc] = useState(250000);
+  const [capAmount, setCapAmount] = useState(0);
+  const [annualExpenses, setAnnualExpenses] = useState(30000);
 
   // Profit First allocation percentages
   const [allocations, setAllocations] = useState({
     taxes: 21,
     giving: 10,
-    operating: 15,
+    operating: 20,
     ownerPay: 30,
-    profitSavings: 14,
-    investment: 10,
+    investing: 19,
   });
 
   // Commission calculations
@@ -51,15 +54,20 @@ export default function Financials() {
   const giving = afterFees * (allocations.giving / 100);
   const netDeposit = afterFees - taxReserve - giving;
 
-  // Profit First breakdown
-  const pfBreakdown = [
+  // MREA Budget Model breakdown
+  const mreaBreakdown = [
     { label: 'Taxes', pct: allocations.taxes, amount: afterFees * (allocations.taxes / 100), color: 'bg-red-500' },
     { label: 'Giving', pct: allocations.giving, amount: afterFees * (allocations.giving / 100), color: 'bg-violet-500' },
     { label: 'Operating', pct: allocations.operating, amount: afterFees * (allocations.operating / 100), color: 'bg-blue-500' },
     { label: 'Owner Pay', pct: allocations.ownerPay, amount: afterFees * (allocations.ownerPay / 100), color: 'bg-emerald-500' },
-    { label: 'Profit/Savings', pct: allocations.profitSavings, amount: afterFees * (allocations.profitSavings / 100), color: 'bg-amber-500' },
-    { label: 'Investment', pct: allocations.investment, amount: afterFees * (allocations.investment / 100), color: 'bg-cyan-500' },
+    { label: 'Investing', pct: allocations.investing, amount: afterFees * (allocations.investing / 100), color: 'bg-cyan-500' },
   ];
+  // Extended commission calculator outputs
+  const capAdjustedAfterSplit = capAmount > 0 ? Math.min(afterSplit, capAmount) : afterSplit;
+  const afterCapAndFees = capAdjustedAfterSplit - fees;
+  const dealsNeeded = gciGoal > 0 && afterFees > 0 ? Math.ceil(gciGoal / afterFees) : 0;
+  const monthlyTarget = Math.ceil(dealsNeeded / 12);
+  const netIncomeProjection = gciGoal - annualExpenses - (gciGoal * (allocations.taxes / 100));
 
   // P&L data
   const totalIncome = financials.filter(f => f.type === 'income').reduce((s, f) => s + f.amount, 0);
@@ -115,7 +123,6 @@ export default function Financials() {
         <Tabs defaultValue="calculator" className="space-y-4">
           <TabsList className="bg-muted/50 w-full sm:w-auto flex flex-wrap">
             <TabsTrigger value="calculator" className="text-xs flex-1 sm:flex-initial">Calculator</TabsTrigger>
-            <TabsTrigger value="profitfirst" className="text-xs flex-1 sm:flex-initial">Profit First</TabsTrigger>
             <TabsTrigger value="pnl" className="text-xs flex-1 sm:flex-initial">P&L</TabsTrigger>
             <TabsTrigger value="model" className="text-xs flex-1 sm:flex-initial">Economic Model</TabsTrigger>
             <TabsTrigger value="forecast" className="text-xs flex-1 sm:flex-initial">90-Day Forecast</TabsTrigger>
@@ -177,6 +184,57 @@ export default function Financials() {
                       />
                     </div>
                   </div>
+                  {/* MREA expanded fields */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-border/40">
+                    <div>
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">GCI Goal (Annual)</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                        <Input
+                          type="number"
+                          value={gciGoal}
+                          onChange={(e) => setGciGoalCalc(parseFloat(e.target.value) || 0)}
+                          className="h-9 font-mono pl-7"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">Cap Amount (0 = none)</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                        <Input
+                          type="number"
+                          value={capAmount}
+                          onChange={(e) => setCapAmount(parseFloat(e.target.value) || 0)}
+                          className="h-9 font-mono pl-7"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-1.5 block">Annual Expenses</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                        <Input
+                          type="number"
+                          value={annualExpenses}
+                          onChange={(e) => setAnnualExpenses(parseFloat(e.target.value) || 0)}
+                          className="h-9 font-mono pl-7"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  {/* MREA Budget Model auto-fill */}
+                  <div className="flex items-center gap-3 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-8 border-[#DC143C]/30 text-[#DC143C] hover:bg-[#DC143C]/5"
+                      onClick={() => setAllocations({ taxes: 21, giving: 10, operating: 20, ownerPay: 30, investing: 19 })}
+                    >
+                      Use MREA Budget Model
+                    </Button>
+                    <span className="text-[10px] text-muted-foreground">Taxes 21% · Giving 10% · Operating 20% · Owner Pay 30% · Investing 19%</span>
+                  </div>
                 </div>
               </Card>
 
@@ -206,114 +264,21 @@ export default function Financials() {
                   <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Net Deposit</div>
                   <div className="font-mono text-2xl font-bold text-emerald-500">${netDeposit.toLocaleString()}</div>
                 </Card>
+                {/* MREA projection outputs */}
+                <Card className="p-4 border-border/50">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Deals to Hit Goal</div>
+                  <div className="font-mono text-xl font-bold text-foreground">{dealsNeeded}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">{monthlyTarget}/mo needed</div>
+                </Card>
+                <Card className="p-4 border-border/50">
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Net Income Projection</div>
+                  <div className="font-mono text-xl font-bold text-foreground">${netIncomeProjection.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">After taxes + expenses</div>
+                </Card>
               </div>
             </div>
           </TabsContent>
 
-          {/* Profit First */}
-          <TabsContent value="profitfirst">
-            <Card className="p-6">
-              <h3 className="font-display text-lg font-semibold mb-6 flex items-center gap-2">
-                <PieChart className="w-5 h-5 text-[#DC143C]" />
-                Profit First Allocation
-              </h3>
-              <p className="text-sm text-muted-foreground mb-6">
-                Based on a ${afterFees.toLocaleString()} net commission (after split and fees).
-              </p>
-
-              {/* Visual allocation bar */}
-              <div className="h-8 rounded-lg overflow-hidden flex mb-6">
-                {pfBreakdown.map((item) => (
-                  <div
-                    key={item.label}
-                    className={`${item.color} flex items-center justify-center transition-all`}
-                    style={{ width: `${item.pct}%` }}
-                  >
-                    <span className="text-[9px] font-mono text-white font-bold">{item.pct}%</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Allocation details */}
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {pfBreakdown.map((item) => (
-                  <div key={item.label} className="p-3 rounded-lg bg-muted/30 border border-border/50">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-3 h-3 rounded-sm ${item.color}`} />
-                      <span className="text-xs font-medium text-foreground">{item.label}</span>
-                      <span className="text-[10px] font-mono text-muted-foreground ml-auto">{item.pct}%</span>
-                    </div>
-                    <div className="font-mono text-lg font-bold text-foreground">
-                      ${Math.round(item.amount).toLocaleString()}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </TabsContent>
-
-          {/* P&L Statement */}
-          <TabsContent value="pnl">
-            <div className="grid lg:grid-cols-2 gap-6">
-              {/* Income */}
-              <Card className="p-6">
-                <h3 className="font-display text-base font-semibold mb-4 flex items-center gap-2">
-                  <ArrowUpRight className="w-4 h-4 text-emerald-500" />
-                  Income
-                </h3>
-                <div className="space-y-2">
-                  {incomeByCategory.map(([cat, amount]) => (
-                    <div key={cat} className="flex items-center justify-between py-2 border-b border-border/30">
-                      <span className="text-sm text-foreground">{cat}</span>
-                      <span className="font-mono text-sm font-semibold text-emerald-500">${amount.toLocaleString()}</span>
-                    </div>
-                  ))}
-                  <div className="flex items-center justify-between py-2 font-semibold">
-                    <span className="text-sm">Total Income</span>
-                    <span className="font-mono text-base text-emerald-500">${totalIncome.toLocaleString()}</span>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Expenses */}
-              <Card className="p-6">
-                <h3 className="font-display text-base font-semibold mb-4 flex items-center gap-2">
-                  <ArrowDownRight className="w-4 h-4 text-foreground" />
-                  Expenses
-                </h3>
-                <div className="space-y-2">
-                  {expensesByCategory.map(([cat, amount]) => (
-                    <div key={cat} className="flex items-center justify-between py-2 border-b border-border/30">
-                      <span className="text-sm text-foreground">{cat}</span>
-                      <span className="font-mono text-sm text-foreground">${amount.toLocaleString()}</span>
-                    </div>
-                  ))}
-                  <div className="flex items-center justify-between py-2 font-semibold">
-                    <span className="text-sm">Total Expenses</span>
-                    <span className="font-mono text-base text-foreground">${totalExpenses.toLocaleString()}</span>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Net */}
-              <Card className="p-6 lg:col-span-2 border-[#DC143C]/20">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Net Operating Income</div>
-                    <div className={`font-mono text-3xl font-bold ${netIncome >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                      ${netIncome.toLocaleString()}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Profit Margin</div>
-                    <div className="font-mono text-xl font-bold text-foreground">
-                      {totalIncome > 0 ? Math.round((netIncome / totalIncome) * 100) : 0}%
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          </TabsContent>
 
           {/* Economic Model — MREA Reverse-Engineered Income */}
           <TabsContent value="model">

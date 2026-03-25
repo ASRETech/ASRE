@@ -50,7 +50,7 @@ const GCAL_COLORS: Record<string, string> = {
 
 export function EventQueueItem({ event, onPush, onSkip, isPushing, canPush = true }: EventQueueItemProps) {
   const colorHex = GCAL_COLORS[event.gcalColorId ?? "1"] ?? "#7986CB";
-  const sourceColor = SOURCE_COLORS[event.sourceModule] ?? "bg-slate-500/20 text-slate-400 border-slate-500/30";
+  const sourceColor = SOURCE_COLORS[event.sourceModule] ?? "bg-muted/50 text-muted-foreground border-border/30";
   const sourceLabel = SOURCE_LABELS[event.sourceModule] ?? event.sourceModule;
 
   const isPushed = event.status === "pushed";
@@ -60,8 +60,8 @@ export function EventQueueItem({ event, onPush, onSkip, isPushing, canPush = tru
     <div className={cn(
       "flex items-start gap-3 p-4 rounded-lg border transition-all",
       isPushed ? "bg-emerald-500/5 border-emerald-500/20 opacity-70" :
-      isSkipped ? "bg-slate-800/30 border-slate-700/30 opacity-50" :
-      "bg-slate-800/50 border-slate-700/40 hover:border-slate-600/60"
+      isSkipped ? "bg-muted/30 border-border/30 opacity-50" :
+      "bg-muted/50 border-border/40 hover:border-border/60"
     )}>
       {/* Color dot */}
       <div className="mt-1 w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: colorHex }} />
@@ -71,17 +71,17 @@ export function EventQueueItem({ event, onPush, onSkip, isPushing, canPush = tru
           <div>
             <p className="text-sm font-medium text-white leading-tight">{event.title}</p>
             {event.description && (
-              <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{event.description}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{event.description}</p>
             )}
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <Badge className={cn("text-xs", sourceColor)}>{sourceLabel}</Badge>
             {isPushed && <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs"><CheckCircle2 className="w-3 h-3 mr-1" />Pushed</Badge>}
-            {isSkipped && <Badge className="bg-slate-500/20 text-slate-400 border-slate-500/30 text-xs"><SkipForward className="w-3 h-3 mr-1" />Skipped</Badge>}
+            {isSkipped && <Badge className="bg-muted/50 text-muted-foreground border-border/30 text-xs"><SkipForward className="w-3 h-3 mr-1" />Skipped</Badge>}
           </div>
         </div>
 
-        <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
+        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground/70">
           {event.suggestedDate && (
             <span className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
@@ -111,7 +111,7 @@ export function EventQueueItem({ event, onPush, onSkip, isPushing, canPush = tru
             size="sm"
             variant="ghost"
             onClick={() => onSkip(event.id)}
-            className="h-7 px-2 text-slate-400 hover:text-slate-200"
+            className="h-7 px-2 text-muted-foreground hover:text-foreground"
           >
             <SkipForward className="w-3.5 h-3.5" />
           </Button>

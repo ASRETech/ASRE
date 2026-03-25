@@ -69,6 +69,65 @@ export const appRouter = router({
         await db.upsertAgentProfile({ ...input, userId: ctx.user.id });
         return { success: true };
       }),
+    generateBigWhy: protectedProcedure
+      .input(z.object({
+        bigWhy: z.string().optional(),
+        bigWhyFaith: z.string().optional(),
+        bigWhyFamily: z.string().optional(),
+        bigWhyFinancial: z.string().optional(),
+        bigWhyFulfillment: z.string().optional(),
+        bigWhyFun: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const filledFields = Object.entries(input)
+          .filter(([, v]) => v && v.trim().length > 10)
+          .map(([k, v]) => {
+            const label = k === 'bigWhy' ? 'Core Why' : k.replace('bigWhy', '');
+            return `${label}: ${v}`;
+          })
+          .join('\n');
+
+        if (!filledFields) {
+          throw new Error('Please fill in at least one Why field before generating.');
+        }
+
+        const response = await invokeLLM({
+          messages: [
+            {
+              role: 'system',
+              content: `You are a KW Productivity Coach helping a real estate agent articulate their purpose. Write in a direct, personal, faith-aware tone. Return JSON with: missionStatement (single sentence, max 30 words), purposeParagraph (3-4 sentences, first person), behaviorAnchors (array of exactly 3 short phrases 5-8 words each describing daily behaviors).`,
+            },
+            {
+              role: 'user',
+              content: `My Big Why answers:\n\n${filledFields}\n\nGenerate my Mission Statement, Purpose Paragraph, and 3 Behavior Anchors.`,
+            },
+          ],
+          response_format: {
+            type: 'json_schema',
+            json_schema: {
+              name: 'big_why_generation',
+              strict: true,
+              schema: {
+                type: 'object',
+                properties: {
+                  missionStatement: { type: 'string' },
+                  purposeParagraph: { type: 'string' },
+                  behaviorAnchors: { type: 'array', items: { type: 'string' } },
+                },
+                required: ['missionStatement', 'purposeParagraph', 'behaviorAnchors'],
+                additionalProperties: false,
+              },
+            },
+          },
+        });
+
+        const parsed = JSON.parse(response.content);
+        return {
+          missionStatement: parsed.missionStatement as string,
+          purposeParagraph: parsed.purposeParagraph as string,
+          behaviorAnchors: parsed.behaviorAnchors as string[],
+        };
+      }),
   }),
 
   // ============================================================

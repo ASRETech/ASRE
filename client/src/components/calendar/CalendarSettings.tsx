@@ -51,9 +51,9 @@ export function CalendarSettings({ onConnect }: CalendarSettingsProps) {
   return (
     <div className="space-y-4">
       {/* Connection status */}
-      <Card className="bg-slate-800/50 border-slate-700/50">
+      <Card className="bg-muted/50 border-border/50">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium text-slate-300 flex items-center gap-2">
+          <CardTitle className="text-sm font-medium text-foreground/80 flex items-center gap-2">
             <Calendar className="w-4 h-4" /> Google Calendar Connection
           </CardTitle>
         </CardHeader>
@@ -63,17 +63,17 @@ export function CalendarSettings({ onConnect }: CalendarSettingsProps) {
               <div>
                 <p className="text-sm text-emerald-400 font-medium">Connected</p>
                 {status.settings?.gcalCalendarId && (
-                  <p className="text-xs text-slate-500 mt-0.5">ASRE calendar provisioned</p>
+                  <p className="text-xs text-muted-foreground/70 mt-0.5">ASRE calendar provisioned</p>
                 )}
               </div>
               <Button variant="outline" size="sm" onClick={onConnect}
-                className="border-slate-600 text-slate-400 hover:text-white text-xs">
+                className="border-border text-muted-foreground hover:text-foreground text-xs">
                 Reconnect
               </Button>
             </div>
           ) : (
             <div className="flex items-center justify-between">
-              <p className="text-sm text-slate-400">Not connected</p>
+              <p className="text-sm text-muted-foreground">Not connected</p>
               <Button size="sm" onClick={onConnect} className="bg-blue-600 hover:bg-blue-500 text-white text-xs">
                 Connect Calendar
               </Button>
@@ -83,25 +83,25 @@ export function CalendarSettings({ onConnect }: CalendarSettingsProps) {
       </Card>
 
       {/* Lead Gen Settings */}
-      <Card className="bg-slate-800/50 border-slate-700/50">
+      <Card className="bg-muted/50 border-border/50">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium text-slate-300 flex items-center gap-2">
+          <CardTitle className="text-sm font-medium text-foreground/80 flex items-center gap-2">
             <Users className="w-4 h-4" /> Lead Generation Blocks
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <Label className="text-sm text-slate-300">Enable lead gen time blocks</Label>
+            <Label className="text-sm text-foreground/80">Enable lead gen time blocks</Label>
             <Switch checked={leadGenEnabled} onCheckedChange={setLeadGenEnabled} />
           </div>
           {leadGenEnabled && (
             <div className="flex items-center gap-3">
-              <Label className="text-sm text-slate-400 w-24">Start time</Label>
+              <Label className="text-sm text-muted-foreground w-24">Start time</Label>
               <Input
                 type="time"
                 value={leadGenStartTime}
                 onChange={e => setLeadGenStartTime(e.target.value)}
-                className="w-32 bg-slate-700 border-slate-600 text-white text-sm"
+                className="w-32 bg-muted border-border text-white text-sm"
               />
             </div>
           )}
@@ -109,9 +109,9 @@ export function CalendarSettings({ onConnect }: CalendarSettingsProps) {
       </Card>
 
       {/* Notification Settings */}
-      <Card className="bg-slate-800/50 border-slate-700/50">
+      <Card className="bg-muted/50 border-border/50">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium text-slate-300 flex items-center gap-2">
+          <CardTitle className="text-sm font-medium text-foreground/80 flex items-center gap-2">
             <Bell className="w-4 h-4" /> Event Notifications
           </CardTitle>
         </CardHeader>
@@ -123,18 +123,18 @@ export function CalendarSettings({ onConnect }: CalendarSettingsProps) {
             { label: "Weekly pulse reminder", value: notifyPulse, set: setNotifyPulse },
           ].map(({ label, value, set }) => (
             <div key={label} className="flex items-center justify-between">
-              <Label className="text-sm text-slate-300">{label}</Label>
+              <Label className="text-sm text-foreground/80">{label}</Label>
               <Switch checked={value} onCheckedChange={set} />
             </div>
           ))}
           {notifyPulse && (
             <div className="flex items-center gap-3 pt-1">
-              <Label className="text-sm text-slate-400 w-28">Pulse reminder time</Label>
+              <Label className="text-sm text-muted-foreground w-28">Pulse reminder time</Label>
               <Input
                 type="time"
                 value={pulseTime}
                 onChange={e => setPulseTime(e.target.value)}
-                className="w-32 bg-slate-700 border-slate-600 text-white text-sm"
+                className="w-32 bg-muted border-border text-white text-sm"
               />
             </div>
           )}
@@ -142,17 +142,17 @@ export function CalendarSettings({ onConnect }: CalendarSettingsProps) {
       </Card>
 
       {/* Approval Setting */}
-      <Card className="bg-slate-800/50 border-slate-700/50">
+      <Card className="bg-muted/50 border-border/50">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium text-slate-300 flex items-center gap-2">
+          <CardTitle className="text-sm font-medium text-foreground/80 flex items-center gap-2">
             <Settings2 className="w-4 h-4" /> Push Behavior
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
             <div>
-              <Label className="text-sm text-slate-300">Require approval before push</Label>
-              <p className="text-xs text-slate-500 mt-0.5">Review events in queue before they go to Calendar</p>
+              <Label className="text-sm text-foreground/80">Require approval before push</Label>
+              <p className="text-xs text-muted-foreground/70 mt-0.5">Review events in queue before they go to Calendar</p>
             </div>
             <Switch checked={requireApproval} onCheckedChange={setRequireApproval} />
           </div>

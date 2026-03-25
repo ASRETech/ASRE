@@ -3,22 +3,18 @@
  *
  * Inspired by Gary Keller's "One Thing" and KW's purpose-first philosophy.
  * Stores 6 dimensions of "why" in the agent profile, persisted via tRPC.
- *
- * Dimensions (5 F's + Core):
- *   Core Why   — The overarching purpose statement
- *   Faith      — Spiritual/values foundation
- *   Family     — Who you're doing this for
- *   Financial  — Freedom number and financial purpose
- *   Fulfillment — What makes the work meaningful
- *   Fun        — What you're building toward enjoying
+ * AI generation produces: Mission Statement, Purpose Paragraph, Behavior Anchors.
  */
 
 import { useState, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
-import { Heart, Save, CheckCircle } from 'lucide-react';
+import { Heart, Save, CheckCircle, Sparkles, Loader2, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 
 interface WhyField {
   key: 'bigWhy' | 'bigWhyFaith' | 'bigWhyFamily' | 'bigWhyFinancial' | 'bigWhyFulfillment' | 'bigWhyFun';
@@ -73,13 +69,22 @@ const WHY_FIELDS: WhyField[] = [
   },
 ];
 
+interface GeneratedContent {
+  missionStatement: string;
+  purposeParagraph: string;
+  behaviorAnchors: string[];
+}
+
 export default function BigWhy() {
   const profileQuery = trpc.profile.get.useQuery(undefined, { staleTime: 60_000 });
   const upsertMutation = trpc.profile.upsert.useMutation();
+  const generateMutation = trpc.profile.generateBigWhy.useMutation();
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [generated, setGenerated] = useState<GeneratedContent | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Load from profile when data arrives
   useEffect(() => {
@@ -103,22 +108,55 @@ export default function BigWhy() {
   };
 
   const handleSave = async () => {
-    await upsertMutation.mutateAsync({
-      bigWhy: values.bigWhy || undefined,
-      bigWhyFaith: values.bigWhyFaith || undefined,
-      bigWhyFamily: values.bigWhyFamily || undefined,
-      bigWhyFinancial: values.bigWhyFinancial || undefined,
-      bigWhyFulfillment: values.bigWhyFulfillment || undefined,
-      bigWhyFun: values.bigWhyFun || undefined,
-    });
-    setSaved(true);
-    setDirty(false);
-    // Reset saved indicator after 3s
-    setTimeout(() => setSaved(false), 3000);
+    try {
+      await upsertMutation.mutateAsync({
+        bigWhy: values.bigWhy || undefined,
+        bigWhyFaith: values.bigWhyFaith || undefined,
+        bigWhyFamily: values.bigWhyFamily || undefined,
+        bigWhyFinancial: values.bigWhyFinancial || undefined,
+        bigWhyFulfillment: values.bigWhyFulfillment || undefined,
+        bigWhyFun: values.bigWhyFun || undefined,
+      });
+      setSaved(true);
+      setDirty(false);
+      setTimeout(() => setSaved(false), 3000);
+    } catch {
+      toast.error('Failed to save. Please try again.');
+    }
+  };
+
+  const handleGenerate = async () => {
+    const filledCount = Object.values(values).filter(v => v && v.trim().length > 10).length;
+    if (filledCount === 0) {
+      toast.error('Fill in at least one Why field before generating.');
+      return;
+    }
+    try {
+      const result = await generateMutation.mutateAsync({
+        bigWhy: values.bigWhy || undefined,
+        bigWhyFaith: values.bigWhyFaith || undefined,
+        bigWhyFamily: values.bigWhyFamily || undefined,
+        bigWhyFinancial: values.bigWhyFinancial || undefined,
+        bigWhyFulfillment: values.bigWhyFulfillment || undefined,
+        bigWhyFun: values.bigWhyFun || undefined,
+      });
+      setGenerated(result);
+      toast.success('Your purpose statement has been generated.');
+    } catch {
+      toast.error('Generation failed. Please try again.');
+    }
+  };
+
+  const handleCopy = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
   };
 
   const isLoading = profileQuery.isLoading;
   const isSaving = upsertMutation.isPending;
+  const isGenerating = generateMutation.isPending;
+  const filledCount = Object.values(values).filter(v => v && v.trim().length > 10).length;
 
   return (
     <div className="p-4 md:p-6 max-w-3xl mx-auto space-y-6">
@@ -190,7 +228,6 @@ export default function BigWhy() {
                 onChange={(e) => handleChange(field.key, e.target.value)}
                 placeholder={field.placeholder}
                 className="min-h-[80px] text-sm resize-none bg-background border-border/50 focus:border-[#DC143C] transition-colors"
-                style={{ '--tw-ring-color': field.color } as React.CSSProperties}
               />
               {values[field.key] && (
                 <p className="text-[10px] text-muted-foreground text-right">
@@ -201,6 +238,116 @@ export default function BigWhy() {
           ))}
         </div>
       )}
+
+      {/* AI Generation Panel */}
+      <Card className="p-5 border-[#DC143C]/20 bg-[#DC143C]/[0.02] space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="w-4 h-4 text-[#DC143C]" />
+              <span className="text-sm font-semibold text-foreground">AI Purpose Generator</span>
+              <Badge variant="outline" className="text-[10px] h-4 border-[#DC143C]/30 text-[#DC143C]">
+                {filledCount}/6 fields filled
+              </Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Fill in your Why fields above, then generate your Mission Statement, Purpose Paragraph, and Behavior Anchors.
+            </p>
+          </div>
+          <Button
+            onClick={handleGenerate}
+            disabled={isGenerating || filledCount === 0}
+            size="sm"
+            className="shrink-0"
+            style={{ background: '#DC143C', color: 'white' }}
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3.5 h-3.5 mr-2" />
+                Generate
+              </>
+            )}
+          </Button>
+        </div>
+
+        {generated && (
+          <div className="space-y-4 pt-2 border-t border-border/40">
+            {/* Mission Statement */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-foreground uppercase tracking-wider">Mission Statement</Label>
+                <button
+                  onClick={() => handleCopy(generated.missionStatement, 'mission')}
+                  className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {copiedField === 'mission' ? (
+                    <><Check className="w-3 h-3 text-emerald-500" /> Copied</>
+                  ) : (
+                    <><Copy className="w-3 h-3" /> Copy</>
+                  )}
+                </button>
+              </div>
+              <div className="rounded-lg bg-background border border-border/50 p-3">
+                <p className="text-sm font-medium text-foreground leading-relaxed">
+                  "{generated.missionStatement}"
+                </p>
+              </div>
+            </div>
+
+            {/* Purpose Paragraph */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold text-foreground uppercase tracking-wider">Purpose Paragraph</Label>
+                <button
+                  onClick={() => handleCopy(generated.purposeParagraph, 'paragraph')}
+                  className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {copiedField === 'paragraph' ? (
+                    <><Check className="w-3 h-3 text-emerald-500" /> Copied</>
+                  ) : (
+                    <><Copy className="w-3 h-3" /> Copy</>
+                  )}
+                </button>
+              </div>
+              <div className="rounded-lg bg-background border border-border/50 p-3">
+                <p className="text-sm text-foreground leading-relaxed">
+                  {generated.purposeParagraph}
+                </p>
+              </div>
+            </div>
+
+            {/* Behavior Anchors */}
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-foreground uppercase tracking-wider">Daily Behavior Anchors</Label>
+              <div className="grid gap-2">
+                {generated.behaviorAnchors.map((anchor, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 rounded-lg bg-background border border-border/50 p-3"
+                  >
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                      style={{ background: '#DC143C' }}
+                    >
+                      {i + 1}
+                    </div>
+                    <p className="text-sm text-foreground">{anchor}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p className="text-[10px] text-muted-foreground">
+              This content was generated from your Why answers. Edit your fields and regenerate anytime.
+            </p>
+          </div>
+        )}
+      </Card>
 
       {/* Bottom save */}
       {dirty && (

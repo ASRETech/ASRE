@@ -123,7 +123,7 @@ export function EventQueue() {
             size="sm"
             onClick={() => generateMutation.mutate()}
             disabled={generateMutation.isPending}
-            className="border-slate-600 text-slate-300 hover:text-white"
+            className="border-border text-foreground/80 hover:text-foreground"
           >
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${generateMutation.isPending ? "animate-spin" : ""}`} />
             Generate
@@ -145,22 +145,22 @@ export function EventQueue() {
 
       {/* Filter tabs */}
       <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterTab)}>
-        <TabsList className="bg-slate-800 border border-slate-700">
-          <TabsTrigger value="pending" className="data-[state=active]:bg-slate-700">
+        <TabsList className="bg-muted border border-border">
+          <TabsTrigger value="pending" className="data-[state=active]:bg-muted">
             Pending {pendingCount > 0 && <span className="ml-1.5 text-xs bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-full">{pendingCount}</span>}
           </TabsTrigger>
-          <TabsTrigger value="pushed" className="data-[state=active]:bg-slate-700">Pushed</TabsTrigger>
-          <TabsTrigger value="skipped" className="data-[state=active]:bg-slate-700">Skipped</TabsTrigger>
-          <TabsTrigger value="all" className="data-[state=active]:bg-slate-700">All</TabsTrigger>
+          <TabsTrigger value="pushed" className="data-[state=active]:bg-muted">Pushed</TabsTrigger>
+          <TabsTrigger value="skipped" className="data-[state=active]:bg-muted">Skipped</TabsTrigger>
+          <TabsTrigger value="all" className="data-[state=active]:bg-muted">All</TabsTrigger>
         </TabsList>
       </Tabs>
 
       {/* Event list */}
       <div className="space-y-2">
         {isLoading ? (
-          <div className="text-center py-8 text-slate-500 text-sm">Loading events...</div>
+          <div className="text-center py-8 text-muted-foreground/70 text-sm">Loading events...</div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-8 text-slate-500 text-sm">
+          <div className="text-center py-8 text-muted-foreground/70 text-sm">
             {filter === "pending" ? (
               <div>
                 <Zap className="w-8 h-8 mx-auto mb-2 opacity-30" />
