@@ -1,14 +1,12 @@
 /**
- * ActionEngine.tsx
- *
- * Clean SaaS card-based layout. Crimson accents, neutral backgrounds.
- * No gradient background. Consistent with Execution HQ design system.
+ * ActionEngine.tsx — v12
  *
  * Tabs:
  *   - Actions: live prioritized action list from execution engine
  *   - Calendar: Google Calendar integration + event queue
- *   - Lead Gen Calc: lead generation calculator
  *   - Settings: calendar settings
+ *
+ * Lead Gen Calculator moved to Analytics → Lead Gen tab.
  */
 
 import { useEffect } from 'react';
@@ -19,8 +17,7 @@ import { toast } from 'sonner';
 import { ActionList } from '@/components/execution/ActionList';
 import { EventQueue } from '@/components/calendar/EventQueue';
 import { CalendarSettings } from '@/components/calendar/CalendarSettings';
-import { LeadGenCalculator } from '@/components/calendar/LeadGenCalculator';
-import { Zap, TrendingUp, CheckCircle2, Target, CalendarDays, Calculator, Settings2 } from 'lucide-react';
+import { Zap, TrendingUp, CheckCircle2, Target, CalendarDays, Settings2 } from 'lucide-react';
 
 export default function ActionEngine() {
   const { data: authUrlData } = trpc.calendar.getAuthUrl.useQuery();
@@ -52,17 +49,17 @@ export default function ActionEngine() {
   const completedActions = actions.filter(a => a.completed).length;
 
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-5">
+    <div className="asre-page asre-page-enter">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Action Engine</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
+      <div className="mb-5">
+        <h1 className="font-display font-bold text-foreground" style={{ fontSize: '1.5rem' }}>Action Engine</h1>
+        <p className="text-muted-foreground mt-0.5">
           Prioritized daily actions + calendar integration. Complete high-priority items first.
         </p>
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <Card className="border-border bg-card">
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-1">
@@ -105,17 +102,14 @@ export default function ActionEngine() {
 
       {/* Tabs */}
       <Tabs defaultValue="actions" className="space-y-4">
-        <TabsList className="bg-muted/50 w-full sm:w-auto flex flex-wrap h-auto">
-          <TabsTrigger value="actions" className="text-xs flex-1 sm:flex-initial gap-1.5">
+        <TabsList className="bg-muted/50 h-auto">
+          <TabsTrigger value="actions" className="text-sm gap-1.5">
             <Zap className="w-3.5 h-3.5" /> Actions
           </TabsTrigger>
-          <TabsTrigger value="calendar" className="text-xs flex-1 sm:flex-initial gap-1.5">
+          <TabsTrigger value="calendar" className="text-sm gap-1.5">
             <CalendarDays className="w-3.5 h-3.5" /> Calendar
           </TabsTrigger>
-          <TabsTrigger value="calculator" className="text-xs flex-1 sm:flex-initial gap-1.5">
-            <Calculator className="w-3.5 h-3.5" /> Lead Gen Calc
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="text-xs flex-1 sm:flex-initial gap-1.5">
+          <TabsTrigger value="settings" className="text-sm gap-1.5">
             <Settings2 className="w-3.5 h-3.5" /> Calendar Settings
           </TabsTrigger>
         </TabsList>
@@ -154,11 +148,6 @@ export default function ActionEngine() {
         {/* Calendar tab */}
         <TabsContent value="calendar">
           <EventQueue />
-        </TabsContent>
-
-        {/* Lead Gen Calc tab */}
-        <TabsContent value="calculator">
-          <LeadGenCalculator />
         </TabsContent>
 
         {/* Settings tab */}

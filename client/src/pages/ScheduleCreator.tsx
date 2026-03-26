@@ -4,7 +4,7 @@
  * Phase 11 fixes: LOW-02 (MREA confirmation dialog), MED-06 (suppress save during template apply)
  */
 import { useState, useMemo, useCallback, useRef } from "react";
-import { Save, LayoutTemplate, Info, AlertTriangle, HelpCircle, ChevronDown, ChevronUp, CheckCircle, Loader2 } from "lucide-react";
+import { Save, LayoutTemplate, Info, AlertTriangle, HelpCircle, ChevronDown, ChevronUp, CheckCircle, Loader2, CalendarCheck, CalendarX, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -34,6 +34,8 @@ function emptyGrid(): string[][] {
 export default function ScheduleCreator() {
   const { data: prefs, isLoading } = trpc.schedule.getPreferences.useQuery();
   const { data: buckets } = trpc.schedule.getBuckets.useQuery();
+  const { data: calStatus } = trpc.calendar.getStatus.useQuery();
+  const { data: authUrlData } = trpc.calendar.getAuthUrl.useQuery();
   const utils = trpc.useUtils();
 
   const [grid, setGrid] = useState<string[][]>(() => emptyGrid());
@@ -145,11 +147,51 @@ export default function ScheduleCreator() {
   return (
     <TooltipProvider>
       <div className="space-y-4 p-4 md:p-6 max-w-7xl mx-auto asre-page-enter">
+        {/* Google Calendar connection status banner */}
+        {calStatus && (
+          <div
+            className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl border text-sm"
+            style={{
+              background: calStatus.connected ? 'rgba(16,185,129,0.07)' : 'rgba(245,158,11,0.07)',
+              borderColor: calStatus.connected ? 'rgba(16,185,129,0.25)' : 'rgba(245,158,11,0.25)',
+            }}
+          >
+            <div className="flex items-center gap-2.5">
+              {calStatus.connected ? (
+                <CalendarCheck className="w-4 h-4 shrink-0" style={{ color: '#10b981' }} />
+              ) : (
+                <CalendarX className="w-4 h-4 shrink-0" style={{ color: '#f59e0b' }} />
+              )}
+              <div>
+                <span className="font-medium text-foreground">
+                  {calStatus.connected ? 'Google Calendar connected' : 'Google Calendar not connected'}
+                </span>
+                <span className="text-muted-foreground ml-2">
+                  {calStatus.connected
+                    ? 'Schedule blocks sync to your calendar automatically when saved.'
+                    : 'Connect Google Calendar to sync your ideal week blocks.'}
+                </span>
+              </div>
+            </div>
+            {!calStatus.connected && authUrlData?.url && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="shrink-0 text-xs"
+                style={{ borderColor: 'rgba(245,158,11,0.4)', color: '#f59e0b' }}
+                onClick={() => window.location.href = authUrlData.url}
+              >
+                <ExternalLink className="w-3 h-3 mr-1.5" />
+                Connect
+              </Button>
+            )}
+          </div>
+        )}
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Schedule Creator</h1>
-            <p className="text-base text-muted-foreground mt-0.5">
+            <h1 className="font-display font-bold text-foreground" style={{ fontSize: '1.5rem' }}>Schedule Creator</h1>
+            <p className="text-muted-foreground mt-0.5">
               Paint your ideal week. The Action Engine uses this to place events in the right time blocks.
             </p>
           </div>

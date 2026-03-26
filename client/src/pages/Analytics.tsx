@@ -1,4 +1,4 @@
-// Analytics — Weekly Pulse, Conversion Funnel, Source Attribution, Health Score, Frameworks
+// Analytics — Weekly Pulse, Conversion Funnel, Source Attribution, Health Score, Lead Gen Calc
 import { useState, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { trpc } from '@/lib/trpc';
@@ -13,8 +13,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Activity, BarChart3, TrendingUp, Target,
   ArrowDown, ArrowUp, Minus, Sparkles, Loader2,
-  RefreshCw, Users, Phone, Calendar, FileText, DollarSign
+  RefreshCw, Users, Phone, Calendar, FileText, DollarSign, Calculator
 } from 'lucide-react';
+import { LeadGenCalculator } from '@/components/calendar/LeadGenCalculator';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -22,35 +23,38 @@ export default function Analytics() {
   const { state } = useApp();
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="max-w-6xl mx-auto space-y-5">
+    <div className="asre-page asre-page-enter">
+      <div className="space-y-5">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
-          <p className="text-base text-muted-foreground mt-0.5">
+          <h1 className="font-display font-bold text-foreground" style={{ fontSize: '1.5rem' }}>Analytics</h1>
+          <p className="text-muted-foreground mt-0.5">
             Weekly leading indicators, conversion funnel, source attribution, and business health score.
           </p>
         </div>
         <Tabs defaultValue="pulse" className="space-y-4">
-          <TabsList className="bg-muted/50 w-full sm:w-auto flex flex-wrap h-auto">
-            <TabsTrigger value="pulse" className="text-xs flex-1 sm:flex-initial">
+          <TabsList className="bg-muted/50 h-auto flex flex-wrap">
+            <TabsTrigger value="pulse" className="text-sm">
               <Activity className="w-3.5 h-3.5 mr-1.5" /> Pulse
             </TabsTrigger>
-            <TabsTrigger value="funnel" className="text-xs flex-1 sm:flex-initial">
+            <TabsTrigger value="funnel" className="text-sm">
               <BarChart3 className="w-3.5 h-3.5 mr-1.5" /> Funnel
             </TabsTrigger>
-            <TabsTrigger value="sources" className="text-xs flex-1 sm:flex-initial">
+            <TabsTrigger value="sources" className="text-sm">
               <TrendingUp className="w-3.5 h-3.5 mr-1.5" /> Sources
             </TabsTrigger>
-            <TabsTrigger value="health" className="text-xs flex-1 sm:flex-initial">
+            <TabsTrigger value="health" className="text-sm">
               <Target className="w-3.5 h-3.5 mr-1.5" /> Health
             </TabsTrigger>
-
+            <TabsTrigger value="leadgen" className="text-sm">
+              <Calculator className="w-3.5 h-3.5 mr-1.5" /> Lead Gen Calc
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pulse"><PulseTab /></TabsContent>
           <TabsContent value="funnel"><FunnelTab /></TabsContent>
           <TabsContent value="sources"><SourcesTab /></TabsContent>
           <TabsContent value="health"><HealthTab /></TabsContent>
+          <TabsContent value="leadgen"><LeadGenCalculator /></TabsContent>
 
         </Tabs>
       </div>

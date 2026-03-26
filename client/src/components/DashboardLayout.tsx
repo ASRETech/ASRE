@@ -14,7 +14,6 @@ const PAGE_TITLES: Record<string, string> = {
   // PILLAR 2: PERFORMANCE
   '/performance/financials':      'Financials',
   '/performance/analytics':       'Analytics',
-  '/performance/dashboard':       'Dashboard',
   // PILLAR 3: GROWTH (KW order: Vision → Growth → Execution → Performance)
   '/growth/current-level':        'Current MREA Level',
   '/growth/coaching':             'Coaching',
@@ -63,7 +62,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <PanelLeft className="w-4 h-4" />
           </button>
           <div className="h-4 w-px bg-border mx-1" />
-          <h1 className="font-display text-sm font-semibold tracking-tight text-foreground">
+          <h1 className="font-display font-semibold tracking-tight text-foreground" style={{ fontSize: '0.875rem' }}>
             {pageTitle}
           </h1>
         </header>

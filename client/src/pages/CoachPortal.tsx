@@ -115,41 +115,141 @@ export default function CoachPortalPage() {
   const allSessions = allSessionsQuery.data || [];
   const detail = detailQuery.data;
 
-  // ── Non-coach state ──────────────────────────────────────────────
+  // ── Non-coach state: Premium Coaching Upsell ────────────────────
   if (!profileQuery.isLoading && !isCoach) {
     return (
-      <div className="p-4 md:p-6 max-w-2xl mx-auto">
-        <div className="flex flex-col items-center justify-center py-16 text-center space-y-5">
-          <div className="w-16 h-16 rounded-2xl bg-[#DC143C]/10 flex items-center justify-center">
+      <div className="asre-page asre-page-enter">
+        {/* Hero */}
+        <div className="text-center mb-10">
+          <div className="w-16 h-16 rounded-2xl bg-[#DC143C]/10 border border-[#DC143C]/20 flex items-center justify-center mx-auto mb-4">
             <GraduationCap className="w-8 h-8 text-[#DC143C]" />
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-foreground mb-2">Coaching Hub</h2>
-            <p className="text-sm text-muted-foreground max-w-md">
-              You're currently in agent mode. This area is for KW Productivity Coaches managing their agents.
-              If you have a coach, they'll use this portal to track your progress and leave feedback.
-            </p>
-          </div>
-          <div className="grid gap-3 w-full max-w-sm">
-            <a
-              href="https://coursecreator360.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-between p-4 rounded-xl border border-border/60 bg-card hover:border-[#DC143C]/30 transition-colors group"
-            >
-              <div className="text-left">
-                <div className="text-sm font-semibold text-foreground">KW Course Creator</div>
-                <div className="text-xs text-muted-foreground">Access your KW training library</div>
+          <h1 className="font-display font-bold text-foreground mb-2">ASRE Coaching</h1>
+          <p className="text-muted-foreground max-w-xl mx-auto" style={{ fontSize: '1rem' }}>
+            Structured accountability, strategic guidance, and KPI-driven coaching to help you move through
+            MREA levels faster — with a coach who knows the system.
+          </p>
+        </div>
+
+        {/* Coaching options grid */}
+        <div className="grid md:grid-cols-2 gap-5 mb-8 max-w-4xl mx-auto">
+          {/* Group Coaching */}
+          <div className="rounded-2xl border border-border bg-card p-6 flex flex-col">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[#DC143C]/10 flex items-center justify-center shrink-0">
+                <Users className="w-5 h-5 text-[#DC143C]" />
               </div>
-              <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-[#DC143C] transition-colors" />
-            </a>
-            <div className="p-4 rounded-xl border border-border/60 bg-card">
-              <div className="text-sm font-semibold text-foreground mb-1">Want to become a coach?</div>
-              <div className="text-xs text-muted-foreground">
-                Contact your Market Center ALC or regional leadership to get set up as a Productivity Coach.
+              <div>
+                <div className="font-display font-bold text-foreground">Group Coaching</div>
+                <div className="text-xs text-muted-foreground">Monthly cohort sessions</div>
               </div>
             </div>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-5">
+              Join a cohort of agents at your MREA level. Monthly group sessions cover KPI review,
+              stage-based business progression, lead generation priorities, and systems implementation.
+              Peer accountability amplifies individual results.
+            </p>
+            <div className="space-y-2 mb-6">
+              {[
+                'Monthly group strategy sessions',
+                'KPI benchmarking with peer cohort',
+                'MREA stage-based curriculum',
+                'Systems and lead gen frameworks',
+                'Shared accountability structure',
+              ].map((benefit) => (
+                <div key={benefit} className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-[#DC143C]/15 flex items-center justify-center shrink-0">
+                    <Check className="w-2.5 h-2.5 text-[#DC143C]" />
+                  </div>
+                  <span className="text-sm text-foreground">{benefit}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-auto">
+              <Badge variant="outline" className="text-[#DC143C] border-[#DC143C]/30">Best for: Agents building momentum</Badge>
+            </div>
           </div>
+
+          {/* 1:1 Coaching */}
+          <div className="rounded-2xl border-2 border-[#DC143C]/40 bg-card p-6 flex flex-col relative overflow-hidden">
+            <div
+              className="absolute top-0 right-0 text-[10px] font-bold px-3 py-1 rounded-bl-lg"
+              style={{ background: '#DC143C', color: '#fff' }}
+            >
+              PREMIUM
+            </div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-[#DC143C]/20 flex items-center justify-center shrink-0">
+                <Target className="w-5 h-5 text-[#DC143C]" />
+              </div>
+              <div>
+                <div className="font-display font-bold text-foreground">1:1 Coaching</div>
+                <div className="text-xs text-muted-foreground">Private sessions, full focus</div>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-5">
+              Work directly with an ASRE-certified Productivity Coach. Sessions are built around your
+              specific pipeline, MREA level, financial targets, and 90-day sprint. Maximum clarity,
+              accountability, and strategic depth.
+            </p>
+            <div className="space-y-2 mb-6">
+              {[
+                'Bi-weekly private strategy sessions',
+                'Custom 90-day sprint planning',
+                'Direct KPI accountability reviews',
+                'Pipeline and lead gen deep-dives',
+                'MREA level advancement guidance',
+                'Personalized systems implementation',
+              ].map((benefit) => (
+                <div key={benefit} className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-[#DC143C]/15 flex items-center justify-center shrink-0">
+                    <Check className="w-2.5 h-2.5 text-[#DC143C]" />
+                  </div>
+                  <span className="text-sm text-foreground">{benefit}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-auto">
+              <Badge className="bg-[#DC143C]/15 text-[#DC143C] border-[#DC143C]/30">Best for: Agents ready to accelerate</Badge>
+            </div>
+          </div>
+        </div>
+
+        {/* What coaching delivers */}
+        <div className="max-w-4xl mx-auto mb-8">
+          <div className="rounded-2xl border border-border bg-card/50 p-6">
+            <h3 className="font-display font-semibold text-foreground mb-4">What ASRE Coaching Delivers</h3>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { icon: TrendingUp, title: 'KPI Clarity', desc: 'Know exactly what numbers to hit each week and why they matter.' },
+                { icon: Target,     title: 'Stage Progression', desc: 'Move through MREA levels with a clear, structured path forward.' },
+                { icon: Zap,        title: 'Systems Execution', desc: 'Build the systems that run your business, not just your schedule.' },
+                { icon: Award,      title: 'Accountability', desc: 'Consistent structure and feedback that compounds over 90-day sprints.' },
+              ].map(({ icon: Icon, title, desc }) => (
+                <div key={title} className="flex flex-col gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-[#DC143C]/10 flex items-center justify-center">
+                    <Icon className="w-4 h-4 text-[#DC143C]" />
+                  </div>
+                  <div className="font-semibold text-sm text-foreground">{title}</div>
+                  <div className="text-xs text-muted-foreground leading-relaxed">{desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="text-center max-w-lg mx-auto">
+          <Button
+            className="bg-[#DC143C] hover:bg-[#B01030] text-white px-8 py-3 text-base font-semibold h-auto"
+            onClick={() => window.location.href = '/settings?tab=subscription'}
+          >
+            Explore Coaching Plans
+            <ChevronRight className="w-4 h-4 ml-2" />
+          </Button>
+          <p className="text-xs text-muted-foreground mt-3">
+            Already enrolled? Your coach will activate your portal access after onboarding.
+          </p>
         </div>
       </div>
     );

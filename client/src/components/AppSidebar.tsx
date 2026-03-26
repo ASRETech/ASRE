@@ -8,14 +8,16 @@
  *   VISION      → /vision/big-why, /vision/wealth
  *   GROWTH      → /growth/current-level, /growth/coaching, /growth/team
  *   EXECUTION   → /execution, /execution/pipeline, /execution/action-engine, /execution/schedule
- *   PERFORMANCE → /performance/financials, /performance/analytics, /performance/dashboard
+ *   PERFORMANCE → /performance/financials, /performance/analytics
+ *
+ * v12: Dashboard removed from nav; Certification moved to footer above Settings
  */
 
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { LEVELS } from '@/lib/store';
 import {
-  LayoutDashboard, Users,
+  Users,
   DollarSign,
   Zap, BarChart3, UsersRound, GraduationCap,
   TrendingUp, Heart,
@@ -37,7 +39,6 @@ const NAV_ITEMS = [
     items: [
       { label: 'Current MREA Level', icon: Star,         path: '/growth/current-level' },
       { label: 'Coaching',           icon: GraduationCap, path: '/growth/coaching' },
-      { label: 'ASRE Coach Certification', icon: BookOpen, path: '/settings/certification-interest', badge: 'Exclusive' },
       { label: 'Team OS',            icon: UsersRound,    path: '/growth/team' },
     ],
   },
@@ -53,9 +54,8 @@ const NAV_ITEMS = [
   {
     section: 'PERFORMANCE',
     items: [
-      { label: 'Financials', icon: DollarSign,     path: '/performance/financials' },
-      { label: 'Analytics',  icon: BarChart3,       path: '/performance/analytics' },
-      { label: 'Dashboard',  icon: LayoutDashboard, path: '/performance/dashboard' },
+      { label: 'Financials', icon: DollarSign, path: '/performance/financials' },
+      { label: 'Analytics',  icon: BarChart3,  path: '/performance/analytics' },
     ],
   },
 ];
@@ -212,11 +212,51 @@ export function AppSidebar() {
         ))}
       </nav>
 
-      {/* Footer */}
+      {/* Footer — Certification + Settings + User */}
       <div
         className="shrink-0 px-3 pb-3 pt-2"
         style={{ borderTop: '1px solid oklch(0.2 0.01 250)' }}
       >
+        {/* ASRE Coach Certification — sits directly above Settings */}
+        <Link href="/settings/certification-interest">
+          <div
+            className={`
+              flex items-center gap-2 px-2 py-2 rounded-md text-[13px]
+              transition-colors duration-100 cursor-pointer mb-1
+              ${location === '/settings/certification-interest'
+                ? 'border-l-2 border-[#DC143C] rounded-l-none font-medium'
+                : 'border-l-2 border-transparent'
+              }
+            `}
+            style={{
+              color: location === '/settings/certification-interest' ? '#DC143C' : 'oklch(0.6 0.005 250)',
+              background: location === '/settings/certification-interest' ? 'rgba(220,20,60,0.12)' : 'transparent',
+            }}
+            onMouseEnter={(e) => {
+              if (location !== '/settings/certification-interest') {
+                (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.05)';
+                (e.currentTarget as HTMLDivElement).style.color = 'oklch(0.9 0.005 250)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (location !== '/settings/certification-interest') {
+                (e.currentTarget as HTMLDivElement).style.background = 'transparent';
+                (e.currentTarget as HTMLDivElement).style.color = 'oklch(0.6 0.005 250)';
+              }
+            }}
+          >
+            <BookOpen className="w-4 h-4 shrink-0" />
+            <span className="flex-1 truncate">ASRE Certification</span>
+            <span
+              className="text-[9px] font-bold px-1 py-0.5 rounded shrink-0"
+              style={{ background: 'rgba(220,20,60,0.2)', color: '#DC143C' }}
+            >
+              Exclusive
+            </span>
+          </div>
+        </Link>
+
+        {/* Settings */}
         <Link href="/settings">
           <div
             className={`

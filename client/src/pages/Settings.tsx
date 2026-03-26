@@ -376,36 +376,39 @@ export default function SettingsPage() {
                 Integrations
               </h3>
               <div className="space-y-3">
-                {[
-                  { name: 'CRM (Follow Up Boss, KW Command)', status: 'Not connected', available: false },
-                  { name: 'MLS Feed', status: 'Not connected', available: false },
-                  { name: 'Google Calendar', status: calSync ? 'Settings saved' : 'Not connected', available: true },
-                  { name: 'Email (Gmail / Outlook)', status: 'Not connected', available: false },
-                  { name: 'Google Business Profile', status: 'Not connected', available: false },
-                  { name: 'Zillow Reviews', status: 'Not connected', available: false },
-                ].map((integration) => (
-                  <div key={integration.name} className="flex items-center justify-between p-3 rounded-lg border border-border/50">
-                    <div>
-                      <div className="text-sm font-medium text-foreground">{integration.name}</div>
-                      <div className="text-[10px] text-muted-foreground">{integration.status}</div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-xs h-7"
-                      onClick={() => {
-                        if (integration.name === 'Google Calendar') {
-                          toast.info('Configure in the Calendar tab');
-                        } else {
-                          toast.info('Feature coming soon');
-                        }
-                      }}
-                    >
-                      {integration.available ? <Check className="w-3 h-3 mr-1" /> : null}
-                      {integration.available ? 'Configured' : 'Connect'}
-                    </Button>
+                {/* CRM */}
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border/50">
+                  <div>
+                    <div className="text-sm font-medium text-foreground">CRM (Follow Up Boss, KW Command)</div>
+                    <div className="text-[10px] text-muted-foreground">Not connected</div>
                   </div>
-                ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => toast.info('CRM integration coming soon')}
+                  >
+                    Connect
+                  </Button>
+                </div>
+
+                {/* Google Calendar */}
+                <div className="flex items-center justify-between p-3 rounded-lg border border-border/50">
+                  <div>
+                    <div className="text-sm font-medium text-foreground">Google Calendar</div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {calSync ? 'Settings saved — configure in Calendar tab' : 'Not connected — configure in Calendar tab'}
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7"
+                    onClick={() => toast.info('Configure in the Calendar tab above')}
+                  >
+                    {calSync ? <><Check className="w-3 h-3 mr-1" /> Configured</> : 'Configure'}
+                  </Button>
+                </div>
               </div>
 
                 {/* Google Drive — live OAuth integration */}

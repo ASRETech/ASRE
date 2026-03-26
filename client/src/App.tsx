@@ -13,7 +13,7 @@
  *   PILLAR 2 — PERFORMANCE
  *     /performance/financials           → Financials
  *     /performance/analytics            → Analytics
- *     /performance/dashboard            → Dashboard
+ *     /performance/dashboard            → redirects to /performance/analytics
  *
  *   PILLAR 3 — GROWTH
  *     /growth/current-level             → Current Level
@@ -37,7 +37,7 @@
  *     /schedule-creator   → /execution/schedule
  *     /financials         → /performance/financials
  *     /analytics          → /performance/analytics
- *     /dashboard          → /performance/dashboard
+ *     /dashboard          → /performance/analytics
  *     /coach              → /growth/coaching
  *     /team               → /growth/team
  *     /wealth             → /vision/wealth
@@ -70,7 +70,6 @@ import TransactionsComingSoon from './pages/execution/TransactionsComingSoon';
 // ── PILLAR 2: PERFORMANCE ──
 import Financials from "./pages/Financials";
 import Analytics from "./pages/Analytics";
-import Dashboard from "./pages/Dashboard";
 
 // ── PILLAR 3: GROWTH ──
 import CoachPortal from "./pages/CoachPortal";
@@ -128,9 +127,7 @@ function AppRoutes() {
       <Route path="/performance/analytics">
         <DashboardLayout><Analytics /></DashboardLayout>
       </Route>
-      <Route path="/performance/dashboard">
-        <DashboardLayout><Dashboard /></DashboardLayout>
-      </Route>
+      <Route path="/performance/dashboard" component={() => <Redirect to="/performance/analytics" />} />
 
       {/* ── PILLAR 3: GROWTH ── */}
       <Route path="/growth/coaching">
@@ -168,7 +165,7 @@ function AppRoutes() {
       <Route path="/schedule-creator" component={() => <Redirect to="/execution/schedule" />} />
       <Route path="/financials" component={() => <Redirect to="/performance/financials" />} />
       <Route path="/analytics" component={() => <Redirect to="/performance/analytics" />} />
-      <Route path="/dashboard" component={() => <Redirect to="/performance/dashboard" />} />
+      <Route path="/dashboard" component={() => <Redirect to="/performance/analytics" />} />
       <Route path="/coach" component={() => <Redirect to="/growth/coaching" />} />
       <Route path="/team" component={() => <Redirect to="/growth/team" />} />
       <Route path="/wealth" component={() => <Redirect to="/vision/wealth" />} />
