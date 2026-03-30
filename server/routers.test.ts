@@ -116,6 +116,14 @@ vi.mock("./db", () => ({
   incrementPartnerCount: vi.fn().mockResolvedValue(undefined),
   // Sprint A — coachProcedure tier check
   getSubscription: vi.fn().mockResolvedValue({ tier: 'one_on_one', status: 'active' }),
+  // Sprint D — Vision layer + Wealth Wins helpers
+  createBigWhySnapshot: vi.fn().mockResolvedValue(undefined),
+  getBigWhySnapshots: vi.fn().mockResolvedValue([]),
+  createWhyMoment: vi.fn().mockResolvedValue(undefined),
+  getWhyMoments: vi.fn().mockResolvedValue([]),
+  createWealthWin: vi.fn().mockResolvedValue(undefined),
+  getWealthWins: vi.fn().mockResolvedValue([]),
+  setMilestoneBlocker: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock the LLM module

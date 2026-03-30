@@ -18,6 +18,7 @@ import { PipelineWidget } from '@/components/widgets/PipelineWidget';
 import { WeeklyPulseWidget } from '@/components/widgets/WeeklyPulseWidget';
 import { FinancialWidget } from '@/components/widgets/FinancialWidget';
 import { WealthWidget } from '@/components/widgets/WealthWidget';
+import { VisionAnchorWidget } from '@/components/widgets/VisionAnchorWidget';
 
 export default function ExecutionHome() {
   const { user } = useAuth();
@@ -107,8 +108,11 @@ export default function ExecutionHome() {
         <PipelineWidget />
       </div>
 
-      {/* ── Row 3: Weekly Pulse + Financials + Wealth ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* ── Row 3: Vision + Weekly Pulse + Financials + Wealth ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-xl border border-border bg-card p-4">
+          <VisionAnchorWidget />
+        </div>
         <WeeklyPulseWidget />
         <FinancialWidget />
         <WealthWidget />

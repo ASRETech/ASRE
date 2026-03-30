@@ -63,6 +63,10 @@ export const agentProfiles = mysqlTable("agent_profiles", {
   bigWhyFinancial: text("bigWhyFinancial"),
   bigWhyFulfillment: text("bigWhyFulfillment"),
   bigWhyFun: text("bigWhyFun"),
+  // Sprint D: Vision layer additions
+  bigWhyMissionStatement: text("bigWhyMissionStatement"),
+  bigWhyLastSnapshotAt: timestamp("bigWhyLastSnapshotAt"),
+  bigWhyBehaviorAnchors: json("bigWhyBehaviorAnchors").$type<string[]>(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
@@ -1132,6 +1136,8 @@ export const wealthMilestones = mysqlTable("wealthMilestones", {
   status: mysqlEnum("status", ["not_started", "in_progress", "done"]).default("not_started"),
   completedDate: date("completedDate"),
   notes: text("notes"),
+  // Sprint D: Blocker note for in_progress milestones
+  blockerNote: varchar("blockerNote", { length: 500 }),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow(),
   createdAt: timestamp("createdAt").defaultNow(),
 }, (table) => ({
@@ -1162,6 +1168,13 @@ export const wealthProfile = mysqlTable("wealthProfile", {
   hasCPA: boolean("hasCPA").default(false),
   aiInsightsJson: json("aiInsightsJson").$type<string[]>(),
   aiInsightsCachedAt: timestamp("aiInsightsCachedAt"),
+  // Sprint D: Track narratives (AI-generated at track unlock, cached)
+  t1Narrative: text("t1Narrative"),
+  t2Narrative: text("t2Narrative"),
+  t3Narrative: text("t3Narrative"),
+  t4Narrative: text("t4Narrative"),
+  t5Narrative: text("t5Narrative"),
+  trackNarrativesGeneratedAt: timestamp("trackNarrativesGeneratedAt"),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow(),
 });
 export type WealthProfile = typeof wealthProfile.$inferSelect;
@@ -1351,3 +1364,68 @@ export const executionWeeklyStats = mysqlTable("executionWeeklyStats", {
 }));
 export type ExecutionWeeklyStat = typeof executionWeeklyStats.$inferSelect;
 export type InsertExecutionWeeklyStat = typeof executionWeeklyStats.$inferInsert;
+
+// ═══════════════════════════════════════════════════════════════════
+// SPRINT D — VISION LAYER
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Big Why Snapshots — quarterly point-in-time captures of the agent's Why
+ */
+export const bigWhySnapshots = mysqlTable("bigWhySnapshots", {
+  id: int("id").autoincrement().primaryKey(),
+  snapshotId: varchar("snapshotId", { length: 32 }).notNull().unique(),
+  userId: int("userId").notNull(),
+  bigWhy: text("bigWhy"),
+  bigWhyFaith: text("bigWhyFaith"),
+  bigWhyFamily: text("bigWhyFamily"),
+  bigWhyFinancial: text("bigWhyFinancial"),
+  bigWhyFulfillment: text("bigWhyFulfillment"),
+  bigWhyFun: text("bigWhyFun"),
+  missionStatement: text("missionStatement"),
+  reflectionNote: text("reflectionNote"),
+  mrealLevel: int("mrealLevel").notNull().default(1),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index("bigWhySnapshots_userId_idx").on(table.userId),
+}));
+export type BigWhySnapshot = typeof bigWhySnapshots.$inferSelect;
+export type InsertBigWhySnapshot = typeof bigWhySnapshots.$inferInsert;
+
+/**
+ * Why Moments — micro-journal entries of purpose-confirming events
+ */
+export const whyMoments = mysqlTable("whyMoments", {
+  id: int("id").autoincrement().primaryKey(),
+  momentId: varchar("momentId", { length: 32 }).notNull().unique(),
+  userId: int("userId").notNull(),
+  text: varchar("text", { length: 400 }).notNull(),
+  category: mysqlEnum("momentCategory", [
+    "client_win", "income_milestone", "family", "faith", "personal"
+  ]).notNull().default("personal"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index("whyMoments_userId_idx").on(table.userId),
+}));
+export type WhyMoment = typeof whyMoments.$inferSelect;
+export type InsertWhyMoment = typeof whyMoments.$inferInsert;
+
+/**
+ * Wealth Wins — brief notes attached to milestone completions, optionally shareable
+ */
+export const wealthWins = mysqlTable("wealthWins", {
+  id: int("id").autoincrement().primaryKey(),
+  winId: varchar("winId", { length: 32 }).notNull().unique(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: varchar("description", { length: 500 }),
+  category: varchar("category", { length: 50 }).notNull().default('mindset'),
+  milestoneKey: varchar("milestoneKey", { length: 100 }),
+  sharedToFeed: boolean("sharedToFeed").default(false).notNull(),
+  journeyPostId: varchar("journeyPostId", { length: 32 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  userIdx: index("wealthWins_userId_idx").on(table.userId),
+}));
+export type WealthWin = typeof wealthWins.$inferSelect;
+export type InsertWealthWin = typeof wealthWins.$inferInsert;

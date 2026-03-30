@@ -1740,3 +1740,96 @@ export async function deleteInvestmentProperty(userId: number, id: number): Prom
   await db.delete(investmentProperties)
     .where(and(eq(investmentProperties.id, id), eq(investmentProperties.userId, userId)));
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// SPRINT D — VISION LAYER HELPERS
+// ═══════════════════════════════════════════════════════════════════
+import {
+  bigWhySnapshots, InsertBigWhySnapshot, BigWhySnapshot,
+  whyMoments, InsertWhyMoment, WhyMoment,
+  wealthWins, InsertWealthWin, WealthWin,
+} from '../drizzle/schema';
+
+// ── BIG WHY SNAPSHOTS ──
+export async function createBigWhySnapshot(data: InsertBigWhySnapshot): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(bigWhySnapshots).values(data);
+}
+
+export async function getBigWhySnapshots(userId: number): Promise<BigWhySnapshot[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(bigWhySnapshots)
+    .where(eq(bigWhySnapshots.userId, userId))
+    .orderBy(desc(bigWhySnapshots.createdAt));
+}
+
+// ── WHY MOMENTS ──
+export async function createWhyMoment(data: InsertWhyMoment): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(whyMoments).values(data);
+}
+
+export async function getWhyMoments(userId: number, limit = 20): Promise<WhyMoment[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(whyMoments)
+    .where(eq(whyMoments.userId, userId))
+    .orderBy(desc(whyMoments.createdAt))
+    .limit(limit);
+}
+
+export async function deleteWhyMoment(userId: number, momentId: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .delete(whyMoments)
+    .where(
+      and(
+        eq(whyMoments.userId, userId),
+        eq(whyMoments.momentId, momentId)
+      )
+    );
+}
+
+// ── WEALTH WINS ──
+export async function createWealthWin(data: InsertWealthWin): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(wealthWins).values(data);
+}
+
+export async function getWealthWins(userId: number): Promise<WealthWin[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(wealthWins)
+    .where(eq(wealthWins.userId, userId))
+    .orderBy(desc(wealthWins.createdAt));
+}
+
+// ── WEALTH MILESTONE BLOCKER ──
+export async function setMilestoneBlocker(
+  userId: number,
+  milestoneKey: string,
+  blockerNote: string | null
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .update(wealthMilestones)
+    .set({ blockerNote })
+    .where(
+      and(
+        eq(wealthMilestones.userId, userId),
+        eq(wealthMilestones.milestoneKey, milestoneKey)
+      )
+    );
+}

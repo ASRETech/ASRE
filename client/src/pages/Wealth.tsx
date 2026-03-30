@@ -1,8 +1,8 @@
 /**
- * Wealth.tsx — v12
+ * Wealth.tsx — v13 (Sprint D)
  *
  * Full T1–T5 roadmap always visible. Locked tracks are previewable but not interactive.
- * Landscape-optimized layout.
+ * Sprint D: blockerNote threading, WealthTimeline tab, Wealth Wins tab.
  */
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,14 +10,26 @@ import { WealthHero } from '@/components/wealth/WealthHero';
 import { MilestoneList } from '@/components/wealth/MilestoneList';
 import { FICalculator } from '@/components/wealth/FICalculator';
 import { WealthInsights } from '@/components/wealth/WealthInsights';
+import { WealthTimeline } from '@/components/wealth/WealthTimeline';
 import { InvestmentProperties } from '@/components/wealth/InvestmentProperties';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { trpc } from '@/lib/trpc';
 import { toast } from 'sonner';
-import { Lock, CheckCircle2 } from 'lucide-react';
+import { Lock, CheckCircle2, Trophy, Plus, Sparkles } from 'lucide-react';
 import { TRACK_NAMES, TRACK_MILESTONE_COUNTS } from '@/lib/wealthConstants';
 
 type MilestoneStatus = 'not_started' | 'in_progress' | 'done';
+
+const WIN_CATEGORIES = [
+  { value: 'milestone', label: 'Milestone' },
+  { value: 'income', label: 'Income' },
+  { value: 'debt', label: 'Debt' },
+  { value: 'investment', label: 'Investment' },
+  { value: 'protection', label: 'Protection' },
+  { value: 'mindset', label: 'Mindset' },
+] as const;
 
 const TRACK_THEMES: Record<number, string> = {
   1: 'Protect your income, separate finances, and build your safety net.',
@@ -42,6 +54,110 @@ const TRACK_COLORS: Record<number, { accent: string; bg: string; border: string;
   4: { accent: '#10b981', bg: 'rgba(16,185,129,0.07)', border: 'rgba(16,185,129,0.25)', ring: 'rgba(16,185,129,0.5)' },
   5: { accent: '#f43f5e', bg: 'rgba(244,63,94,0.07)', border: 'rgba(244,63,94,0.25)', ring: 'rgba(244,63,94,0.5)' },
 };
+
+// ── Wealth Wins Logger ──
+function WealthWinsPanel() {
+  const utils = trpc.useUtils();
+  const winsQuery = trpc.wealth.listWealthWins.useQuery();
+  const addWin = trpc.wealth.addWealthWin.useMutation({
+    onSuccess: () => {
+      utils.wealth.listWealthWins.invalidate();
+      setTitle('');
+      setDesc('');
+      setCategory('mindset');
+      toast.success('Wealth Win logged!');
+    },
+    onError: () => toast.error('Failed to log win.'),
+  });
+  const [title, setTitle] = useState('');
+  const [desc, setDesc] = useState('');
+  const [category, setCategory] = useState<typeof WIN_CATEGORIES[number]['value']>('mindset');
+
+  const handleSubmit = () => {
+    if (!title.trim()) return;
+    addWin.mutate({ title: title.trim(), description: desc.trim() || undefined, category });
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Log a win */}
+      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+        <div className="flex items-center gap-2 mb-1">
+          <Trophy className="w-4 h-4 text-[#DC143C]" />
+          <h3 className="text-sm font-semibold">Log a Wealth Win</h3>
+        </div>
+        <Input
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          placeholder="What did you accomplish? e.g. 'Opened SEP-IRA', 'Paid off car loan'"
+          className="text-sm"
+          maxLength={200}
+        />
+        <Input
+          value={desc}
+          onChange={e => setDesc(e.target.value)}
+          placeholder="Optional: add context or how it felt"
+          className="text-sm"
+          maxLength={500}
+        />
+        <div className="flex items-center gap-2 flex-wrap">
+          {WIN_CATEGORIES.map(c => (
+            <button
+              key={c.value}
+              onClick={() => setCategory(c.value)}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                category === c.value
+                  ? 'bg-[#DC143C] text-white border-[#DC143C]'
+                  : 'border-border text-muted-foreground hover:border-foreground'
+              }`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+        <Button
+          size="sm"
+          className="h-8 text-xs gap-1"
+          onClick={handleSubmit}
+          disabled={!title.trim() || addWin.isPending}
+        >
+          <Plus className="w-3.5 h-3.5" /> Log Win
+        </Button>
+      </div>
+
+      {/* Recent wins list */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recent Wins</p>
+        {winsQuery.isLoading ? (
+          <div className="space-y-2">
+            {[1,2,3].map(i => <div key={i} className="h-12 rounded-lg bg-muted/40 animate-pulse" />)}
+          </div>
+        ) : (winsQuery.data?.length ?? 0) === 0 ? (
+          <div className="text-center py-8 text-muted-foreground text-sm">
+            <Trophy className="w-8 h-8 mx-auto mb-2 opacity-30" />
+            <p>No wins logged yet. Every step forward counts — log your first win!</p>
+          </div>
+        ) : (
+          winsQuery.data?.map(w => (
+            <div key={w.winId} className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card">
+              <div className="w-7 h-7 rounded-full bg-[#DC143C]/10 flex items-center justify-center shrink-0">
+                <Trophy className="w-3.5 h-3.5 text-[#DC143C]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">{w.title}</p>
+                {w.description && <p className="text-xs text-muted-foreground mt-0.5">{w.description}</p>}
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  {new Date(w.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {' · '}{w.category}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function Wealth() {
   const utils = trpc.useUtils();
@@ -73,9 +189,20 @@ export default function Wealth() {
     },
   });
 
-  const handleUpdate = (key: string, status: MilestoneStatus, notes?: string, date?: string) => {
-    updateMutation.mutate({ milestoneKey: key, status, notes, completedDate: date });
+  // Sprint D: blockerNote threaded through
+  const handleUpdate = (key: string, status: MilestoneStatus, notes?: string, date?: string, blockerNote?: string | null) => {
+    updateMutation.mutate({ milestoneKey: key, status, notes, completedDate: date, blockerNote });
   };
+
+  // Sprint D: Track Narrative Generation
+  const [trackNarratives, setTrackNarratives] = useState<Record<number, string>>({});
+  const generateNarrative = trpc.wealth.generateTrackNarrative.useMutation({
+    onSuccess: (data, variables) => {
+      setTrackNarratives(prev => ({ ...prev, [variables.trackNumber]: data.narrative }));
+      toast.success('Coaching narrative generated!');
+    },
+    onError: () => toast.error('Failed to generate narrative.'),
+  });
 
   if (isLoading) {
     return (
@@ -101,6 +228,8 @@ export default function Wealth() {
           <TabsTrigger value="calculator" className="text-sm">FI Calculator</TabsTrigger>
           <TabsTrigger value="properties" className="text-sm">Properties</TabsTrigger>
           <TabsTrigger value="insights" className="text-sm">Insights</TabsTrigger>
+          <TabsTrigger value="timeline" className="text-sm">Timeline</TabsTrigger>
+          <TabsTrigger value="wins" className="text-sm">Wins</TabsTrigger>
         </TabsList>
 
         {/* MILESTONES TAB */}
@@ -197,13 +326,35 @@ export default function Wealth() {
                     </div>
                     <p className="text-sm text-muted-foreground">{TRACK_THEMES[selectedTrack]}</p>
                   </div>
-                  <div className="text-right shrink-0 ml-4">
-                    <div className="font-mono font-bold" style={{ color: colors.accent, fontSize: '1.25rem' }}>
-                      {done}/{total}
+                  <div className="flex items-center gap-3 shrink-0 ml-4">
+                    <div className="text-right">
+                      <div className="font-mono font-bold" style={{ color: colors.accent, fontSize: '1.25rem' }}>
+                        {done}/{total}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider">milestones</div>
                     </div>
-                    <div className="text-[10px] text-muted-foreground uppercase tracking-wider">milestones</div>
+                    {isUnlocked && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs gap-1 border-[#DC143C]/30 text-[#DC143C] hover:bg-[#DC143C]/10"
+                        onClick={() => generateNarrative.mutate({ trackNumber: selectedTrack })}
+                        disabled={generateNarrative.isPending}
+                      >
+                        <Sparkles className="w-3 h-3" />
+                        {generateNarrative.isPending ? 'Generating...' : 'Narrative'}
+                      </Button>
+                    )}
                   </div>
                 </div>
+
+                {/* Sprint D: Track Narrative */}
+                {trackNarratives[selectedTrack] && (
+                  <div className="px-5 py-3 border-b border-border bg-[#DC143C]/[0.03] flex items-start gap-3">
+                    <Sparkles className="w-4 h-4 text-[#DC143C] shrink-0 mt-0.5" />
+                    <p className="text-sm text-foreground leading-relaxed italic">{trackNarratives[selectedTrack]}</p>
+                  </div>
+                )}
 
                 {/* Locked preview notice */}
                 {!isUnlocked && (
@@ -225,6 +376,7 @@ export default function Wealth() {
                     milestones={milestones.map(m => ({
                       ...m,
                       completedDate: m.completedDate ? String(m.completedDate) : null,
+                      blockerNote: (m as any).blockerNote ?? null,
                     }))}
                     onUpdate={handleUpdate}
                     isPending={updateMutation.isPending}
@@ -248,6 +400,25 @@ export default function Wealth() {
         {/* INSIGHTS TAB */}
         <TabsContent value="insights">
           <WealthInsights />
+        </TabsContent>
+
+        {/* TIMELINE TAB — Sprint D */}
+        <TabsContent value="timeline">
+          <div className="rounded-xl border border-border bg-card p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <CheckCircle2 className="w-4 h-4 text-[#DC143C]" />
+              <h3 className="text-sm font-semibold">Your Wealth Story</h3>
+            </div>
+            <p className="text-xs text-muted-foreground mb-5">
+              A chronological record of every milestone completed and wealth win logged.
+            </p>
+            <WealthTimeline />
+          </div>
+        </TabsContent>
+
+        {/* WINS TAB — Sprint D */}
+        <TabsContent value="wins">
+          <WealthWinsPanel />
         </TabsContent>
       </Tabs>
     </div>

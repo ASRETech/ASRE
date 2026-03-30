@@ -18,6 +18,7 @@ import {
   syncSessionNotesToPCx,
   syncCommitmentCompletionToPCx,
 } from './integrations/pcxSync';
+import { getStreakData } from './domains/execution/executionService';
 import { wealthRouter } from "./routers/wealth";
 import { calendarRouter } from "./routers/calendar";
 import { scheduleRouter } from "./routers/schedule";
@@ -153,6 +154,130 @@ export const appRouter = router({
           behaviorAnchors: parsed.behaviorAnchors as string[],
         };
       }),
+
+    // ── WHY MOMENTS ──
+    listWhyMoments: protectedProcedure.query(async ({ ctx }) => {
+      return db.getWhyMoments(ctx.user.id, 20);
+    }),
+
+    addWhyMoment: protectedProcedure
+      .input(z.object({
+        text: z.string().min(1).max(400),
+        category: z.enum(['client_win', 'income_milestone', 'family', 'faith', 'personal']),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await db.createWhyMoment({
+          momentId: nanoid(16),
+          userId: ctx.user.id,
+          text: input.text,
+          category: input.category,
+        });
+        return { success: true };
+      }),
+
+    deleteWhyMoment: protectedProcedure
+      .input(z.object({ momentId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await db.deleteWhyMoment(ctx.user.id, input.momentId);
+        return { success: true };
+      }),
+
+    // ── WHY SNAPSHOTS ──
+    listWhySnapshots: protectedProcedure.query(async ({ ctx }) => {
+      return db.getBigWhySnapshots(ctx.user.id);
+    }),
+
+    takeWhySnapshot: protectedProcedure
+      .input(z.object({
+        reflectionNote: z.string().max(1000).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const profile = await db.getAgentProfile(ctx.user.id);
+        if (!profile) throw new TRPCError({ code: 'NOT_FOUND', message: 'Profile not found' });
+
+        await db.createBigWhySnapshot({
+          snapshotId: nanoid(16),
+          userId: ctx.user.id,
+          bigWhy: profile.bigWhy ?? null,
+          bigWhyFaith: profile.bigWhyFaith ?? null,
+          bigWhyFamily: profile.bigWhyFamily ?? null,
+          bigWhyFinancial: profile.bigWhyFinancial ?? null,
+          bigWhyFulfillment: profile.bigWhyFulfillment ?? null,
+          bigWhyFun: profile.bigWhyFun ?? null,
+          missionStatement: profile.bigWhyMissionStatement ?? null,
+          reflectionNote: input.reflectionNote ?? null,
+          mrealLevel: profile.currentLevel ?? 1,
+        });
+
+        await db.upsertAgentProfile({
+          userId: ctx.user.id,
+          bigWhyLastSnapshotAt: new Date(),
+        });
+
+        return { success: true };
+      }),
+
+    // ── WHY DRIFT DETECTION ──
+    generateWhyDriftCheck: protectedProcedure.mutation(async ({ ctx }) => {
+      const [profile, snapshots, streak] = await Promise.all([
+        db.getAgentProfile(ctx.user.id),
+        db.getBigWhySnapshots(ctx.user.id),
+        getStreakData(ctx.user.id),
+      ]);
+
+      if (!profile?.bigWhy) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Write your Big Why first before running a drift check.',
+        });
+      }
+
+      const incomeGoal = profile.incomeGoal ?? 0;
+      const currentLevel = profile.currentLevel ?? 1;
+      const streakDays = streak?.currentStreak ?? 0;
+      const firstSnapshot = snapshots[snapshots.length - 1];
+      const originalWhy = firstSnapshot?.bigWhy ?? profile.bigWhy;
+      const originalDate = firstSnapshot
+        ? new Date(firstSnapshot.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        : 'when you started';
+
+      const prompt = `You are a KW Productivity Coach doing a quarterly reflection with an agent.
+
+Agent's original Big Why (written ${originalDate}):
+"${originalWhy}"
+
+Agent's current Big Why:
+"${profile.bigWhy}"
+
+Current context:
+- MREA Level: ${currentLevel} of 7
+- Income Goal: $${incomeGoal.toLocaleString()}/year
+- Current execution streak: ${streakDays} days
+
+Generate exactly 2 coaching observations and 1 forward-looking question.
+Format as JSON: { observations: string[], question: string }
+Keep each observation to 1-2 sentences. Be specific to their actual Why text.
+Do NOT give financial or legal advice. Stay in a coaching voice.
+Return ONLY the JSON, no markdown.`;
+
+      const response = await invokeLLM({
+        messages: [{ role: 'user', content: prompt }],
+      });
+
+      try {
+        const cleaned = response.content.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        return {
+          observations: parsed.observations as string[],
+          question: parsed.question as string,
+        };
+      } catch {
+        return {
+          observations: ['Your Why has remained consistent — that\'s a sign of deep clarity.'],
+          question: 'What would change in your daily actions if you hit your income goal 6 months early?',
+        };
+      }
+    }),
   }),
 
   // ============================================================

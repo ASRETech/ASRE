@@ -10,8 +10,9 @@ interface MilestoneListProps {
     status: string | null;
     notes?: string | null;
     completedDate?: string | null;
+    blockerNote?: string | null;
   }>;
-  onUpdate: (key: string, status: MilestoneStatus, notes?: string, date?: string) => void;
+  onUpdate: (key: string, status: MilestoneStatus, notes?: string, date?: string, blockerNote?: string | null) => void;
   isPending?: boolean;
 }
 
@@ -44,6 +45,7 @@ export function MilestoneList({ trackNumber, milestones, onUpdate, isPending }: 
               status={(saved?.status as MilestoneStatus) ?? 'not_started'}
               notes={saved?.notes}
               completedDate={saved?.completedDate}
+              blockerNote={saved?.blockerNote}
               onUpdate={onUpdate}
               isPending={isPending}
             />
