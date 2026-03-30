@@ -22,6 +22,25 @@ import { ENV } from "./env";
 import { getDb } from "../db";
 import * as schema from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
+import rateLimit from "express-rate-limit";
+import helmet from "helmet";
+import cors from "cors";
+
+// ── CORS allowlist ──────────────────────────────────────────────────────────
+const ALLOWED_ORIGINS = [
+  "https://asre-production-a9d5.up.railway.app",
+  "http://localhost:3000",
+  "http://localhost:5173",
+];
+
+// ── Rate limiter for auth endpoints ────────────────────────────────────────
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // max 10 attempts per window per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many login attempts. Please wait 15 minutes and try again." },
+});
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -45,9 +64,72 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
-  // Configure body parser with larger size limit for file uploads
+
+  // ── Security headers (Helmet) ─────────────────────────────────────────────
+  app.use(helmet({
+    contentSecurityPolicy: false, // Vite dev needs this off; revisit for prod hardening
+    crossOriginEmbedderPolicy: false,
+  }));
+
+  // ── CORS ──────────────────────────────────────────────────────────────────
+  app.use(cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, Postman, server-to-server)
+      if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS blocked for origin: ${origin}`));
+      }
+    },
+    credentials: true,
+  }));
+
+  // ── Rate limiting on auth routes ──────────────────────────────────────────
+  app.use("/api/auth/login", authLimiter);
+  app.use("/api/auth/register", authLimiter);
+
+  // ── Stripe webhook — MUST be registered BEFORE express.json() ────────────
+  // (imported lazily to avoid top-level Stripe instantiation without a key)
+  app.post(
+    "/api/webhooks/stripe",
+    express.raw({ type: "application/json" }),
+    async (req, res) => {
+      const sig = req.headers["stripe-signature"] as string;
+      const webhookSecret = ENV.stripeWebhookSecret;
+
+      if (!webhookSecret) {
+        console.warn("[Stripe] Webhook secret not configured — skipping verification");
+        res.json({ received: true });
+        return;
+      }
+
+      let event: import("stripe").Stripe.Event;
+
+      try {
+        const Stripe = (await import("stripe")).default;
+        const stripe = new Stripe(ENV.stripeSecretKey);
+        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+      } catch (err: any) {
+        console.error("[Stripe] Webhook signature verification failed:", err.message);
+        res.status(400).json({ error: "Webhook signature invalid" });
+        return;
+      }
+
+      try {
+        const { handleStripeEvent } = await import("../stripe/webhookHandler");
+        await handleStripeEvent(event);
+        res.json({ received: true });
+      } catch (err) {
+        console.error("[Stripe] Event handler error:", err);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    }
+  );
+
+  // ── Body parsers (AFTER raw Stripe webhook route) ─────────────────────────
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
   // Standalone auth routes: POST /api/auth/login, /api/auth/register, /api/auth/logout
   registerOAuthRoutes(app);
 
@@ -151,6 +233,16 @@ async function startServer() {
     } catch (e) {
       const tool = await db.getTool(toolId).catch(() => null);
       return res.redirect(tool?.websiteUrl || '/tools');
+    }
+  });
+
+  // TEMPORARY — remove before beta launch
+  app.get('/api/debug/session', async (req, res) => {
+    try {
+      const user = await sdk.authenticateRequest(req);
+      res.json({ authenticated: true, userId: user.id, email: user.email });
+    } catch {
+      res.json({ authenticated: false, cookies: Object.keys(req.cookies ?? {}) });
     }
   });
 

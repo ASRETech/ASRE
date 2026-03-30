@@ -18,6 +18,26 @@ import { calendarRouter } from "./routers/calendar";
 import { scheduleRouter } from "./routers/schedule";
 import { executionRouter } from "./routers/execution";
 
+// ── Coach-only middleware: requires admin role, agentRole=coach/mc_op/admin, OR tier=one_on_one/enterprise ──
+const coachProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  const isAdmin = ctx.user.role === 'admin';
+  if (!isAdmin) {
+    const [profile, sub] = await Promise.all([
+      db.getAgentProfile(ctx.user.id),
+      db.getSubscription(ctx.user.id),
+    ]);
+    const isCoachRole = profile?.agentRole === 'coach' || profile?.agentRole === 'mc_op' || profile?.agentRole === 'admin';
+    const hasCoachTier = sub?.tier === 'one_on_one' || sub?.tier === 'enterprise';
+    if (!isCoachRole && !hasCoachTier) {
+      throw new TRPCError({
+        code: 'FORBIDDEN',
+        message: 'Coach access requires the 1:1 Coaching plan or coach role.',
+      });
+    }
+  }
+  return next();
+});
+
 export const appRouter = router({
   system: systemRouter,
   execution: executionRouter,
@@ -51,8 +71,8 @@ export const appRouter = router({
         currentLevel: z.number().optional(),
         operationalScore: z.number().optional(),
         incomeGoal: z.number().optional(),
-        diagnosticAnswers: z.any().optional(),
-        topProblems: z.any().optional(),
+        diagnosticAnswers: z.record(z.string(), z.unknown()).optional(),
+        topProblems: z.array(z.string()).optional(),
         isOnboarded: z.boolean().optional(),
         coachMode: z.boolean().optional(),
         googleBusinessUrl: z.string().optional(),
@@ -144,7 +164,7 @@ export const appRouter = router({
         title: z.string(),
         isComplete: z.boolean().optional(),
         completedAt: z.date().optional(),
-        builderData: z.any().optional(),
+        builderData: z.record(z.string(), z.unknown()).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         await db.upsertDeliverable({ ...input, userId: ctx.user.id });
@@ -182,7 +202,7 @@ export const appRouter = router({
         stage: z.string().optional(),
         budget: z.number().optional(),
         timeline: z.string().optional(),
-        tags: z.any().optional(),
+        tags: z.array(z.string()).optional(),
         notes: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -202,7 +222,7 @@ export const appRouter = router({
           stage: z.string().optional(),
           budget: z.number().optional(),
           timeline: z.string().optional(),
-          tags: z.any().optional(),
+          tags: z.array(z.string()).optional(),
           notes: z.string().optional(),
         }),
       }))
@@ -242,7 +262,7 @@ export const appRouter = router({
         salePrice: z.number().optional(),
         commission: z.number().optional(),
         closeDate: z.string().optional(),
-        checklist: z.any().optional(),
+        checklist: z.record(z.string(), z.boolean()).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         await db.insertTransaction({ ...input, userId: ctx.user.id });
@@ -260,7 +280,7 @@ export const appRouter = router({
           salePrice: z.number().optional(),
           commission: z.number().optional(),
           closeDate: z.string().optional(),
-          checklist: z.any().optional(),
+          checklist: z.record(z.string(), z.boolean()).optional(),
         }),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -384,8 +404,8 @@ Return JSON: { "vendor": string, "amount": number, "date": string, "category": s
       .input(z.object({
         missionStatement: z.string().optional(),
         visionStatement: z.string().optional(),
-        coreValues: z.any().optional(),
-        teamCommitments: z.any().optional(),
+        coreValues: z.array(z.string()).optional(),
+        teamCommitments: z.array(z.string()).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         await db.upsertCultureDoc({ ...input, userId: ctx.user.id });
@@ -402,7 +422,7 @@ Return JSON: { "vendor": string, "amount": number, "date": string, "category": s
         context: z.string(),
         prompt: z.string(),
         agentLevel: z.number().optional(),
-        agentData: z.any().optional(),
+        agentData: z.record(z.string(), z.unknown()).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const systemPrompt = `You are an expert real estate business coach trained in the MREA (Millionaire Real Estate Agent) framework by Gary Keller. You help agents build their business systematically through the 7 levels: Solo Agent, First Admin Hire, First Buyer's Agent, Multiple Buyer's Agents, Listings Specialist, Full Team, and Business Owner.
@@ -444,7 +464,7 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
   // COACH PORTAL (Phase 4)
   // ============================================================
   coachPortal: router({
-    invite: protectedProcedure
+    invite: coachProcedure
       .input(z.object({ inviteEmail: z.string() }))
       .mutation(async ({ ctx, input }) => {
         const token = nanoid(32);
@@ -468,7 +488,7 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
         await db.upsertAgentProfile({ userId: rel.agentId, coachMode: true });
         return { success: true };
       }),
-    myAgents: protectedProcedure.query(async ({ ctx }) => {
+    myAgents: coachProcedure.query(async ({ ctx }) => {
       const rels = await db.getCoachRelationships(ctx.user.id);
       const agents = [];
       for (const rel of rels) {
@@ -485,7 +505,7 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
       }
       return agents;
     }),
-    agentDetail: protectedProcedure
+    agentDetail: coachProcedure
       .input(z.object({ agentId: z.number() }))
       .query(async ({ ctx, input }) => {
         // Verify coach relationship
@@ -496,7 +516,7 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
         const comments = await db.getAgentCoachComments(input.agentId);
         return { profile, deliverables: delivs, comments };
       }),
-    addComment: protectedProcedure
+    addComment: coachProcedure
       .input(z.object({
         agentId: z.number(),
         deliverableId: z.string(),
@@ -511,12 +531,12 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
         });
         return { success: true };
       }),
-    myCoachComments: protectedProcedure.query(async ({ ctx }) => {
+    myCoachComments: coachProcedure.query(async ({ ctx }) => {
       return db.getAgentCoachComments(ctx.user.id);
     }),
 
     // ── Cohort management (Phase 6) ──────────────────────────────
-    createCohort: protectedProcedure
+    createCohort: coachProcedure
       .input(z.object({
         name: z.string(),
         type: z.enum(['foundation', 'growth', 'scale']),
@@ -538,7 +558,7 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
         return { success: true };
       }),
 
-    myCohorts: protectedProcedure.query(async ({ ctx }) => {
+    myCohorts: coachProcedure.query(async ({ ctx }) => {
       const cohorts = await db.getCoachCohorts(ctx.user.id);
       return Promise.all(cohorts.map(async (c) => {
         const members = await db.getCohortMembers(c.cohortId);
@@ -579,7 +599,7 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
       }));
     }),
 
-    inviteToCohort: protectedProcedure
+    inviteToCohort: coachProcedure
       .input(z.object({
         cohortId: z.string(),
         agentEmail: z.string().email(),
@@ -595,7 +615,7 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
         return { success: true };
       }),
 
-    removeCohortMember: protectedProcedure
+    removeCohortMember: coachProcedure
       .input(z.object({ cohortId: z.string(), agentId: z.number() }))
       .mutation(async ({ ctx, input }) => {
         await db.updateCohortMemberStatus(
@@ -605,7 +625,7 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
       }),
 
     // ── Sessions (Phase 6) ───────────────────────────────────────
-    scheduleSession: protectedProcedure
+    scheduleSession: coachProcedure
       .input(z.object({
         agentId: z.number().optional(),
         cohortId: z.string().optional(),
@@ -626,15 +646,15 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
         return { success: true };
       }),
 
-    upcomingSessions: protectedProcedure.query(async ({ ctx }) => {
+    upcomingSessions: coachProcedure.query(async ({ ctx }) => {
       return db.getCoachUpcomingSessions(ctx.user.id);
     }),
 
-    allSessions: protectedProcedure.query(async ({ ctx }) => {
+    allSessions: coachProcedure.query(async ({ ctx }) => {
       return db.getCoachAllSessions(ctx.user.id);
     }),
 
-    saveSessionNotes: protectedProcedure
+    saveSessionNotes: coachProcedure
       .input(z.object({
         sessionId: z.string(),
         coachNotes: z.string().optional(),
@@ -667,7 +687,7 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
       }),
 
     // ── Pre-session brief (Phase 6) ─────────────────────────────
-    generatePreBrief: protectedProcedure
+    generatePreBrief: coachProcedure
       .input(z.object({
         sessionId: z.string(),
         sendEmail: z.boolean().default(false),
@@ -752,7 +772,7 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
     }),
 
     // Wealth view — coach sees all clients' wealth health scores and alert flags
-    getClientsWithWealth: protectedProcedure.query(async ({ ctx }) => {
+    getClientsWithWealth: coachProcedure.query(async ({ ctx }) => {
       const relationships = await db.getCoachRelationships(ctx.user.id);
       const agentIds = relationships.map(r => r.agentId);
       if (agentIds.length === 0) return [];

@@ -59,7 +59,9 @@ export const agentProfiles = mysqlTable("agent_profiles", {
   bigWhyFun: text("bigWhyFun"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('agentProfiles_userId_idx').on(table.userId),
+}));
 
 export type AgentProfile = typeof agentProfiles.$inferSelect;
 export type InsertAgentProfile = typeof agentProfiles.$inferInsert;
@@ -78,7 +80,9 @@ export const deliverables = mysqlTable("deliverables", {
   builderData: json("builderData"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('deliverables_userId_idx').on(table.userId),
+}));
 
 export type Deliverable = typeof deliverables.$inferSelect;
 export type InsertDeliverable = typeof deliverables.$inferInsert;
@@ -103,7 +107,9 @@ export const leads = mysqlTable("leads", {
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('leads_userId_idx').on(table.userId),
+}));
 
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = typeof leads.$inferInsert;
@@ -128,7 +134,9 @@ export const transactions = mysqlTable("transactions", {
   clientPhone: varchar("clientPhone", { length: 32 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('transactions_userId_idx').on(table.userId),
+}));
 
 export type Transaction = typeof transactions.$inferSelect;
 export type InsertTransaction = typeof transactions.$inferInsert;
@@ -149,7 +157,9 @@ export const financialEntries = mysqlTable("financial_entries", {
   receiptText: text("receiptText"),
   autoCategory: varchar("autoCategory", { length: 128 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('financialEntries_userId_idx').on(table.userId),
+}));
 
 export type FinancialEntry = typeof financialEntries.$inferSelect;
 export type InsertFinancialEntry = typeof financialEntries.$inferInsert;
@@ -450,6 +460,7 @@ export const subscriptions = mysqlTable("subscriptions", {
   currentPeriodEnd: timestamp("currentPeriodEnd"),
   trialEndsAt: timestamp("trialEndsAt"),
   cancelAtPeriodEnd: boolean("cancelAtPeriodEnd").default(false).notNull(),
+  currentPeriodStart: timestamp("currentPeriodStart"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -606,7 +617,9 @@ export const journeyPosts = mysqlTable('journey_posts', {
 
   createdAt: timestamp('createdAt').defaultNow().notNull(),
   updatedAt: timestamp('updatedAt').defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('journeyPosts_userId_idx').on(table.userId),
+}));
 
 export type JourneyPost = typeof journeyPosts.$inferSelect;
 export type InsertJourneyPost = typeof journeyPosts.$inferInsert;
@@ -779,7 +792,9 @@ export const toolSaves = mysqlTable('tool_saves', {
   toolId: varchar('toolId', { length: 32 }).notNull(),
   notes: text('notes'),
   createdAt: timestamp('createdAt').defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('toolSaves_userId_idx').on(table.userId),
+}));
 
 export type ToolSave = typeof toolSaves.$inferSelect;
 export type InsertToolSave = typeof toolSaves.$inferInsert;
@@ -792,7 +807,9 @@ export const toolUpvotes = mysqlTable('tool_upvotes', {
   userId: int('userId').notNull(),
   toolId: varchar('toolId', { length: 32 }).notNull(),
   createdAt: timestamp('createdAt').defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('toolUpvotes_userId_idx').on(table.userId),
+}));
 
 /**
  * Tool submissions from the community
@@ -1087,7 +1104,9 @@ export const weeklyPulses = mysqlTable("weekly_pulses", {
   closings: int("closings").default(0).notNull(),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('weeklyPulses_userId_idx').on(table.userId),
+}));
 export type WeeklyPulse = typeof weeklyPulses.$inferSelect;
 export type InsertWeeklyPulse = typeof weeklyPulses.$inferInsert;
 

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { AppSidebar } from '@/components/AppSidebar';
-import { useLocation } from 'wouter';
+import { useLocation, Redirect } from 'wouter';
 import { PanelLeft } from 'lucide-react';
+import { useAuth } from '@/_core/hooks/useAuth';
 
 // PAGE_TITLES — matches App.tsx canonical nested routes exactly
 const PAGE_TITLES: Record<string, string> = {
@@ -37,6 +38,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const pageTitle = PAGE_TITLES[location] || '';
+  const { user, loading } = useAuth();
+
+  if (loading) return (
+    <div className="flex h-screen w-full items-center justify-center bg-background">
+      <div className="text-muted-foreground text-sm">Loading...</div>
+    </div>
+  );
+  if (!user) return <Redirect to="/login" />;
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">

@@ -21,28 +21,33 @@ function isSecureRequest(req: Request) {
   return protoList.some(proto => proto.trim().toLowerCase() === "https");
 }
 
+/**
+ * Returns cookie options for the session cookie.
+ *
+ * Phase 2 — Session Persistence Fix:
+ *  - `sameSite: "lax"` for same-origin navigations (was "none" which requires
+ *    Secure and can be dropped by some browsers on HTTP dev environments).
+ *  - `sameSite: "none"` is kept only for cross-origin HTTPS (e.g. Railway
+ *    preview URLs served from a different subdomain than the API).
+ *  - `secure` is derived from the actual request protocol / x-forwarded-proto
+ *    so Railway's reverse proxy is respected correctly.
+ *  - `domain` is intentionally left unset to avoid cross-subdomain cookie
+ *    leakage and to let the browser default to the exact origin.
+ */
 export function getSessionCookieOptions(
   req: Request
 ): Pick<CookieOptions, "domain" | "httpOnly" | "path" | "sameSite" | "secure"> {
-  // const hostname = req.hostname;
-  // const shouldSetDomain =
-  //   hostname &&
-  //   !LOCAL_HOSTS.has(hostname) &&
-  //   !isIpAddress(hostname) &&
-  //   hostname !== "127.0.0.1" &&
-  //   hostname !== "::1";
-
-  // const domain =
-  //   shouldSetDomain && !hostname.startsWith(".")
-  //     ? `.${hostname}`
-  //     : shouldSetDomain
-  //       ? hostname
-  //       : undefined;
+  const secure = isSecureRequest(req);
+  const hostname = req.hostname ?? "";
+  const isLocal =
+    LOCAL_HOSTS.has(hostname) || isIpAddress(hostname);
 
   return {
     httpOnly: true,
     path: "/",
-    sameSite: "none",
-    secure: isSecureRequest(req),
+    // Use "lax" on localhost (HTTP) to avoid the browser silently dropping
+    // the cookie. Use "none" only on secure cross-origin deployments.
+    sameSite: secure && !isLocal ? "none" : "lax",
+    secure,
   };
 }
