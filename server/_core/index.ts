@@ -236,16 +236,6 @@ async function startServer() {
     }
   });
 
-  // TEMPORARY — remove before beta launch
-  app.get('/api/debug/session', async (req, res) => {
-    try {
-      const user = await sdk.authenticateRequest(req);
-      res.json({ authenticated: true, userId: user.id, email: user.email });
-    } catch {
-      res.json({ authenticated: false, cookies: Object.keys(req.cookies ?? {}) });
-    }
-  });
-
   // tRPC API
   app.use(
     "/api/trpc",

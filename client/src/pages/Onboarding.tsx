@@ -11,7 +11,8 @@ import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { LEVELS, DIAGNOSTIC_QUESTIONS, TOP_PROBLEMS } from '@/lib/store';
-import { generateMockLeads, generateMockTransactions, generateMockFinancials, generateMockSOPs, generateDeliverables } from '@/lib/mockData';
+import { generateDeliverables } from '@/lib/mockData';
+import { trpc } from '@/lib/trpc';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ArrowLeft, Lock, Check, MapPin, Zap } from 'lucide-react';
 
@@ -20,6 +21,7 @@ const ONBOARDING_HERO = 'https://d2xsxph8kpxj0f.cloudfront.net/31051966326786832
 export default function Onboarding() {
   const [, navigate] = useLocation();
   const { dispatch } = useApp();
+  const profileMutation = trpc.profile.upsert.useMutation();
   const [step, setStep] = useState(1);
   const [selectedLevel, setSelectedLevel] = useState(1);
 
@@ -65,16 +67,26 @@ export default function Onboarding() {
 
     dispatch({ type: 'SET_USER', payload: user });
     dispatch({ type: 'SET_ONBOARDED', payload: true });
-    dispatch({ type: 'SET_LEADS', payload: generateMockLeads(25) });
     dispatch({ type: 'SET_DELIVERABLES', payload: generateDeliverables(selectedLevel) });
 
-    // Add mock transactions
-    generateMockTransactions(5).forEach(t => dispatch({ type: 'ADD_TRANSACTION', payload: t }));
-    generateMockFinancials().forEach(f => dispatch({ type: 'ADD_FINANCIAL', payload: f }));
-    generateMockSOPs().forEach(s => dispatch({ type: 'ADD_SOP', payload: s }));
+    // Persist to server — fire and forget (don't block navigation on failure)
+    profileMutation.mutate({
+      name: name || undefined,
+      brokerage: brokerage || undefined,
+      marketCenter: marketCenter || undefined,
+      state: stateVal || undefined,
+      yearsExperience: parseInt(yearsExp) || undefined,
+      gciLastYear: parseInt(gciLastYear) || undefined,
+      teamSize: parseInt(teamSize) || undefined,
+      currentLevel: selectedLevel,
+      incomeGoal: incomeGoal[0],
+      operationalScore: Math.round(operationalScore),
+      diagnosticAnswers: answers as Record<string, string>,
+      topProblems: selectedProblems,
+    });
 
     navigate('/execution');
-  }, [name, brokerage, marketCenter, stateVal, yearsExp, gciLastYear, teamSize, selectedLevel, operationalScore, incomeGoal, answers, selectedProblems, dispatch, navigate]);
+  }, [name, brokerage, marketCenter, stateVal, yearsExp, gciLastYear, teamSize, selectedLevel, operationalScore, incomeGoal, answers, selectedProblems, dispatch, navigate, profileMutation]);
 
   const canProceed = () => {
     if (step === 2) return name.trim().length > 0;
@@ -96,7 +108,7 @@ export default function Onboarding() {
             <div className="w-10 h-10 rounded-xl bg-[#DC143C] flex items-center justify-center">
               <Zap className="w-5 h-5 text-white" />
             </div>
-            <span className="font-display text-2xl font-bold tracking-tight">AgentOS</span>
+            <span className="font-display text-2xl font-bold tracking-tight">ASRE</span>
           </div>
           <h2 className="font-display text-4xl font-bold leading-tight mb-4">
             Your business has a
@@ -104,7 +116,7 @@ export default function Onboarding() {
             <span className="text-[#DC143C]">proven path.</span>
           </h2>
           <p className="text-white/60 text-lg leading-relaxed max-w-md">
-            AgentOS guides you through the MREA 7-Level framework — one deliverable at a time. No guesswork. Just execution.
+            ASRE guides you through the MREA 7-Level framework — one deliverable at a time. No guesswork. Just execution.
           </p>
           {/* Step indicator */}
           <div className="mt-12 flex items-center gap-2">
@@ -132,7 +144,7 @@ export default function Onboarding() {
             <div className="w-8 h-8 rounded-lg bg-[#DC143C] flex items-center justify-center">
               <Zap className="w-4 h-4 text-white" />
             </div>
-            <span className="font-display text-xl font-bold">AgentOS</span>
+            <span className="font-display text-xl font-bold">ASRE</span>
           </div>
 
           {/* Mobile step indicator */}

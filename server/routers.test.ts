@@ -114,6 +114,8 @@ vi.mock("./db", () => ({
   createReview: vi.fn().mockResolvedValue(undefined),
   createTransactionComm: vi.fn().mockResolvedValue(undefined),
   incrementPartnerCount: vi.fn().mockResolvedValue(undefined),
+  // Sprint A — coachProcedure tier check
+  getSubscription: vi.fn().mockResolvedValue({ tier: 'one_on_one', status: 'active' }),
 }));
 
 // Mock the LLM module
