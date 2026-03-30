@@ -21,7 +21,7 @@ import {
   DollarSign,
   Zap, BarChart3, UsersRound, GraduationCap,
   TrendingUp, Heart,
-  CalendarDays, Flame, Settings, Star, BookOpen,
+  CalendarDays, Flame, Settings, Star, BookOpen, LayoutList,
 } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
 
@@ -39,6 +39,7 @@ const NAV_ITEMS = [
     items: [
       { label: 'Current MREA Level', icon: Star,         path: '/growth/current-level' },
       { label: 'Coaching',           icon: GraduationCap, path: '/growth/coaching' },
+      { label: 'Coach Roster',       icon: LayoutList,    path: '/growth/roster' },
       { label: 'Team OS',            icon: UsersRound,    path: '/growth/team' },
     ],
   },

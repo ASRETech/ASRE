@@ -18,6 +18,7 @@ const PAGE_TITLES: Record<string, string> = {
   // PILLAR 3: GROWTH (KW order: Vision → Growth → Execution → Performance)
   '/growth/current-level':        'Current MREA Level',
   '/growth/coaching':             'Coaching',
+  '/growth/roster':               'Coach Roster',
   '/growth/team':                 'Team OS',
   // PILLAR 4: VISION
   '/vision/big-why':              'Big Why',

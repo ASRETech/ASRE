@@ -50,6 +50,12 @@ export const agentProfiles = mysqlTable("agent_profiles", {
   marketCenterId: varchar("marketCenterId", { length: 100 }),
   marketCenterName: varchar("marketCenterName", { length: 200 }),
   agentRole: mysqlEnum("agentRole", ["agent", "coach", "mc_op", "team_leader", "admin"]).default("agent"),
+  // PCx integration fields — future sync points (manual input for now, automated when PCx API is live)
+  pcxAgentId: varchar("pcxAgentId", { length: 64 }),
+  pcxEnrollmentDate: timestamp("pcxEnrollmentDate"),
+  pcxProgramPhase: varchar("pcxProgramPhase", { length: 32 }),
+  pcxLastSyncAt: timestamp("pcxLastSyncAt"),
+  pcxSyncEnabled: boolean("pcxSyncEnabled").default(false),
   // Big Why — Vision layer
   bigWhy: text("bigWhy"),
   bigWhyFaith: text("bigWhyFaith"),
@@ -484,12 +490,14 @@ export const coachingSessions = mysqlTable("coaching_sessions", {
   coachNotes: text("coachNotes"),
   clientSummary: text("clientSummary"),
   rating: int("rating"),
-  preBriefSentAt: timestamp("preBriefSentAt"),
+   preBriefSentAt: timestamp("preBriefSentAt"),
   zoomLink: varchar("zoomLink", { length: 512 }),
+  // PCx integration fields
+  pcxSessionId: varchar("pcxSessionId", { length: 64 }),
+  syncedToPcx: boolean("syncedToPcx").default(false),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
-
 export type CoachingSession = typeof coachingSessions.$inferSelect;
 export type InsertCoachingSession = typeof coachingSessions.$inferInsert;
 
@@ -505,11 +513,13 @@ export const coachingCommitments = mysqlTable("coaching_commitments", {
   text: text("text").notNull(),
   linkedDeliverableId: varchar("linkedDeliverableId", { length: 32 }),
   dueDate: timestamp("dueDate"),
-  isComplete: boolean("isComplete").default(false).notNull(),
+   isComplete: boolean("isComplete").default(false).notNull(),
   completedAt: timestamp("completedAt"),
+  // PCx integration fields
+  pcxCommitmentId: varchar("pcxCommitmentId", { length: 64 }),
+  syncedToPcx: boolean("syncedToPcx").default(false),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
-
 export type CoachingCommitment = typeof coachingCommitments.$inferSelect;
 export type InsertCoachingCommitment = typeof coachingCommitments.$inferInsert;
 

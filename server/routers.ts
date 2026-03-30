@@ -12,7 +12,12 @@ import { eq, and } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { getAuthUrl, exchangeCodeForTokens } from "./drive/googleDrive";
 import { provisionAgentFolder, syncEconomicModel, syncWeeklyPulse } from "./drive/driveSync";
-import { buildMCRollup } from "./drive/mcRollup";
+import { buildMCRollup } from './drive/mcRollup';
+import {
+  syncPulseActivityToPCx,
+  syncSessionNotesToPCx,
+  syncCommitmentCompletionToPCx,
+} from './integrations/pcxSync';
 import { wealthRouter } from "./routers/wealth";
 import { calendarRouter } from "./routers/calendar";
 import { scheduleRouter } from "./routers/schedule";
@@ -683,10 +688,14 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
             dueDate: c.dueDate ? new Date(c.dueDate) : undefined,
           });
         }
+        // Fire-and-forget PCx sync stub
+        syncSessionNotesToPCx(input.sessionId, input.coachNotes ?? '').catch(err =>
+          console.warn('[PCx Sync] Session notes sync failed silently:', err)
+        );
         return { success: true };
       }),
 
-    // ── Pre-session brief (Phase 6) ─────────────────────────────
+    // ── Pre-session brief (Phase 6) ──────────────────────────────────────────────
     generatePreBrief: coachProcedure
       .input(z.object({
         sessionId: z.string(),
@@ -752,6 +761,10 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
       .input(z.object({ commitmentId: z.string() }))
       .mutation(async ({ ctx, input }) => {
         await db.markCommitmentComplete(input.commitmentId, ctx.user.id);
+        // Fire-and-forget PCx sync stub
+        syncCommitmentCompletionToPCx(input.commitmentId, ctx.user.id).catch(err =>
+          console.warn('[PCx Sync] Commitment sync failed silently:', err)
+        );
         return { success: true };
       }),
 
@@ -812,6 +825,34 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
       );
 
       return results.sort((a, b) => a.healthScore - b.healthScore);
+    }),
+
+    // ── Coach Roster: PCx-compatible agent snapshots ─────────────────────────
+    // Powers the /growth/roster dashboard. Each snapshot is built from ASRE-native
+    // data and shaped into the PCx Business Dashboard format for future integration.
+    getRosterSnapshots: coachProcedure.query(async ({ ctx }) => {
+      const relationships = await db.getCoachRelationships(ctx.user.id);
+      const activeAgentIds = relationships
+        .filter(r => r.status === 'active')
+        .map(r => r.agentId);
+
+      if (activeAgentIds.length === 0) return [];
+
+      // Build snapshots in parallel — one DB round-trip set per agent
+      const { buildPCxAgentSnapshot } = await import('./integrations/pcxAdapter');
+      const snapshots = await Promise.all(
+        activeAgentIds.map(agentId =>
+          buildPCxAgentSnapshot(agentId).catch(err => {
+            console.error(`[Roster] Snapshot failed for agent ${agentId}:`, err);
+            return null;
+          })
+        )
+      );
+
+      // Filter out any failed snapshots, return sorted by agent name
+      return snapshots
+        .filter((s): s is NonNullable<typeof s> => s !== null)
+        .sort((a, b) => a.agentName.localeCompare(b.agentName));
     }),
   }),
   // ============================================================
@@ -1933,6 +1974,10 @@ Be warm, professional, and informative. Include next steps when applicable.`,
           closings: input.closings,
           notes: input.notes,
         });
+        // Fire-and-forget PCx sync stub (no-op until PCX_API_KEY is set)
+        syncPulseActivityToPCx(ctx.user.id).catch(err =>
+          console.warn('[PCx Sync] Pulse sync failed silently:', err)
+        );
         // Fire-and-forget Drive sync — don't let Drive failure break the save
         syncWeeklyPulse(ctx.user.id, {
           weekEnding,

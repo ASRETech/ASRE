@@ -75,6 +75,7 @@ import Analytics from "./pages/Analytics";
 import CoachPortal from "./pages/CoachPortal";
 import CoachAccept from "./pages/CoachAccept";
 import TeamOS from "./pages/TeamOS";
+import CoachRoster from "./pages/coaching/CoachRoster";
 
 // ── PILLAR 4: VISION ──
 import Wealth from './pages/Wealth';
@@ -135,6 +136,9 @@ function AppRoutes() {
       </Route>
       <Route path="/growth/coaching/accept/:token">
         <CoachAccept />
+      </Route>
+      <Route path="/growth/roster">
+        <DashboardLayout><CoachRoster /></DashboardLayout>
       </Route>
       <Route path="/growth/team">
         <DashboardLayout><TeamOS /></DashboardLayout>
