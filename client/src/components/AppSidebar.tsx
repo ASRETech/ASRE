@@ -20,7 +20,7 @@ import {
   Users,
   DollarSign,
   Zap, BarChart3, UsersRound, GraduationCap,
-  TrendingUp, Heart,
+  TrendingUp, Heart, Briefcase, Building2,
   CalendarDays, Flame, Settings, Star, BookOpen, LayoutList,
 } from 'lucide-react';
 import { useLocation, Link } from 'wouter';
@@ -30,8 +30,10 @@ const NAV_ITEMS = [
   {
     section: 'VISION',
     items: [
-      { label: 'Big Why',        icon: Heart,      path: '/vision/big-why' },
-      { label: 'Wealth Journey', icon: TrendingUp, path: '/vision/wealth' },
+      { label: 'Big Why',           icon: Heart,      path: '/vision/big-why' },
+      { label: 'Wealth Journey',    icon: TrendingUp, path: '/vision/wealth' },
+      { label: 'Agent Journey',     icon: Briefcase,  path: '/vision/agent-journey' },
+      { label: 'Business Journey',  icon: Building2,  path: '/vision/business-journey' },
     ],
   },
   {

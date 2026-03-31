@@ -20,6 +20,8 @@ import {
 } from './integrations/pcxSync';
 import { getStreakData } from './domains/execution/executionService';
 import { wealthRouter } from "./routers/wealth";
+import { agentJourneyRouter } from './routers/agentJourney';
+import { businessJourneyRouter } from './routers/businessJourney';
 import { calendarRouter } from "./routers/calendar";
 import { scheduleRouter } from "./routers/schedule";
 import { executionRouter } from "./routers/execution";
@@ -917,20 +919,33 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
 
       const results = await Promise.all(
         agentIds.map(async (agentId) => {
-          const profile = await db.getAgentProfile(agentId);
-          const milestones = await db.getWealthMilestones(agentId);
-          const properties = await db.getInvestmentProperties(agentId);
+          const [profile, allMilestones, properties] = await Promise.all([
+            db.getAgentProfile(agentId),
+            db.getAllMilestones(agentId),
+            db.getInvestmentProperties(agentId),
+          ]);
 
-          const doneCount = milestones.filter(m => m.status === 'done').length;
-          const totalCount = 33;
-          const healthScore = Math.round((doneCount / totalCount) * 100);
+          const wealthMilestonesForAgent = allMilestones.filter(m => m.domain === 'wealth');
+          const agentMilestonesForAgent  = allMilestones.filter(m => m.domain === 'agent');
+          const bizMilestonesForAgent    = allMilestones.filter(m => m.domain === 'business');
 
-          // Alert flags for coaching conversations
+          const wealthDone   = wealthMilestonesForAgent.filter(m => m.status === 'done').length;
+          const agentDone    = agentMilestonesForAgent.filter(m => m.status === 'done').length;
+          const bizDone      = bizMilestonesForAgent.filter(m => m.status === 'done').length;
+          const totalDone    = wealthDone + agentDone + bizDone;
+          const healthScore  = Math.round((totalDone / 100) * 100); // 100 total milestones
+
+          // Domain-specific scores for coach drill-down
+          const wealthScore   = Math.round((wealthDone / 33) * 100);
+          const agentScore    = Math.round((agentDone  / 32) * 100);
+          const businessScore = Math.round((bizDone    / 35) * 100);
+
+          // Alert flags for coaching conversations (wealth domain)
           const alerts: string[] = [];
-          const hasSepIra = milestones.find(m => m.milestoneKey === 't3_sep_ira' && m.status === 'done');
-          const hasLLC = milestones.find(m => m.milestoneKey === 't2_llc_formed' && m.status === 'done');
-          const hasEmergencyFund = milestones.find(m => m.milestoneKey === 't1_emergency_fund_3mo' && m.status === 'done');
-          const hasFiNumber = milestones.find(m => m.milestoneKey === 't4_fi_number_defined' && m.status === 'done');
+          const hasSepIra = wealthMilestonesForAgent.find(m => m.milestoneKey === 't3_sep_ira' && m.status === 'done');
+          const hasLLC = wealthMilestonesForAgent.find(m => m.milestoneKey === 't2_llc_formed' && m.status === 'done');
+          const hasEmergencyFund = wealthMilestonesForAgent.find(m => m.milestoneKey === 't1_emergency_fund_3mo' && m.status === 'done');
+          const hasFiNumber = wealthMilestonesForAgent.find(m => m.milestoneKey === 't4_fi_number_defined' && m.status === 'done');
 
           if (!hasEmergencyFund) alerts.push('No emergency fund');
           if (!hasLLC) alerts.push('No LLC');
@@ -940,11 +955,17 @@ Provide actionable, specific advice. Reference MREA models where applicable (Per
           return {
             agentId,
             agentName: profile?.name ?? 'Unknown Agent',
-            healthScore,
-            doneCount,
+            healthScore,        // unified 0–100 across all 100 milestones
+            wealthScore,        // wealth domain only
+            agentScore,         // agent domain only
+            businessScore,      // business domain only
+            totalDone,
+            wealthDone,
+            agentDone,
+            bizDone,
             propertyCount: properties.length,
             alerts,
-            incomeGoal: profile?.incomeGoal ?? null,
+            incomeGoal: profile?.incomeGoal ?? 0,
           };
         })
       );
@@ -2065,6 +2086,8 @@ Be warm, professional, and informative. Include next steps when applicable.`,
   // WEALTH JOURNEY (Phase 8)
   // ============================================================
   wealth: wealthRouter,
+  agentJourney: router(agentJourneyRouter),
+  businessJourney: router(businessJourneyRouter),
   calendar: calendarRouter,
   schedule: scheduleRouter,
 

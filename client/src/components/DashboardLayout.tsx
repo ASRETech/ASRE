@@ -23,6 +23,8 @@ const PAGE_TITLES: Record<string, string> = {
   // PILLAR 4: VISION
   '/vision/big-why':              'Big Why',
   '/vision/wealth':               'Wealth Journey',
+  '/vision/agent-journey':        'Agent Journey',
+  '/vision/business-journey':     'Business Journey',
   // SYSTEM
   '/settings':                    'Settings',
   '/settings/certification-interest': 'ASRE Coach Certification',

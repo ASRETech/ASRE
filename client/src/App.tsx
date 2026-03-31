@@ -80,6 +80,8 @@ import CoachRoster from "./pages/coaching/CoachRoster";
 // ── PILLAR 4: VISION ──
 import Wealth from './pages/Wealth';
 import BigWhy from './pages/vision/BigWhy';
+import AgentJourney from './pages/vision/AgentJourney';
+import BusinessJourney from './pages/vision/BusinessJourney';
 
 // ── SYSTEM ──
 import SettingsPage from "./pages/Settings";
@@ -150,6 +152,12 @@ function AppRoutes() {
       </Route>
       <Route path="/vision/wealth">
         <DashboardLayout><Wealth /></DashboardLayout>
+      </Route>
+      <Route path="/vision/agent-journey">
+        <DashboardLayout><AgentJourney /></DashboardLayout>
+      </Route>
+      <Route path="/vision/business-journey">
+        <DashboardLayout><BusinessJourney /></DashboardLayout>
       </Route>
 
       {/* ── SYSTEM ── */}

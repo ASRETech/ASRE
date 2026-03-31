@@ -1635,40 +1635,91 @@ export async function getUsersWithDriveTokens(): Promise<Array<{ id: number }>> 
 // PHASE 8 — WEALTH JOURNEY helpers
 // ============================================================
 import {
-  wealthMilestones, InsertWealthMilestone, WealthMilestone,
+  milestones, Milestone, InsertMilestone,
+  wealthMilestones, InsertWealthMilestone, WealthMilestone, // backward compat aliases
   wealthProfile, InsertWealthProfile, WealthProfile,
   investmentProperties, InsertInvestmentProperty, InvestmentProperty,
 } from '../drizzle/schema';
 
-export async function getWealthMilestones(userId: number): Promise<WealthMilestone[]> {
+export async function getWealthMilestones(userId: number): Promise<Milestone[]> {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(wealthMilestones).where(eq(wealthMilestones.userId, userId));
+  return db.select().from(milestones).where(
+    and(eq(milestones.userId, userId), eq(milestones.domain, 'wealth'))
+  );
+}
+
+// New generic helper — fetch milestones for any domain
+export async function getMilestonesByDomain(
+  userId: number,
+  domain: 'wealth' | 'agent' | 'business'
+): Promise<Milestone[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(milestones).where(
+    and(eq(milestones.userId, userId), eq(milestones.domain, domain))
+  );
+}
+
+// New helper — fetch ALL milestones for a user across all domains
+export async function getAllMilestones(userId: number): Promise<Milestone[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(milestones).where(eq(milestones.userId, userId));
 }
 
 export async function upsertWealthMilestone(
   userId: number,
   input: { milestoneKey: string; status: 'not_started' | 'in_progress' | 'done'; notes?: string; completedDate?: string }
 ): Promise<void> {
+  // Delegates to generic upsert with domain='wealth' for backward compatibility
+  return upsertMilestone(userId, 'wealth', input);
+}
+
+// New generic upsert — used by all three domain routers
+export async function upsertMilestone(
+  userId: number,
+  domain: 'wealth' | 'agent' | 'business',
+  input: { milestoneKey: string; status: 'not_started' | 'in_progress' | 'done'; notes?: string; completedDate?: string }
+): Promise<void> {
   const db = await getDb();
   if (!db) return;
-  const existing = await db.select().from(wealthMilestones)
-    .where(and(eq(wealthMilestones.userId, userId), eq(wealthMilestones.milestoneKey, input.milestoneKey)))
+  const existing = await db.select({ id: milestones.id }).from(milestones)
+    .where(and(
+      eq(milestones.userId, userId),
+      eq(milestones.domain, domain),
+      eq(milestones.milestoneKey, input.milestoneKey)
+    ))
     .limit(1);
   const completedDateVal = (input.completedDate ?? null) as any;
   if (existing.length > 0) {
-    await db.update(wealthMilestones)
+    await db.update(milestones)
       .set({ status: input.status, notes: input.notes ?? null, completedDate: completedDateVal })
-      .where(eq(wealthMilestones.id, existing[0].id));
+      .where(eq(milestones.id, existing[0].id));
   } else {
-    await (db.insert(wealthMilestones) as any).values({
+    await (db.insert(milestones) as any).values({
       userId,
+      domain,
       milestoneKey: input.milestoneKey,
       status: input.status,
       notes: input.notes ?? null,
       completedDate: completedDateVal,
     });
   }
+}
+
+/**
+ * Compute a unified milestone score (0–100) across all three domains.
+ * Done = 1 pt, in_progress = 0.5 pt, not_started = 0 pt. Total possible = 100.
+ */
+export function computeUnifiedJourneyScore(allMilestones: Milestone[]): number {
+  const TOTAL = 100;
+  const earned = allMilestones.reduce((sum, m) => {
+    if (m.status === 'done') return sum + 1;
+    if (m.status === 'in_progress') return sum + 0.5;
+    return sum;
+  }, 0);
+  return Math.min(100, Math.round((earned / TOTAL) * 100));
 }
 
 export async function getWealthProfile(userId: number): Promise<WealthProfile | null> {

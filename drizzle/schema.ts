@@ -1129,9 +1129,12 @@ export type InsertWeeklyPulse = typeof weeklyPulses.$inferInsert;
 // ============================================================
 // MED-08: wealthTracks removed — track unlock state is computed dynamically
 // from income data + milestone completion; no need to persist it.
-export const wealthMilestones = mysqlTable("wealthMilestones", {
+// Sprint E: Unified milestones table — replaces wealthMilestones.
+// Supports domain='wealth' (T1–5), 'agent' (T6–9), 'business' (T10–13).
+export const milestones = mysqlTable("milestones", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  domain: mysqlEnum("domain", ["wealth", "agent", "business"]).notNull().default("wealth"),
   milestoneKey: varchar("milestoneKey", { length: 100 }).notNull(),
   status: mysqlEnum("status", ["not_started", "in_progress", "done"]).default("not_started"),
   completedDate: date("completedDate"),
@@ -1141,11 +1144,20 @@ export const wealthMilestones = mysqlTable("wealthMilestones", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow(),
   createdAt: timestamp("createdAt").defaultNow(),
 }, (table) => ({
-  // MED-09: Index for fast milestone lookups by user + key
-  userKeyIdx: uniqueIndex("wealthMilestones_userId_key_idx").on(table.userId, table.milestoneKey),
+  // Unique: one row per user + domain + key
+  userDomainKeyIdx: uniqueIndex("milestones_userId_domain_key_idx").on(
+    table.userId, table.domain, table.milestoneKey
+  ),
+  // Fast domain-scoped queries
+  userDomainIdx: index("milestones_userId_domain_idx").on(table.userId, table.domain),
 }));
-export type WealthMilestone = typeof wealthMilestones.$inferSelect;
-export type InsertWealthMilestone = typeof wealthMilestones.$inferInsert;
+export type Milestone = typeof milestones.$inferSelect;
+export type InsertMilestone = typeof milestones.$inferInsert;
+
+// Backward-compat aliases — existing wealth router imports compile without change
+export const wealthMilestones = milestones;
+export type WealthMilestone = Milestone;
+export type InsertWealthMilestone = InsertMilestone;
 
 export const wealthProfile = mysqlTable("wealthProfile", {
   id: int("id").autoincrement().primaryKey(),
