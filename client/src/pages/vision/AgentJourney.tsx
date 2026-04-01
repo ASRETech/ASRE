@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { trpc } from '@/lib/trpc';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -111,11 +111,10 @@ function MilestoneRow({ meta, completion, onUpdate, isUpdating }: MilestoneRowPr
 }
 
 export default function AgentJourney() {
-  const { toast } = useToast();
   const { data, isLoading, refetch } = trpc.agentJourney.getJourney.useQuery();
   const updateMutation = trpc.agentJourney.updateMilestone.useMutation({
     onSuccess: () => refetch(),
-    onError: (e) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
+    onError: (e) => toast.error(e.message),
   });
 
   const completions: Array<{ milestoneKey: string; status: string | null; notes?: string | null }> = data?.milestones ?? [];
