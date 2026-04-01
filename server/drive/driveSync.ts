@@ -45,7 +45,7 @@ export async function provisionAgentFolder(
   if (!tokens) throw new Error('No Drive tokens for user ' + userId);
   const { accessToken, refreshToken } = tokens;
 
-  const rootId = await createFolder(accessToken, refreshToken, `AgentOS — ${agentName}`);
+  const rootId = await createFolder(accessToken, refreshToken, `ASRE — ${agentName}`);
   const ssIds: Record<string, string> = {};
 
   for (const name of SHEET_NAMES) {

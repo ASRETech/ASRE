@@ -67,7 +67,7 @@ export default function CoachAcceptPage() {
         </div>
         <h1 className="font-display text-lg font-bold mb-2">Coaching Invite</h1>
         <p className="text-sm text-muted-foreground mb-6">
-          An agent has invited you to be their coach on AgentOS. Accept to view their MREA journey progress, deliverables, and leave coaching feedback.
+          An agent has invited you to be their coach on ASRE. Accept to view their MREA journey progress, deliverables, and leave coaching feedback.
         </p>
 
         {authLoading ? (

@@ -165,7 +165,7 @@ export default function ClientPortalPage() {
 
         {/* Footer */}
         <div className="text-center py-4">
-          <p className="text-[10px] text-muted-foreground">Powered by AgentOS — Your agent's business operating system</p>
+          <p className="text-[10px] text-muted-foreground">Powered by ASRE — Your agent's business operating system</p>
         </div>
       </div>
     </div>

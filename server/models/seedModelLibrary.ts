@@ -287,7 +287,7 @@ export const KW_MODELS = [
     sortOrder: 31,
     content: {
       kwMantra: "It's not the market. It's your model.",
-      application: "When a down market is flagged, AgentOS surfaces a model review rather than a market assessment. The three questions: Is your Economic Model still accurate? Is your Lead Generation consistent? Is your team Organized for this market?",
+      application: "When a down market is flagged, ASRE surfaces a model review rather than a market assessment. The three questions: Is your Economic Model still accurate? Is your Lead Generation consistent? Is your team Organized for this market?",
       millerContext: "KW agents who survived 2008 weren't lucky. They had better models. The market downturn filtered out agents who were riding the market versus agents who were running a business.",
     },
   },

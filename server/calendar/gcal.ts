@@ -1,6 +1,6 @@
 /**
  * server/calendar/gcal.ts
- * Google Calendar API wrapper for AgentOS Action Engine
+ * Google Calendar API wrapper for ASRE Action Engine
  */
 import { google, Auth } from 'googleapis';
 import { ENV } from '../_core/env';
@@ -22,7 +22,7 @@ export async function createAsreCalendar(auth: Auth.OAuth2Client): Promise<strin
   const calendar = google.calendar({ version: 'v3', auth });
   const res = await calendar.calendars.insert({
     requestBody: {
-      summary: '📅 ASRE — AgentOS',
+      summary: '📅 ASRE — Action Engine',
       description: 'Auto-managed calendar by Applied Strategy Real Estate (ASRE). Contains lead gen blocks, financial deadlines, wealth milestones, and MREA deliverables.',
       timeZone: 'America/New_York',
     },

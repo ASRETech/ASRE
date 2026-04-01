@@ -1,5 +1,5 @@
 import { eq, and, desc, asc, gt, sql, or, inArray, isNull } from "drizzle-orm";
-import mysql from "mysql2/promise";
+import mysql, { type Pool } from "mysql2/promise";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser, users,
@@ -51,12 +51,13 @@ import { ENV } from './_core/env';
 
 // ── Connection pool — replaces single connection to prevent cascade failures ──
 // Drizzle's drizzle() accepts a pool directly; no other call-site changes needed.
-let _db: ReturnType<typeof drizzle> | null = null;
+let _pool: Pool | null = null;
+let _db: ReturnType<typeof drizzle<Record<string, unknown>>> | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      const pool = mysql.createPool({
+      _pool = mysql.createPool({
         uri: process.env.DATABASE_URL,
         waitForConnections: true,
         connectionLimit: 10,
@@ -64,9 +65,10 @@ export async function getDb() {
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
       });
-      _db = drizzle(pool);
+      _db = drizzle(_pool);
     } catch (error) {
       console.warn("[Database] Failed to create connection pool:", error);
+      _pool = null;
       _db = null;
     }
   }

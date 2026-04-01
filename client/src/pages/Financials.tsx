@@ -759,7 +759,7 @@ function TaxExportTab() {
 
       {/* Disclaimer */}
       <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20 text-xs text-muted-foreground">
-        <strong className="text-amber-600">Disclaimer:</strong> This export is for informational purposes only. Consult a licensed CPA or tax professional for official tax filing. AgentOS does not provide tax advice.
+        <strong className="text-amber-600">Disclaimer:</strong> This export is for informational purposes only. Consult a licensed CPA or tax professional for official tax filing. ASRE does not provide tax advice.
       </div>
     </div>
   );

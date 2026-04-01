@@ -157,7 +157,7 @@ export default function SettingsPage() {
                 Data & Privacy
               </h3>
               <p className="text-xs text-muted-foreground">
-                Your data is stored securely in the AgentOS database.
+                Your data is stored securely in the ASRE database.
                 You can export your data at any time.
               </p>
               <div className="mt-3">
@@ -246,7 +246,7 @@ export default function SettingsPage() {
                 Brokerage Configuration
               </h3>
               <p className="text-xs text-muted-foreground mb-4">
-                Customize AgentOS for your brokerage. Rename levels, adjust branding, and configure framework terminology.
+                Customize ASRE for your brokerage. Rename levels, adjust branding, and configure framework terminology.
               </p>
 
               <div className="space-y-4">
@@ -420,7 +420,7 @@ export default function SettingsPage() {
                       <div className="text-[10px] text-muted-foreground">
                         {driveStatus.isLoading ? 'Checking...' :
                           driveStatus.data?.connected
-                            ? driveStatus.data.hasFolders ? '✓ Connected — AgentOS folder provisioned' : '✓ Connected — provisioning folders...'
+                            ? driveStatus.data.hasFolders ? '✓ Connected — ASRE folder provisioned' : '✓ Connected — provisioning folders...'
                             : 'Not connected — click to authorize'}
                       </div>
                     </div>

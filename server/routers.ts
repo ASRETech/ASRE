@@ -591,7 +591,7 @@ Return ONLY the JSON, no markdown.`;
       }))
       .mutation(async ({ ctx, input }) => {
         const agent = await db.getUserByEmail(input.agentEmail);
-        if (!agent) throw new Error('No AgentOS user found with that email');
+        if (!agent) throw new Error('No ASRE user found with that email');
         await db.addCohortMember({
           cohortId: input.cohortId,
           agentId: agent.id,

@@ -1,4 +1,4 @@
-// AgentOS Global Store
+// ASRE Global Store
 // Design: "Command Center" — Swiss Design + Modern SaaS
 // All state management for the MVP using React-friendly patterns
 

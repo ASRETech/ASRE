@@ -406,7 +406,7 @@ function DraftPostCard({ post }: { post: any }) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="cohort" className="text-xs">My cohort only</SelectItem>
-              <SelectItem value="community" className="text-xs">All AgentOS users</SelectItem>
+              <SelectItem value="community" className="text-xs">All ASRE users</SelectItem>
               <SelectItem value="network" className="text-xs">KW Network</SelectItem>
               <SelectItem value="private" className="text-xs">Keep private</SelectItem>
             </SelectContent>

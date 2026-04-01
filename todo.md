@@ -1,4 +1,4 @@
-# AgentOS Phase 2 TODO
+# ASRE Phase 2 TODO
 
 ## Phase 1 (Complete)
 - [x] Full-stack upgrade (web-db-user)

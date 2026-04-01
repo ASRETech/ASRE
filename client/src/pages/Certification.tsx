@@ -10,7 +10,7 @@ import { trpc } from '@/lib/trpc';
 const MODULES = [
   { key: 'm1', title: 'MREA Framework Mastery', desc: 'Deep understanding of the 7-level model, economic model, and lead generation model.' },
   { key: 'm2', title: 'Coaching Methodology', desc: 'Accountability structures, session cadence, commitment tracking, and pre-brief workflows.' },
-  { key: 'm3', title: 'AgentOS Platform Proficiency', desc: 'Navigate all platform features: deliverables, pipeline, financials, SOPs, and coach portal.' },
+  { key: 'm3', title: 'ASRE Platform Proficiency', desc: 'Navigate all platform features: deliverables, pipeline, financials, SOPs, and coach portal.' },
   { key: 'm4', title: 'Business Diagnostics', desc: 'Assess agent businesses, identify bottlenecks, and prescribe level-appropriate interventions.' },
   { key: 'm5', title: 'Professional Standards', desc: 'Coaching ethics, client confidentiality, professional conduct, and industry best practices.' },
 ] as const;
@@ -56,7 +56,7 @@ export default function CertificationPage() {
           </div>
           <h1 className="font-display text-xl font-bold">Coach Certification</h1>
           <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
-            Complete all five modules and pass the assessment to become a certified AgentOS coach.
+            Complete all five modules and pass the assessment to become a certified ASRE coach.
           </p>
         </div>
 
@@ -86,7 +86,7 @@ export default function CertificationPage() {
             <GraduationCap className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
             <h3 className="font-display text-sm font-semibold mb-2">Ready to Begin?</h3>
             <p className="text-xs text-muted-foreground mb-4 max-w-sm mx-auto">
-              The certification program validates your expertise in the MREA framework and AgentOS platform.
+              The certification program validates your expertise in the MREA framework and ASRE platform.
               Complete all modules at your own pace.
             </p>
             <Button className="bg-[#DC143C] text-white text-xs"

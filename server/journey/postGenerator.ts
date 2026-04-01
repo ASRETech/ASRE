@@ -39,7 +39,7 @@ const HEADLINES: Record<string, (meta: any) => string> = {
       ? `Hit the ${m.label}`
       : `Crossed ${m.tier} transactions`,
   certification: () =>
-    `Earned Certified AgentOS Coach designation`,
+    `Earned Certified ASRE Coach designation`,
   streak: (m) =>
     `${m.days}-day daily engagement streak`,
   coaching_milestone: (m) =>

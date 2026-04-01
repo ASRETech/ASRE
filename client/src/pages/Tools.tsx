@@ -32,7 +32,7 @@ const CATEGORIES = [
 ];
 
 const TIER_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode | null }> = {
-  integrated: { label: 'Works with AgentOS', color: 'bg-[#DC143C]/10 text-[#DC143C] border-[#DC143C]/20', icon: <Zap className="w-3 h-3" /> },
+  integrated: { label: 'Works with ASRE', color: 'bg-[#DC143C]/10 text-[#DC143C] border-[#DC143C]/20', icon: <Zap className="w-3 h-3" /> },
   vetted:     { label: 'Vetted', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20', icon: <CheckCircle2 className="w-3 h-3" /> },
   featured:   { label: 'Featured', color: 'bg-amber-500/10 text-amber-600 border-amber-500/20', icon: <Star className="w-3 h-3" /> },
   listed:     { label: 'Community', color: 'bg-muted text-muted-foreground border-border/50', icon: null },
@@ -235,7 +235,7 @@ function ToolCard({ tool, userId }: { tool: any; userId: number }) {
             </Button>
             {tool.affiliateUrl && (
               <p className="text-[10px] text-muted-foreground text-center">
-                AgentOS may earn a referral fee if you subscribe through this link.
+                ASRE may earn a referral fee if you subscribe through this link.
               </p>
             )}
           </div>
@@ -338,7 +338,7 @@ export default function ToolsPage() {
           <div>
             <h1 className="font-display text-xl font-bold">AI Tools Directory</h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Curated tools for real estate professionals. Vetted by the AgentOS team.
+              Curated tools for real estate professionals. Vetted by the ASRE team.
             </p>
           </div>
           <SubmitToolDialog />
@@ -429,7 +429,7 @@ export default function ToolsPage() {
                     <div className="flex items-center gap-2 mb-3">
                       <Zap className="w-3.5 h-3.5 text-[#DC143C]" />
                       <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Works with AgentOS
+                        Works with ASRE
                       </h2>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -445,7 +445,7 @@ export default function ToolsPage() {
                     <div className="flex items-center gap-2 mb-3">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
                       <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Vetted by AgentOS
+                        Vetted by ASRE
                       </h2>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

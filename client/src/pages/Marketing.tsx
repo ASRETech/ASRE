@@ -338,7 +338,7 @@ function DatabaseMarketingTab({ leads }: { leads: any[] }) {
           36:12:3 Database Planning Calculator
         </h3>
         <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
-          Enter your full Met database size from Command. AgentOS calculates the contact
+          Enter your full Met database size from Command. ASRE calculates the contact
           cadence and projected production the 36:12:3 model recommends.
         </p>
         <div className="space-y-3">

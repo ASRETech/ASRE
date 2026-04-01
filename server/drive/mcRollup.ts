@@ -24,7 +24,7 @@ export async function buildMCRollup(
   if (!tokens) throw new Error('No Drive tokens for MC user');
   const { accessToken: at, refreshToken: rt } = tokens;
 
-  const folderId = await createFolder(at, rt, `AgentOS — ${mcName} Dashboard`);
+  const folderId = await createFolder(at, rt, `ASRE — ${mcName} Dashboard`);
   const rollupId = await createSpreadsheet(at, rt, 'Agent Scorecard — Top 20', folderId);
 
   const headers = [
