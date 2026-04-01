@@ -11,11 +11,13 @@
  *   PERFORMANCE → /performance/financials, /performance/analytics
  *
  * v12: Dashboard removed from nav; Certification moved to footer above Settings
+ * Sprint D Group 2: Added streak counter below level badge
  */
 
 import React from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { LEVELS } from '@/lib/store';
+import { trpc } from '@/lib/trpc';
 import {
   Users,
   DollarSign,
@@ -114,6 +116,14 @@ export function AppSidebar() {
   const currentLevel = user?.currentLevel ?? 1;
   const levelData = LEVELS[currentLevel - 1];
 
+  // Sprint D Group 2: streak data for sidebar display
+  // Reuses getStreakSummary (lightweight — no duplicate heavy queries)
+  const { data: streakData } = trpc.execution.getStreakSummary.useQuery(undefined, {
+    staleTime: 60_000,
+    retry: 1,
+  });
+  const currentStreak = streakData?.currentStreak ?? 0;
+
   return (
     <div
       className="flex flex-col h-full w-56 shrink-0"
@@ -168,6 +178,31 @@ export function AppSidebar() {
           </span>
         </div>
       )}
+
+      {/* Sprint D Group 2: Streak Counter — compact, below level badge, above nav */}
+      <div className="shrink-0 mx-3 mb-2 px-2 py-1 flex items-center gap-1.5">
+        {currentStreak > 0 ? (
+          <>
+            <Flame className="w-3.5 h-3.5 shrink-0" style={{ color: '#DC143C' }} />
+            <span className="text-[12px] font-bold" style={{ color: 'oklch(0.88 0.005 250)' }}>
+              {currentStreak}
+            </span>
+            <span className="text-[12px]" style={{ color: 'oklch(0.45 0.01 250)' }}>
+              day streak
+            </span>
+          </>
+        ) : (
+          <>
+            <span
+              className="w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ background: 'oklch(0.35 0.01 250)' }}
+            />
+            <span className="text-[12px]" style={{ color: 'oklch(0.45 0.01 250)' }}>
+              Start your streak
+            </span>
+          </>
+        )}
+      </div>
 
       {/* Nav — scrollable */}
       <nav

@@ -132,7 +132,7 @@ export default function ActionEngine() {
                   <p className="text-sm text-muted-foreground">Unable to load actions. Check your connection.</p>
                 </div>
               ) : (
-                <ActionList actions={actions} onComplete={() => {}} />
+                <ActionList actions={actions} onActionCompleted={() => {}} />
               )}
             </CardContent>
           </Card>

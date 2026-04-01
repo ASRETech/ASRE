@@ -3,17 +3,26 @@
  *
  * Primary screen of the application. 12-column grid layout:
  * Row 1: Score (4col) | Today's Actions (8col)
+ * [Sprint D] Coaching Nudge — full width between Row 1 and Row 2
  * Row 2: Streak (4col) | Leaderboard (4col) | Pipeline (4col)
- * Row 3: Weekly Pulse (4col) | Financials (4col) | Wealth (4col)
+ * Row 3: Vision (1col) | Weekly Pulse (1col) | Financials+GCI (1col) | Wealth (1col)
+ *
+ * Sprint D additions:
+ *   - CoachingNudge: AI-generated 1-2 sentence observation (Group 1)
+ *   - GciPaceCard: YTD GCI vs goal progress bar (Group 1)
+ *   - StreakAtRiskAlert: afternoon alert when streak is at risk (Group 2)
  */
+import { useState } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { ExecutionScoreCard } from '@/components/execution/ExecutionScoreCard';
 import { StreakTracker } from '@/components/execution/StreakTracker';
 import { Leaderboard } from '@/components/execution/Leaderboard';
 import { ActionList } from '@/components/execution/ActionList';
+import { CoachingNudge } from '@/components/execution/CoachingNudge';
+import { GciPaceCard } from '@/components/execution/GciPaceCard';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Flame, X } from 'lucide-react';
 import { PipelineWidget } from '@/components/widgets/PipelineWidget';
 import { WeeklyPulseWidget } from '@/components/widgets/WeeklyPulseWidget';
 import { FinancialWidget } from '@/components/widgets/FinancialWidget';
@@ -29,6 +38,9 @@ export default function ExecutionHome() {
   });
   const { data: summary, isLoading, isError } = summaryQuery;
 
+  // Sprint D Group 2: streak-at-risk alert dismiss state
+  const [streakAlertDismissed, setStreakAlertDismissed] = useState(false);
+
   const greeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -36,8 +48,53 @@ export default function ExecutionHome() {
     return 'Good evening';
   };
 
+  // Sprint D Group 2: streak-at-risk conditions
+  const now = new Date();
+  const isAfternoon = now.getHours() > 15 || (now.getHours() === 15 && now.getMinutes() >= 30);
+  const showStreakAlert =
+    !streakAlertDismissed &&
+    isAfternoon &&
+    (summary?.currentStreak ?? 0) > 0 &&
+    (summary?.completedActionsToday ?? 0) === 0;
+
+  const scrollToActions = () => {
+    const el = document.getElementById('action-list-section');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
     <div className="p-4 md:p-6 max-w-[1400px] mx-auto space-y-5">
+
+      {/* ── Streak-at-Risk Alert (Sprint D Group 2) ── */}
+      {showStreakAlert && (
+        <div
+          className="flex items-center gap-3 rounded-lg border px-4 py-3 text-sm"
+          style={{
+            background: 'rgba(220,20,60,0.08)',
+            borderColor: 'rgba(220,20,60,0.3)',
+          }}
+        >
+          <Flame className="h-4 w-4 shrink-0" style={{ color: '#DC143C' }} />
+          <span className="flex-1 text-foreground">
+            Log at least one action to keep your{' '}
+            <strong>{summary?.currentStreak}-day streak</strong> alive today.
+          </span>
+          <button
+            onClick={scrollToActions}
+            className="text-xs font-semibold shrink-0 hover:underline"
+            style={{ color: '#DC143C' }}
+          >
+            Log Action →
+          </button>
+          <button
+            onClick={() => setStreakAlertDismissed(true)}
+            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Dismiss"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* ── Error Banner ── */}
       {isError && (
@@ -77,7 +134,7 @@ export default function ExecutionHome() {
           />
         </div>
         {/* Today's Actions — 8 cols */}
-        <div className="lg:col-span-8">
+        <div className="lg:col-span-8" id="action-list-section">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-base font-semibold text-foreground">Today's Actions</h2>
             <span className="text-[11px] text-muted-foreground">
@@ -90,6 +147,9 @@ export default function ExecutionHome() {
           />
         </div>
       </div>
+
+      {/* ── Coaching Nudge (Sprint D Group 1) — full width ── */}
+      <CoachingNudge />
 
       {/* ── Row 2: Streak + Leaderboard + Pipeline ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -114,7 +174,11 @@ export default function ExecutionHome() {
           <VisionAnchorWidget />
         </div>
         <WeeklyPulseWidget />
-        <FinancialWidget />
+        {/* Financials column: GCI Pace Card (Sprint D) above existing FinancialWidget */}
+        <div className="rounded-xl border border-border bg-card p-4 flex flex-col">
+          <GciPaceCard />
+          <FinancialWidget />
+        </div>
         <WealthWidget />
       </div>
 

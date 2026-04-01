@@ -1,102 +1,175 @@
-// Screen 1: Onboarding — THE JOURNEY ENTRY POINT
-// Design: "Command Center" — Narrative-driven, not a typical sign-up form
-// Step 1: Welcome (level selection), Step 2: Profile, Step 3: Diagnostic, Step 4: Goals, Step 5: Results
-import { useState, useCallback } from 'react';
+/**
+ * Onboarding.tsx — Sprint D Group 4: First-Win Redesign
+ *
+ * 5-step flow designed to get a new user to their "first win" within 5 minutes:
+ *   Step 1 — Welcome + Basics (name, market center, MREA level)
+ *   Step 2 — Your Goal (GCI goal + live breakdown preview)
+ *   Step 3 — Your First Lead (quick-add lead form, skippable)
+ *   Step 4 — Your First Action (static action card preview)
+ *   Step 5 — Complete (2.5s celebration screen then auto-redirect to /execution)
+ *
+ * Sprint B/C constraints preserved:
+ *   - profileMutation.mutate() still fires on completion
+ *   - ASRE branding (not AgentOS)
+ *   - generateDeliverables() still called for local state
+ */
+
+import { useState, useCallback, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useApp } from '@/contexts/AppContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { LEVELS, DIAGNOSTIC_QUESTIONS, TOP_PROBLEMS } from '@/lib/store';
+import { LEVELS } from '@/lib/store';
 import { generateDeliverables } from '@/lib/mockData';
 import { trpc } from '@/lib/trpc';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Lock, Check, MapPin, Zap } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Lock, Check, Zap, CheckCircle2 } from 'lucide-react';
+import { nanoid } from 'nanoid';
 
-const ONBOARDING_HERO = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663267868321/DsnBpPCR9zPt6H566oZapB/onboarding-hero-X6E5CaPazPrJLybWpKQtMB.webp';
+const ONBOARDING_HERO =
+  'https://d2xsxph8kpxj0f.cloudfront.net/310519663267868321/DsnBpPCR9zPt6H566oZapB/onboarding-hero-X6E5CaPazPrJLybWpKQtMB.webp';
 
+const TOTAL_STEPS = 5;
+
+const LEAD_SOURCES = ['Sphere', 'Referral', 'Open House', 'Other'] as const;
+const LEAD_STAGES = ['New', 'Active'] as const;
+
+type LeadSource = (typeof LEAD_SOURCES)[number];
+type LeadStage = (typeof LEAD_STAGES)[number];
+
+// ── GCI breakdown helper ──────────────────────────────────────────────────────
+function computeGciBreakdown(goal: number) {
+  const closings = Math.round(goal / 6000);
+  const weeklyContacts = Math.round((closings / 48) * 36);
+  return { closings, weeklyContacts };
+}
+
+// ── Static action card text ───────────────────────────────────────────────────
+function buildFirstAction(level: number, weeklyContacts: number): string {
+  if (level <= 2 && weeklyContacts > 0) {
+    return `Make 5 contacts from your sphere today. Your weekly contact goal is approximately ${weeklyContacts}.`;
+  }
+  if (level >= 3) {
+    return 'Review your 90-day sprint plan and confirm your weekly contact target aligns with your GCI goal.';
+  }
+  return 'Open your Action Engine daily for your recommended next steps.';
+}
+
+// ── Progress bar ──────────────────────────────────────────────────────────────
+function StepIndicator({ current, total }: { current: number; total: number }) {
+  return (
+    <div className="flex items-center gap-1.5 mb-6">
+      {Array.from({ length: total }, (_, i) => (
+        <div
+          key={i}
+          className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+            i + 1 <= current ? 'bg-[#DC143C]' : 'bg-white/10'
+          }`}
+        />
+      ))}
+      <span className="text-white/30 text-xs font-mono ml-2 shrink-0">
+        {current} of {total}
+      </span>
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 export default function Onboarding() {
   const [, navigate] = useLocation();
   const { dispatch } = useApp();
+
   const profileMutation = trpc.profile.upsert.useMutation();
+  const createLeadMutation = trpc.leads.create.useMutation();
+
   const [step, setStep] = useState(1);
+
+  // Step 1: Basics
+  const [name, setName] = useState('');
+  const [marketCenter, setMarketCenter] = useState('');
   const [selectedLevel, setSelectedLevel] = useState(1);
 
-  // Profile fields
-  const [name, setName] = useState('');
-  const [brokerage, setBrokerage] = useState('');
-  const [marketCenter, setMarketCenter] = useState('');
-  const [stateVal, setStateVal] = useState('');
-  const [yearsExp, setYearsExp] = useState('');
-  const [gciLastYear, setGciLastYear] = useState('');
-  const [teamSize, setTeamSize] = useState('');
+  // Step 2: Goal
+  const [incomeGoalRaw, setIncomeGoalRaw] = useState('250000');
+  const incomeGoal = parseInt(incomeGoalRaw.replace(/\D/g, '')) || 0;
+  const { closings, weeklyContacts } = computeGciBreakdown(incomeGoal);
 
-  // Diagnostic
-  const [answers, setAnswers] = useState<Record<string, 'yes' | 'no' | 'partial'>>({});
+  // Step 3: First Lead
+  const [leadName, setLeadName] = useState('');
+  const [leadSource, setLeadSource] = useState<LeadSource>('Sphere');
+  const [leadStage, setLeadStage] = useState<LeadStage>('New');
+  const [leadGci, setLeadGci] = useState('');
+  const [leadSkipped, setLeadSkipped] = useState(false);
 
-  // Goals
-  const [incomeGoal, setIncomeGoal] = useState([250000]);
-  const [selectedProblems, setSelectedProblems] = useState<string[]>([]);
-
-  const operationalScore = Object.values(answers).filter(a => a === 'yes').length +
-    Object.values(answers).filter(a => a === 'partial').length * 0.5;
-
-  const avgCommission = 8500;
-  const transactionsNeeded = Math.ceil(incomeGoal[0] / avgCommission);
-
-  const handleComplete = useCallback(() => {
-    const user = {
-      id: 'user-1',
-      name: name || 'Agent',
-      email: '',
-      brokerage: brokerage || 'Keller Williams',
-      marketCenter: marketCenter || '',
-      state: stateVal || 'OH',
-      yearsExperience: parseInt(yearsExp) || 1,
-      gciLastYear: parseInt(gciLastYear) || 0,
-      teamSize: parseInt(teamSize) || 1,
-      currentLevel: selectedLevel,
-      operationalScore: Math.round(operationalScore),
-      incomeGoal: incomeGoal[0],
-      diagnosticAnswers: answers,
-      topProblems: selectedProblems,
-    };
-
-    dispatch({ type: 'SET_USER', payload: user });
-    dispatch({ type: 'SET_ONBOARDED', payload: true });
-    dispatch({ type: 'SET_DELIVERABLES', payload: generateDeliverables(selectedLevel) });
-
-    // Persist to server — fire and forget (don't block navigation on failure)
-    profileMutation.mutate({
-      name: name || undefined,
-      brokerage: brokerage || undefined,
-      marketCenter: marketCenter || undefined,
-      state: stateVal || undefined,
-      yearsExperience: parseInt(yearsExp) || undefined,
-      gciLastYear: parseInt(gciLastYear) || undefined,
-      teamSize: parseInt(teamSize) || undefined,
-      currentLevel: selectedLevel,
-      incomeGoal: incomeGoal[0],
-      operationalScore: Math.round(operationalScore),
-      diagnosticAnswers: answers as Record<string, string>,
-      topProblems: selectedProblems,
-    });
-
-    navigate('/execution');
-  }, [name, brokerage, marketCenter, stateVal, yearsExp, gciLastYear, teamSize, selectedLevel, operationalScore, incomeGoal, answers, selectedProblems, dispatch, navigate, profileMutation]);
-
-  const canProceed = () => {
-    if (step === 2) return name.trim().length > 0;
-    if (step === 3) return Object.keys(answers).length === 8;
+  const canProceed = (): boolean => {
+    if (step === 1) return name.trim().length > 0;
+    if (step === 3) return leadSkipped || leadName.trim().length > 0;
     return true;
   };
 
+  // Final completion — fires when step 5 mounts
+  const handleComplete = useCallback(() => {
+    profileMutation.mutate({
+      name: name || undefined,
+      marketCenter: marketCenter || undefined,
+      currentLevel: selectedLevel,
+      incomeGoal: incomeGoal || undefined,
+    });
+
+    dispatch({
+      type: 'SET_USER',
+      payload: {
+        id: 'user-1',
+        name: name || 'Agent',
+        email: '',
+        brokerage: 'Keller Williams',
+        marketCenter: marketCenter || '',
+        state: 'OH',
+        yearsExperience: 1,
+        gciLastYear: 0,
+        teamSize: 1,
+        currentLevel: selectedLevel,
+        operationalScore: 0,
+        incomeGoal: incomeGoal,
+        diagnosticAnswers: {},
+        topProblems: [],
+      },
+    });
+    dispatch({ type: 'SET_ONBOARDED', payload: true });
+    dispatch({ type: 'SET_DELIVERABLES', payload: generateDeliverables(selectedLevel) });
+
+    setTimeout(() => navigate('/execution'), 2500);
+  }, [name, marketCenter, selectedLevel, incomeGoal, dispatch, navigate, profileMutation]);
+
+  // Handle Next button
+  const handleNext = useCallback(async () => {
+    if (step === 3 && !leadSkipped && leadName.trim()) {
+      try {
+        await createLeadMutation.mutateAsync({
+          leadId: nanoid(16),
+          firstName: leadName.trim().split(' ')[0] || leadName.trim(),
+          lastName: leadName.trim().split(' ').slice(1).join(' ') || undefined,
+          source: leadSource,
+          stage: leadStage,
+          budget: leadGci ? parseInt(leadGci.replace(/\D/g, '')) || undefined : undefined,
+        });
+      } catch {
+        // Non-blocking
+      }
+    }
+    if (step < TOTAL_STEPS) setStep((s) => s + 1);
+  }, [step, leadSkipped, leadName, leadSource, leadStage, leadGci, createLeadMutation]);
+
+  // Trigger completion when step 5 renders
+  useEffect(() => {
+    if (step === 5) handleComplete();
+  }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white flex">
-      {/* Left visual panel - hidden on mobile */}
+      {/* Left visual panel */}
       <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden items-center justify-center">
         <img
           src={ONBOARDING_HERO}
@@ -118,18 +191,23 @@ export default function Onboarding() {
           <p className="text-white/60 text-lg leading-relaxed max-w-md">
             ASRE guides you through the MREA 7-Level framework — one deliverable at a time. No guesswork. Just execution.
           </p>
-          {/* Step indicator */}
           <div className="mt-12 flex items-center gap-2">
-            {[1, 2, 3, 4, 5].map((s) => (
-              <div key={s} className="flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-mono font-bold transition-all duration-300 ${
-                  s === step ? 'bg-[#DC143C] text-white scale-110' :
-                  s < step ? 'bg-[#DC143C]/30 text-[#DC143C]' :
-                  'bg-white/10 text-white/30'
-                }`}>
-                  {s < step ? <Check className="w-3.5 h-3.5" /> : s}
+            {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-mono font-bold transition-all duration-300 ${
+                    i + 1 === step
+                      ? 'bg-[#DC143C] text-white scale-110'
+                      : i + 1 < step
+                      ? 'bg-[#DC143C]/30 text-[#DC143C]'
+                      : 'bg-white/10 text-white/30'
+                  }`}
+                >
+                  {i + 1 < step ? <Check className="w-3.5 h-3.5" /> : i + 1}
                 </div>
-                {s < 5 && <div className={`w-6 h-0.5 ${s < step ? 'bg-[#DC143C]/30' : 'bg-white/10'}`} />}
+                {i < TOTAL_STEPS - 1 && (
+                  <div className={`w-6 h-0.5 ${i + 1 < step ? 'bg-[#DC143C]/30' : 'bg-white/10'}`} />
+                )}
               </div>
             ))}
           </div>
@@ -139,7 +217,6 @@ export default function Onboarding() {
       {/* Right content panel */}
       <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
         <div className="w-full max-w-lg">
-          {/* Mobile header */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
             <div className="w-8 h-8 rounded-lg bg-[#DC143C] flex items-center justify-center">
               <Zap className="w-4 h-4 text-white" />
@@ -147,14 +224,7 @@ export default function Onboarding() {
             <span className="font-display text-xl font-bold">ASRE</span>
           </div>
 
-          {/* Mobile step indicator */}
-          <div className="lg:hidden flex items-center gap-1.5 mb-6">
-            {[1, 2, 3, 4, 5].map((s) => (
-              <div key={s} className={`h-1 flex-1 rounded-full transition-all ${
-                s <= step ? 'bg-[#DC143C]' : 'bg-white/10'
-              }`} />
-            ))}
-          </div>
+          <StepIndicator current={step} total={TOTAL_STEPS} />
 
           <AnimatePresence mode="wait">
             <motion.div
@@ -164,301 +234,366 @@ export default function Onboarding() {
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
             >
-              {/* Step 1: Welcome — Level Selection */}
+              {/* ── Step 1: Welcome + Basics ── */}
               {step === 1 && (
                 <div>
-                  <h1 className="font-display text-3xl font-bold mb-2">Where are you on the path?</h1>
-                  <p className="text-white/50 mb-8">Select the level that best describes your current business stage.</p>
-                  <div className="space-y-2 max-h-[55vh] overflow-y-auto pr-2">
-                    {LEVELS.map((level) => {
-                      const isLocked = level.level > 4;
-                      const isSelected = selectedLevel === level.level;
-                      return (
-                        <button
-                          key={level.level}
-                          onClick={() => !isLocked && setSelectedLevel(level.level)}
-                          disabled={isLocked}
-                          className={`w-full text-left p-4 rounded-xl border transition-all duration-200 ${
-                            isSelected
-                              ? 'border-[#DC143C] bg-[#DC143C]/10'
-                              : isLocked
-                                ? 'border-white/5 bg-white/[0.02] opacity-40 cursor-not-allowed'
-                                : 'border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 font-mono text-sm font-bold ${
-                              isSelected ? 'bg-[#DC143C] text-white' :
-                              isLocked ? 'bg-white/5 text-white/20' :
-                              'bg-white/10 text-white/60'
-                            }`}>
-                              {isLocked ? <Lock className="w-3.5 h-3.5" /> : level.level}
-                            </div>
-                            <div>
-                              <div className="font-display font-semibold text-sm mb-0.5">
-                                {level.name}
-                                {isLocked && <span className="text-white/30 ml-2 text-xs font-normal">Coming soon</span>}
-                              </div>
-                              <p className="text-white/40 text-xs leading-relaxed">{level.description}</p>
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+                  <p className="text-white/40 text-xs uppercase tracking-wider font-mono mb-2">
+                    Welcome to ASRE
+                  </p>
+                  <h1 className="font-display text-3xl font-bold mb-1">
+                    Your execution OS for the MREA framework.
+                  </h1>
+                  <p className="text-white/50 mb-8">This takes about 4 minutes.</p>
 
-              {/* Step 2: Agent Profile */}
-              {step === 2 && (
-                <div>
-                  <h1 className="font-display text-3xl font-bold mb-2">Tell us about yourself</h1>
-                  <p className="text-white/50 mb-8">We'll use this to personalize your journey.</p>
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     <div>
-                      <Label className="text-white/70 text-xs uppercase tracking-wider mb-1.5 block">Full Name *</Label>
-                      <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-11" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-white/70 text-xs uppercase tracking-wider mb-1.5 block">Brokerage</Label>
-                        <Select value={brokerage} onValueChange={setBrokerage}>
-                          <SelectTrigger className="bg-white/5 border-white/10 text-white h-11">
-                            <SelectValue placeholder="Select" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Keller Williams">Keller Williams</SelectItem>
-                            <SelectItem value="RE/MAX">RE/MAX</SelectItem>
-                            <SelectItem value="Coldwell Banker">Coldwell Banker</SelectItem>
-                            <SelectItem value="Century 21">Century 21</SelectItem>
-                            <SelectItem value="eXp Realty">eXp Realty</SelectItem>
-                            <SelectItem value="Compass">Compass</SelectItem>
-                            <SelectItem value="Independent">Independent</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label className="text-white/70 text-xs uppercase tracking-wider mb-1.5 block">Market Center</Label>
-                        <Input value={marketCenter} onChange={(e) => setMarketCenter(e.target.value)} placeholder="Location" className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-11" />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <Label className="text-white/70 text-xs uppercase tracking-wider mb-1.5 block">State</Label>
-                        <Input value={stateVal} onChange={(e) => setStateVal(e.target.value)} placeholder="OH" className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-11" />
-                      </div>
-                      <div>
-                        <Label className="text-white/70 text-xs uppercase tracking-wider mb-1.5 block">Years in RE</Label>
-                        <Input type="number" value={yearsExp} onChange={(e) => setYearsExp(e.target.value)} placeholder="3" className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-11" />
-                      </div>
-                      <div>
-                        <Label className="text-white/70 text-xs uppercase tracking-wider mb-1.5 block">Team Size</Label>
-                        <Input type="number" value={teamSize} onChange={(e) => setTeamSize(e.target.value)} placeholder="1" className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-11" />
-                      </div>
+                      <Label className="text-white/70 text-xs uppercase tracking-wider mb-1.5 block">
+                        Full Name <span className="text-[#DC143C]">*</span>
+                      </Label>
+                      <Input
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Your full name"
+                        className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-11"
+                      />
                     </div>
                     <div>
-                      <Label className="text-white/70 text-xs uppercase tracking-wider mb-1.5 block">GCI Last 12 Months</Label>
-                      <Input type="number" value={gciLastYear} onChange={(e) => setGciLastYear(e.target.value)} placeholder="150000" className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-11 font-mono" />
+                      <Label className="text-white/70 text-xs uppercase tracking-wider mb-1.5 block">
+                        KW Market Center
+                      </Label>
+                      <Input
+                        value={marketCenter}
+                        onChange={(e) => setMarketCenter(e.target.value)}
+                        placeholder="e.g. KW Cincinnati East"
+                        className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-11"
+                      />
                     </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Step 3: Operational Diagnostic */}
-              {step === 3 && (
-                <div>
-                  <h1 className="font-display text-3xl font-bold mb-2">Operational Diagnostic</h1>
-                  <p className="text-white/50 mb-6">Answer honestly — this determines your starting point.</p>
-                  <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-2">
-                    {DIAGNOSTIC_QUESTIONS.map((q, i) => (
-                      <div key={q.id} className="p-3.5 rounded-xl border border-white/10 bg-white/[0.02]">
-                        <p className="text-sm text-white/80 mb-3">
-                          <span className="font-mono text-[#DC143C] mr-2 text-xs">Q{i + 1}</span>
-                          {q.text}
-                        </p>
-                        <div className="flex gap-2">
-                          {(['yes', 'partial', 'no'] as const).map((val) => (
+                    <div>
+                      <Label className="text-white/70 text-xs uppercase tracking-wider mb-3 block">
+                        Current MREA Level (1–7)
+                      </Label>
+                      <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
+                        {LEVELS.map((level) => {
+                          const isLocked = level.level > 4;
+                          const isSelected = selectedLevel === level.level;
+                          return (
                             <button
-                              key={val}
-                              onClick={() => setAnswers(prev => ({ ...prev, [q.id]: val }))}
-                              className={`flex-1 py-2 rounded-lg text-xs font-medium uppercase tracking-wider transition-all ${
-                                answers[q.id] === val
-                                  ? val === 'yes' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                    : val === 'partial' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                                    : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                                  : 'bg-white/5 text-white/40 border border-transparent hover:bg-white/10'
+                              key={level.level}
+                              onClick={() => !isLocked && setSelectedLevel(level.level)}
+                              disabled={isLocked}
+                              className={`w-full text-left p-3.5 rounded-xl border transition-all duration-200 ${
+                                isSelected
+                                  ? 'border-[#DC143C] bg-[#DC143C]/10'
+                                  : isLocked
+                                  ? 'border-white/5 bg-white/[0.02] opacity-40 cursor-not-allowed'
+                                  : 'border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]'
                               }`}
                             >
-                              {val}
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-mono text-sm font-bold ${
+                                    isSelected
+                                      ? 'bg-[#DC143C] text-white'
+                                      : isLocked
+                                      ? 'bg-white/5 text-white/20'
+                                      : 'bg-white/10 text-white/60'
+                                  }`}
+                                >
+                                  {isLocked ? <Lock className="w-3.5 h-3.5" /> : level.level}
+                                </div>
+                                <div>
+                                  <div className="font-display font-semibold text-sm">
+                                    {level.name}
+                                    {isLocked && (
+                                      <span className="text-white/30 ml-2 text-xs font-normal">
+                                        Coming soon
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-white/40 text-xs mt-0.5">
+                                    {level.deliverables.length} deliverables
+                                  </div>
+                                </div>
+                              </div>
                             </button>
-                          ))}
-                        </div>
+                          );
+                        })}
                       </div>
-                    ))}
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* Step 4: Goal Setting */}
-              {step === 4 && (
+              {/* ── Step 2: Your Goal ── */}
+              {step === 2 && (
                 <div>
-                  <h1 className="font-display text-3xl font-bold mb-2">Set Your Target</h1>
-                  <p className="text-white/50 mb-8">What GCI are you building toward?</p>
+                  <p className="text-white/40 text-xs uppercase tracking-wider font-mono mb-2">
+                    Step 2 of 5
+                  </p>
+                  <h1 className="font-display text-3xl font-bold mb-1">Your Goal</h1>
+                  <p className="text-white/50 mb-8">What GCI are you building toward this year?</p>
 
-                  <div className="mb-8">
-                    <div className="flex items-baseline justify-between mb-4">
-                      <Label className="text-white/70 text-xs uppercase tracking-wider">GCI Goal</Label>
-                      <span className="font-mono text-2xl font-bold text-[#DC143C]">
-                        ${incomeGoal[0].toLocaleString()}
+                  <div className="mb-6">
+                    <Label className="text-white/70 text-xs uppercase tracking-wider mb-1.5 block">
+                      Annual GCI Goal
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 font-mono">
+                        $
                       </span>
-                    </div>
-                    <Slider
-                      value={incomeGoal}
-                      onValueChange={setIncomeGoal}
-                      min={50000}
-                      max={1000000}
-                      step={25000}
-                      className="mb-2"
-                    />
-                    <div className="flex justify-between text-[10px] font-mono text-white/30">
-                      <span>$50K</span>
-                      <span>$1M+</span>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={incomeGoalRaw}
+                        onChange={(e) => setIncomeGoalRaw(e.target.value)}
+                        placeholder="250000"
+                        className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-11 pl-7 font-mono text-lg"
+                      />
                     </div>
                   </div>
 
-                  {/* Live calculation */}
-                  <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 mb-8">
-                    <div className="text-xs text-white/40 uppercase tracking-wider mb-2">Transactions Needed</div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-mono text-3xl font-bold text-white">{transactionsNeeded}</span>
-                      <span className="text-white/40 text-sm">transactions / year</span>
+                  {incomeGoal > 0 && (
+                    <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 mb-6">
+                      <div className="text-xs text-white/40 uppercase tracking-wider mb-3 font-mono">
+                        To hit ${incomeGoal.toLocaleString()} in GCI you need approximately:
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="font-mono text-2xl font-bold text-[#DC143C]">{closings}</div>
+                          <div className="text-white/50 text-xs mt-0.5">closings at $6,000 avg commission</div>
+                        </div>
+                        <div>
+                          <div className="font-mono text-2xl font-bold text-white">{weeklyContacts}</div>
+                          <div className="text-white/50 text-xs mt-0.5">contacts per week to generate that pipeline</div>
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-white/25 mt-3 font-mono">
+                        Approximate based on KW averages
+                      </div>
                     </div>
-                    <div className="text-[11px] text-white/30 mt-1 font-mono">
-                      Based on ${avgCommission.toLocaleString()} avg commission per transaction
-                    </div>
-                  </div>
+                  )}
+                </div>
+              )}
 
-                  {/* Top Problems */}
-                  <div>
-                    <Label className="text-white/70 text-xs uppercase tracking-wider mb-3 block">Top 3 Challenges</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {TOP_PROBLEMS.map((problem) => {
-                        const isSelected = selectedProblems.includes(problem);
-                        return (
+              {/* ── Step 3: Your First Lead ── */}
+              {step === 3 && (
+                <div>
+                  <p className="text-white/40 text-xs uppercase tracking-wider font-mono mb-2">
+                    Step 3 of 5
+                  </p>
+                  <h1 className="font-display text-3xl font-bold mb-1">Add your first lead</h1>
+                  <p className="text-white/50 mb-8">
+                    to activate your pipeline. Takes 15 seconds. You can add more later.
+                  </p>
+
+                  <div className="space-y-5">
+                    <div>
+                      <Label className="text-white/70 text-xs uppercase tracking-wider mb-1.5 block">
+                        Lead Name
+                      </Label>
+                      <Input
+                        value={leadName}
+                        onChange={(e) => setLeadName(e.target.value)}
+                        placeholder="Jane Smith"
+                        className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-11"
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-white/70 text-xs uppercase tracking-wider mb-2 block">
+                        Source
+                      </Label>
+                      <div className="flex gap-2 flex-wrap">
+                        {LEAD_SOURCES.map((src) => (
                           <button
-                            key={problem}
-                            onClick={() => {
-                              if (isSelected) {
-                                setSelectedProblems(prev => prev.filter(p => p !== problem));
-                              } else if (selectedProblems.length < 3) {
-                                setSelectedProblems(prev => [...prev, problem]);
-                              }
-                            }}
-                            className={`px-3 py-1.5 rounded-lg text-xs transition-all ${
-                              isSelected
-                                ? 'bg-[#DC143C]/20 text-[#DC143C] border border-[#DC143C]/30'
-                                : 'bg-white/5 text-white/50 border border-transparent hover:bg-white/10'
+                            key={src}
+                            onClick={() => setLeadSource(src)}
+                            className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-all border ${
+                              leadSource === src
+                                ? 'bg-[#DC143C]/20 text-[#DC143C] border-[#DC143C]/30'
+                                : 'bg-white/5 text-white/50 border-transparent hover:bg-white/10'
                             }`}
                           >
-                            {problem}
+                            {src}
                           </button>
-                        );
-                      })}
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-white/70 text-xs uppercase tracking-wider mb-2 block">
+                        Stage
+                      </Label>
+                      <div className="flex gap-2">
+                        {LEAD_STAGES.map((stg) => (
+                          <button
+                            key={stg}
+                            onClick={() => setLeadStage(stg)}
+                            className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-all border ${
+                              leadStage === stg
+                                ? 'bg-[#DC143C]/20 text-[#DC143C] border-[#DC143C]/30'
+                                : 'bg-white/5 text-white/50 border-transparent hover:bg-white/10'
+                            }`}
+                          >
+                            {stg}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-white/70 text-xs uppercase tracking-wider mb-1.5 block">
+                        Estimated GCI ($) — optional
+                      </Label>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={leadGci}
+                        onChange={(e) => setLeadGci(e.target.value)}
+                        placeholder="e.g. 9000"
+                        className="bg-white/5 border-white/10 text-white placeholder:text-white/20 h-11 font-mono"
+                      />
                     </div>
                   </div>
+
+                  <p className="text-white/25 text-xs mt-5 leading-relaxed">
+                    ASRE is not a CRM. This activates your pipeline tracker — not a contact database.
+                    KW Command manages your relationships.
+                  </p>
                 </div>
               )}
 
-              {/* Step 5: Results */}
-              {step === 5 && (
+              {/* ── Step 4: Your First Action ── */}
+              {step === 4 && (
                 <div>
-                  <h1 className="font-display text-3xl font-bold mb-2">Your Operations Score</h1>
-                  <p className="text-white/50 mb-8">Here's where you stand — and where we'll take you.</p>
+                  <p className="text-white/40 text-xs uppercase tracking-wider font-mono mb-2">
+                    Step 4 of 5
+                  </p>
+                  <h1 className="font-display text-3xl font-bold mb-1">
+                    Here is your first recommended action.
+                  </h1>
+                  <p className="text-white/50 mb-8">
+                    ASRE generated this from your goal and level.
+                  </p>
 
-                  {/* Score display */}
-                  <div className="flex items-center justify-center mb-8">
-                    <div className="relative w-32 h-32">
-                      <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
-                        <circle
-                          cx="50" cy="50" r="42" fill="none"
-                          stroke="#DC143C" strokeWidth="6" strokeLinecap="round"
-                          strokeDasharray={`${(operationalScore / 8) * 264} 264`}
-                          className="transition-all duration-1000"
-                        />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="font-mono text-3xl font-bold text-white">{operationalScore}</span>
-                        <span className="text-[10px] text-white/40 uppercase tracking-wider">/8</span>
+                  <div className="p-4 rounded-xl border border-[#DC143C]/30 bg-[#DC143C]/5 mb-6">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 shrink-0">
+                        <CheckCircle2 className="w-5 h-5 text-[#DC143C]" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-start gap-2 flex-wrap mb-1">
+                          <span className="text-sm font-medium text-white leading-snug">
+                            {buildFirstAction(selectedLevel, weeklyContacts)}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-1.5 py-0 shrink-0 bg-red-500/10 text-red-500 border-red-500/20"
+                          >
+                            High
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs font-semibold text-[#DC143C]">
+                          <Zap className="w-3 h-3" />
+                          <span>+10 XP</span>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Gap analysis */}
-                  <div className="space-y-2 mb-8">
-                    {DIAGNOSTIC_QUESTIONS.map((q, i) => {
-                      const answer = answers[q.id];
-                      return (
-                        <div key={q.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.02]">
-                          <div className={`w-2 h-2 rounded-full shrink-0 ${
-                            answer === 'yes' ? 'bg-emerald-400' :
-                            answer === 'partial' ? 'bg-amber-400' : 'bg-red-400'
-                          }`} />
-                          <span className="text-xs text-white/60 flex-1">{q.text}</span>
-                          <span className={`text-[10px] font-mono uppercase ${
-                            answer === 'yes' ? 'text-emerald-400' :
-                            answer === 'partial' ? 'text-amber-400' : 'text-red-400'
-                          }`}>{answer}</span>
-                        </div>
-                      );
-                    })}
+                  <p className="text-white/40 text-sm leading-relaxed">
+                    When you finish setup, your full action list will be waiting in Execution HQ.
+                  </p>
+                </div>
+              )}
+
+              {/* ── Step 5: Complete ── */}
+              {step === 5 && (
+                <div className="flex flex-col items-center justify-center text-center py-8">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+                    className="w-16 h-16 rounded-full bg-[#DC143C]/20 border border-[#DC143C]/30 flex items-center justify-center mb-6"
+                  >
+                    <Check className="w-8 h-8 text-[#DC143C]" />
+                  </motion.div>
+
+                  <h1 className="font-display text-3xl font-bold mb-2">Your ASRE is live.</h1>
+
+                  <div className="space-y-2 mt-6 mb-8 text-left w-full max-w-xs mx-auto">
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/10">
+                      <span className="text-white/50 text-sm">Goal</span>
+                      <span className="text-white font-mono font-semibold">
+                        {incomeGoal > 0 ? `$${incomeGoal.toLocaleString()}` : '\u2014'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/10">
+                      <span className="text-white/50 text-sm">Level</span>
+                      <span className="text-white font-mono font-semibold">{selectedLevel}</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/10">
+                      <span className="text-white/50 text-sm">Streak starts</span>
+                      <span className="text-white font-mono font-semibold">Today</span>
+                    </div>
                   </div>
 
-                  <div className="p-4 rounded-xl border border-[#DC143C]/20 bg-[#DC143C]/5 mb-6">
-                    <div className="text-xs text-[#DC143C] uppercase tracking-wider mb-1 font-medium">Starting at Level {selectedLevel}</div>
-                    <div className="font-display text-lg font-semibold text-white">{LEVELS[selectedLevel - 1]?.name}</div>
-                    <div className="text-xs text-white/40 mt-1">
-                      {LEVELS[selectedLevel - 1]?.deliverables.length} deliverables to build
-                    </div>
+                  <p className="text-white/40 text-sm">Taking you to Execution HQ\u2026</p>
+                  <div className="mt-3 flex gap-1">
+                    {[0, 1, 2].map((i) => (
+                      <motion.div
+                        key={i}
+                        className="w-1.5 h-1.5 rounded-full bg-[#DC143C]"
+                        animate={{ opacity: [0.3, 1, 0.3] }}
+                        transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                      />
+                    ))}
                   </div>
                 </div>
               )}
             </motion.div>
           </AnimatePresence>
 
-          {/* Navigation buttons */}
-          <div className="flex items-center justify-between mt-8">
-            {step > 1 ? (
-              <Button
-                variant="ghost"
-                onClick={() => setStep(s => s - 1)}
-                className="text-white/50 hover:text-white hover:bg-white/5"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </Button>
-            ) : <div />}
+          {/* Navigation — hidden on step 5 */}
+          {step < 5 && (
+            <div className="flex items-center justify-between mt-8">
+              {step > 1 ? (
+                <Button
+                  variant="ghost"
+                  onClick={() => setStep((s) => s - 1)}
+                  className="text-white/50 hover:text-white hover:bg-white/5"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back
+                </Button>
+              ) : (
+                <div />
+              )}
 
-            {step < 5 ? (
-              <Button
-                onClick={() => setStep(s => s + 1)}
-                disabled={!canProceed()}
-                className="bg-[#DC143C] hover:bg-[#DC143C]/90 text-white px-6"
-              >
-                Continue
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            ) : (
-              <Button
-                onClick={handleComplete}
-                className="bg-[#DC143C] hover:bg-[#DC143C]/90 text-white px-8"
-              >
-                Build My Business
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            )}
-          </div>
+              <div className="flex flex-col items-end gap-2">
+                <Button
+                  onClick={handleNext}
+                  disabled={!canProceed() || createLeadMutation.isPending}
+                  className="bg-[#DC143C] hover:bg-[#DC143C]/90 text-white px-6"
+                >
+                  {step === 4 ? 'Finish Setup' : 'Continue'}
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+
+                {step === 3 && (
+                  <button
+                    onClick={() => {
+                      setLeadSkipped(true);
+                      setStep((s) => s + 1);
+                    }}
+                    className="text-white/30 text-xs hover:text-white/50 transition-colors"
+                  >
+                    Skip for now \u2192
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

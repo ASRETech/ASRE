@@ -71,6 +71,10 @@ type Snapshot = {
   wealthHealthScore: number | null;
   pcxSyncEnabled: boolean;
   snapshotGeneratedAt: string;
+  // Sprint D Group 3
+  actionsThisWeek?: number;
+  pulseSubmittedThisWeek?: boolean;
+  heartbeatStatus?: 'active' | 'light' | 'inactive' | 'dark';
 };
 
 type SortKey = keyof Pick<
@@ -308,6 +312,9 @@ export default function CoachRoster() {
                   <SortHeader label="Goal Pace" field="goalPacePercent" />
                 </TableHead>
                 <TableHead className="text-white/60 text-xs uppercase tracking-wider font-mono">
+                  Activity
+                </TableHead>
+                <TableHead className="text-white/60 text-xs uppercase tracking-wider font-mono">
                   Last Pulse
                 </TableHead>
                 <TableHead className="text-white/60 text-xs uppercase tracking-wider font-mono">
@@ -394,6 +401,29 @@ export default function CoachRoster() {
                       >
                         {s.goalPacePercent}%
                       </span>
+                    </TableCell>
+
+                    {/* Heartbeat status */}
+                    <TableCell>
+                      {(() => {
+                        const hb = s.heartbeatStatus;
+                        const dotColor =
+                          hb === 'active'   ? 'bg-emerald-500' :
+                          hb === 'light'    ? 'bg-amber-400' :
+                          hb === 'inactive' ? 'bg-red-500' :
+                          'bg-zinc-600';
+                        const label =
+                          hb === 'active'   ? 'Active' :
+                          hb === 'light'    ? 'Light' :
+                          hb === 'inactive' ? 'None' :
+                          'Dark';
+                        return (
+                          <div className="flex items-center gap-1.5">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
+                            <span className="text-white/50 text-xs font-mono">{label}</span>
+                          </div>
+                        );
+                      })()}
                     </TableCell>
 
                     {/* Last pulse */}

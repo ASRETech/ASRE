@@ -7,6 +7,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { startDriveScheduler } from "../drive/driveScheduler";
 import { startCalendarScheduler } from "../calendar/calendarScheduler";
+import { startWeeklyPulseScheduler } from "../execution/weeklyPulseScheduler";
 import { exchangeCodeForTokens } from "../drive/googleDrive";
 import { provisionAgentFolder } from "../drive/driveSync";
 import { sdk } from "./sdk";
@@ -266,6 +267,7 @@ async function startServer() {
     seedModelLibrary().catch(e => console.warn('[Seed] Model library seed failed:', e.message));
     startDriveScheduler();
     startCalendarScheduler();
+    startWeeklyPulseScheduler();
   });
 }
 
