@@ -48,7 +48,10 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       <div className="text-muted-foreground text-sm">Loading...</div>
     </div>
   );
-  if (!user) return <Redirect to="/login" />;
+
+  // Redirect unauthenticated users to /login, preserving the intended destination
+  // so Login.tsx can redirect back after a successful sign-in.
+  if (!user) return <Redirect to={`/login?returnTo=${encodeURIComponent(location)}`} />;
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">

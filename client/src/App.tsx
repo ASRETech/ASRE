@@ -47,57 +47,65 @@
  *     /journey, /level, /library, /culture, /tools, /recruiting
  */
 
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
 import { Route, Switch, Redirect } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AppProvider } from "./contexts/AppContext";
 import { DashboardLayout } from "./components/DashboardLayout";
 
-// ── AUTH / ONBOARDING ──
+// ── Eager imports: tiny components always needed on first paint ──
+import NotFound from "@/pages/NotFound";
 import Login from './pages/Login';
-import Onboarding from "./pages/Onboarding";
 
-// ── PILLAR 1: EXECUTION ──
-import ExecutionHome from './pages/execution/ExecutionHome';
-import Pipeline from "./pages/Pipeline";
-import ActionEngine from './pages/ActionEngine';
-import ScheduleCreator from './pages/ScheduleCreator';
-import TransactionsComingSoon from './pages/execution/TransactionsComingSoon';
+// ── Lazy imports: each page is a separate chunk, loaded only when visited ──
+// AUTH / ONBOARDING
+const Onboarding = lazy(() => import("./pages/Onboarding"));
+// PILLAR 1: EXECUTION
+const ExecutionHome = lazy(() => import('./pages/execution/ExecutionHome'));
+const Pipeline = lazy(() => import("./pages/Pipeline"));
+const ActionEngine = lazy(() => import('./pages/ActionEngine'));
+const ScheduleCreator = lazy(() => import('./pages/ScheduleCreator'));
+const TransactionsComingSoon = lazy(() => import('./pages/execution/TransactionsComingSoon'));
+// PILLAR 2: PERFORMANCE
+const Financials = lazy(() => import("./pages/Financials"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+// PILLAR 3: GROWTH
+const CoachPortal = lazy(() => import("./pages/CoachPortal"));
+const CoachAccept = lazy(() => import("./pages/CoachAccept"));
+const TeamOS = lazy(() => import("./pages/TeamOS"));
+const CoachRoster = lazy(() => import("./pages/coaching/CoachRoster"));
+// PILLAR 4: VISION
+const Wealth = lazy(() => import('./pages/Wealth'));
+const BigWhy = lazy(() => import('./pages/vision/BigWhy'));
+const AgentJourney = lazy(() => import('./pages/vision/AgentJourney'));
+const BusinessJourney = lazy(() => import('./pages/vision/BusinessJourney'));
+// SYSTEM
+const SettingsPage = lazy(() => import("./pages/Settings"));
+const CertificationInterest = lazy(() => import("./pages/CertificationInterest"));
+const ClientPortal = lazy(() => import("./pages/ClientPortal"));
+// LEGACY (no sidebar links — kept for backward compat)
+const Journey = lazy(() => import("./pages/Journey"));
+const CurrentLevel = lazy(() => import("./pages/CurrentLevel"));
+const Library = lazy(() => import("./pages/Library"));
+const CultureOS = lazy(() => import("./pages/CultureOS"));
+const Tools = lazy(() => import('./pages/Tools'));
+const Recruiting = lazy(() => import("./pages/Recruiting"));
 
-// ── PILLAR 2: PERFORMANCE ──
-import Financials from "./pages/Financials";
-import Analytics from "./pages/Analytics";
-
-// ── PILLAR 3: GROWTH ──
-import CoachPortal from "./pages/CoachPortal";
-import CoachAccept from "./pages/CoachAccept";
-import TeamOS from "./pages/TeamOS";
-import CoachRoster from "./pages/coaching/CoachRoster";
-
-// ── PILLAR 4: VISION ──
-import Wealth from './pages/Wealth';
-import BigWhy from './pages/vision/BigWhy';
-import AgentJourney from './pages/vision/AgentJourney';
-import BusinessJourney from './pages/vision/BusinessJourney';
-
-// ── SYSTEM ──
-import SettingsPage from "./pages/Settings";
-import CertificationInterest from "./pages/CertificationInterest";
-import ClientPortal from "./pages/ClientPortal";
-
-// ── LEGACY (no sidebar links — kept for backward compat) ──
-import Journey from "./pages/Journey";
-import CurrentLevel from "./pages/CurrentLevel";
-import Library from "./pages/Library";
-import CultureOS from "./pages/CultureOS";
-import Tools from './pages/Tools';
-import Recruiting from "./pages/Recruiting";
+// Shared loading fallback used by all Suspense boundaries
+function PageLoader() {
+  return (
+    <div className="flex h-screen w-full items-center justify-center bg-background">
+      <div className="text-muted-foreground text-sm">Loading...</div>
+    </div>
+  );
+}
 
 function AppRoutes() {
   return (
+    <Suspense fallback={<PageLoader />}>
     <Switch>
       {/* ── ROOT ── */}
       <Route path="/" component={() => <Redirect to="/execution" />} />
@@ -207,6 +215,7 @@ function AppRoutes() {
       {/* ── CATCH-ALL ── */}
       <Route component={NotFound} />
     </Switch>
+    </Suspense>
   );
 }
 

@@ -4,6 +4,7 @@
  * Phase 11 fixes: CRIT-01, CRIT-02, CRIT-06, HIGH-08
  */
 import { protectedProcedure, router } from '../_core/trpc';
+import { encryptToken, decryptToken } from '../_core/crypto';
 import { z } from 'zod';
 import { ENV } from '../_core/env';
 import { google } from 'googleapis';
@@ -33,26 +34,29 @@ async function refreshTokenIfNeeded(
   conn: Awaited<ReturnType<typeof requireDb>>,
   settings: typeof schema.calendarSettings.$inferSelect
 ): Promise<string> {
-  // If no refresh token, just return the current access token
-  if (!settings.gcalRefreshToken) return settings.gcalAccessToken ?? '';
+  // If no refresh token, just return the current access token (decrypted)
+  if (!settings.gcalRefreshToken) return settings.gcalAccessToken ? decryptToken(settings.gcalAccessToken) : '';
 
   try {
     const auth = getOAuth2Client();
     auth.setCredentials({
-      access_token: settings.gcalAccessToken,
-      refresh_token: settings.gcalRefreshToken,
+      access_token: settings.gcalAccessToken ? decryptToken(settings.gcalAccessToken) : null,
+      refresh_token: settings.gcalRefreshToken ? decryptToken(settings.gcalRefreshToken) : null,
     });
     const { credentials } = await auth.refreshAccessToken();
-    if (credentials.access_token && credentials.access_token !== settings.gcalAccessToken) {
-      await conn.update(schema.calendarSettings)
-        .set({ gcalAccessToken: credentials.access_token })
-        .where(eq(schema.calendarSettings.userId, settings.userId));
+    if (credentials.access_token) {
+      const encryptedNew = encryptToken(credentials.access_token);
+      if (encryptedNew !== settings.gcalAccessToken) {
+        await conn.update(schema.calendarSettings)
+          .set({ gcalAccessToken: encryptedNew })
+          .where(eq(schema.calendarSettings.userId, settings.userId));
+      }
       return credentials.access_token;
     }
   } catch {
     // If refresh fails, proceed with existing token
   }
-  return settings.gcalAccessToken ?? '';
+  return settings.gcalAccessToken ? decryptToken(settings.gcalAccessToken) : ''
 }
 
 // CRIT-01: Shared helper to push a single event to GCal
@@ -63,7 +67,7 @@ async function pushSingleEvent(
   calendarId: string
 ): Promise<string> {
   const accessToken = await refreshTokenIfNeeded(conn, settings);
-  const auth = getGCalClient(accessToken, settings.gcalRefreshToken ?? undefined);
+  const auth = getGCalClient(accessToken, settings.gcalRefreshToken ? decryptToken(settings.gcalRefreshToken) : undefined);
 
   const startTime = event.suggestedStartTime ?? '09:00';
   const startDate = new Date(`${event.suggestedDate}T${startTime}:00`);
@@ -256,7 +260,7 @@ export const calendarRouter = router({
       if (!calendarId) {
         // CRIT-01: Create ASRE calendar on first push
         const accessToken = await refreshTokenIfNeeded(conn, settings);
-        const auth = getGCalClient(accessToken, settings.gcalRefreshToken ?? undefined);
+        const auth = getGCalClient(accessToken, settings.gcalRefreshToken ? decryptToken(settings.gcalRefreshToken) : undefined);
         calendarId = await createAsreCalendar(auth);
         await conn.update(schema.calendarSettings)
           .set({ gcalCalendarId: calendarId })
@@ -296,7 +300,7 @@ export const calendarRouter = router({
     let calendarId = settings.gcalCalendarId;
     if (!calendarId) {
       const accessToken = await refreshTokenIfNeeded(conn, settings);
-      const auth = getGCalClient(accessToken, settings.gcalRefreshToken ?? undefined);
+      const auth = getGCalClient(accessToken, settings.gcalRefreshToken ? decryptToken(settings.gcalRefreshToken) : undefined);
       calendarId = await createAsreCalendar(auth);
       await conn.update(schema.calendarSettings)
         .set({ gcalCalendarId: calendarId })

@@ -14,4 +14,7 @@ export const ENV = {
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
   googleRedirectUri: process.env.GOOGLE_REDIRECT_URI ?? "https://asre-production.up.railway.app/api/drive/callback",
+  // AES-256-GCM key for encrypting OAuth tokens at rest.
+  // Generate: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+  tokenEncryptionKey: process.env.TOKEN_ENCRYPTION_KEY ?? "",
 };

@@ -25,6 +25,10 @@ import { businessJourneyRouter } from './routers/businessJourney';
 import { calendarRouter } from "./routers/calendar";
 import { scheduleRouter } from "./routers/schedule";
 import { executionRouter } from "./routers/execution";
+import { financialsRouter } from "./routers/financials";
+import { sopsRouter } from "./routers/sops";
+import { cultureRouter } from "./routers/culture";
+import { coachingRouter } from "./routers/coaching";
 
 // ── Coach-only middleware: requires admin role, agentRole=coach/mc_op/admin, OR tier=one_on_one/enterprise ──
 const coachProcedure = protectedProcedure.use(async ({ ctx, next }) => {
@@ -424,173 +428,22 @@ Return ONLY the JSON, no markdown.`;
   // ============================================================
   // FINANCIALS
   // ============================================================
-  financials: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      return db.getUserFinancials(ctx.user.id);
-    }),
-    create: protectedProcedure
-      .input(z.object({
-        type: z.enum(["income", "expense"]),
-        category: z.string(),
-        description: z.string().optional(),
-        amount: z.number(),
-        date: z.string(),
-        receiptUrl: z.string().optional(),
-        receiptText: z.string().optional(),
-        autoCategory: z.string().optional(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        await db.insertFinancialEntry({ ...input, userId: ctx.user.id });
-        return { success: true };
-      }),
-    categorizeReceipt: protectedProcedure
-      .input(z.object({ receiptText: z.string() }))
-      .mutation(async ({ input }) => {
-        const response = await invokeLLM({
-          messages: [
-            {
-              role: "system",
-              content: `You are a real estate business expense categorizer. Given receipt text, extract the vendor, amount, date, and assign an IRS Schedule C category for a real estate agent. Categories: Advertising, Car/Truck Expenses, Commission/Fees, Insurance, Legal/Professional, Office Expense, Supplies, Travel, Meals, Education, MLS Dues, Lockbox Fees, Photography, Staging, Signs, Technology, Other.
-
-Return JSON: { "vendor": string, "amount": number, "date": string, "category": string, "description": string }`,
-            },
-            { role: "user", content: input.receiptText },
-          ],
-          response_format: {
-            type: "json_schema",
-            json_schema: {
-              name: "receipt_categorization",
-              strict: true,
-              schema: {
-                type: "object",
-                properties: {
-                  vendor: { type: "string" },
-                  amount: { type: "number" },
-                  date: { type: "string" },
-                  category: { type: "string" },
-                  description: { type: "string" },
-                },
-                required: ["vendor", "amount", "date", "category", "description"],
-                additionalProperties: false,
-              },
-            },
-          },
-        });
-        const content = response.choices[0]?.message?.content;
-        try {
-          return JSON.parse(typeof content === "string" ? content : "{}");
-        } catch {
-          return { vendor: "", amount: 0, date: "", category: "Other", description: content || "" };
-        }
-      }),
-    taxExport: protectedProcedure
-      .input(z.object({ year: z.number() }))
-      .query(async ({ ctx, input }) => {
-        return db.getFinancialEntriesByYear(ctx.user.id, input.year);
-      }),
-  }),
+  financials: financialsRouter,
 
   // ============================================================
   // SOPs / KNOWLEDGE LIBRARY
   // ============================================================
-  sops: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      return db.getUserSOPs(ctx.user.id);
-    }),
-    create: protectedProcedure
-      .input(z.object({
-        sopId: z.string(),
-        title: z.string(),
-        category: z.string().optional(),
-        content: z.string().optional(),
-        status: z.enum(["draft", "active", "archived"]).optional(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        await db.insertSOP({ ...input, userId: ctx.user.id });
-        return { success: true };
-      }),
-    update: protectedProcedure
-      .input(z.object({
-        sopId: z.string(),
-        updates: z.object({
-          title: z.string().optional(),
-          category: z.string().optional(),
-          content: z.string().optional(),
-          status: z.enum(["draft", "active", "archived"]).optional(),
-        }),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        await db.updateSOP(ctx.user.id, input.sopId, input.updates);
-        return { success: true };
-      }),
-  }),
+  sops: sopsRouter,
 
   // ============================================================
   // CULTURE DOCS
   // ============================================================
-  culture: router({
-    get: protectedProcedure.query(async ({ ctx }) => {
-      return db.getUserCultureDoc(ctx.user.id);
-    }),
-    upsert: protectedProcedure
-      .input(z.object({
-        missionStatement: z.string().optional(),
-        visionStatement: z.string().optional(),
-        coreValues: z.array(z.string()).optional(),
-        teamCommitments: z.array(z.string()).optional(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        await db.upsertCultureDoc({ ...input, userId: ctx.user.id });
-        return { success: true };
-      }),
-  }),
+  culture: cultureRouter,
 
   // ============================================================
   // AI COACHING
   // ============================================================
-  coaching: router({
-    ask: protectedProcedure
-      .input(z.object({
-        context: z.string(),
-        prompt: z.string(),
-        agentLevel: z.number().optional(),
-        agentData: z.record(z.string(), z.unknown()).optional(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        const systemPrompt = `You are an expert real estate business coach trained in the MREA (Millionaire Real Estate Agent) framework by Gary Keller. You help agents build their business systematically through the 7 levels: Solo Agent, First Admin Hire, First Buyer's Agent, Multiple Buyer's Agents, Listings Specialist, Full Team, and Business Owner.
-
-The agent is currently at Level ${input.agentLevel || 1}. Context: ${input.context}.
-
-${input.agentData ? `Agent data: ${JSON.stringify(input.agentData)}` : ''}
-
-Provide actionable, specific advice. Reference MREA models where applicable (Personal Economic Model, Lead Generation Model, Budget Model, Organizational Model). Be direct, structured, and metrics-focused. Use real estate industry terminology naturally.`;
-
-        const response = await invokeLLM({
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: input.prompt },
-          ],
-        });
-
-        const content = response.choices[0]?.message?.content;
-        const responseText = typeof content === "string" ? content : "";
-
-        await db.insertCoachingLog({
-          userId: ctx.user.id,
-          context: input.context,
-          prompt: input.prompt,
-          response: responseText,
-        });
-
-        return { response: responseText };
-      }),
-
-    history: protectedProcedure
-      .input(z.object({ limit: z.number().optional() }))
-      .query(async ({ ctx, input }) => {
-        return db.getUserCoachingLogs(ctx.user.id, input.limit || 20);
-      }),
-  }),
+  coaching: coachingRouter,
 
   // ============================================================
   // COACH PORTAL (Phase 4)

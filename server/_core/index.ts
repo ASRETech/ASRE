@@ -18,8 +18,9 @@ import { nanoid } from "nanoid";
 import { seedTools } from "../tools/seedTools";
 import { seedModelLibrary } from "../models/seedModelLibrary";
 import { google } from "googleapis";
-import { ENV } from "./env";
-import { getDb } from "../db";
+import { ENV } from './env';
+import { encryptToken } from './crypto';
+import { getDb } from '../db';
 import * as schema from "../../drizzle/schema";
 import { eq } from "drizzle-orm";
 import rateLimit from "express-rate-limit";
@@ -179,15 +180,15 @@ async function startServer() {
       if (existing[0]) {
         await dbConn.update(schema.calendarSettings)
           .set({
-            gcalAccessToken: tokens.access_token ?? null,
-            gcalRefreshToken: tokens.refresh_token ?? null,
+            gcalAccessToken: tokens.access_token ? encryptToken(tokens.access_token) : null,
+            gcalRefreshToken: tokens.refresh_token ? encryptToken(tokens.refresh_token) : null,
           })
           .where(eq(schema.calendarSettings.userId, user.id));
       } else {
         await dbConn.insert(schema.calendarSettings).values({
           userId: user.id,
-          gcalAccessToken: tokens.access_token ?? null,
-          gcalRefreshToken: tokens.refresh_token ?? null,
+          gcalAccessToken: tokens.access_token ? encryptToken(tokens.access_token) : null,
+          gcalRefreshToken: tokens.refresh_token ? encryptToken(tokens.refresh_token) : null,
         });
       }
       return res.redirect('/action-engine?cal=connected');

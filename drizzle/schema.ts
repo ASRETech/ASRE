@@ -202,7 +202,9 @@ export const complianceLogs = mysqlTable("compliance_logs", {
   result: mysqlEnum("result", ["pass", "warning", "fail"]).notNull(),
   flaggedItems: json("flaggedItems"),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('complianceLogs_userId_idx').on(table.userId),
+}))
 
 export type ComplianceLog = typeof complianceLogs.$inferSelect;
 export type InsertComplianceLog = typeof complianceLogs.$inferInsert;
@@ -219,7 +221,9 @@ export const cultureDocs = mysqlTable("culture_docs", {
   teamCommitments: json("teamCommitments"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('cultureDocs_userId_idx').on(table.userId),
+}))
 
 export type CultureDoc = typeof cultureDocs.$inferSelect;
 export type InsertCultureDoc = typeof cultureDocs.$inferInsert;
@@ -234,7 +238,9 @@ export const aiCoachingLogs = mysqlTable("ai_coaching_logs", {
   prompt: text("prompt").notNull(),
   response: text("response"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('aiCoachingLogs_userId_idx').on(table.userId),
+}))
 
 export type AICoachingLog = typeof aiCoachingLogs.$inferSelect;
 export type InsertAICoachingLog = typeof aiCoachingLogs.$inferInsert;
@@ -257,7 +263,9 @@ export const calendarTokens = mysqlTable("calendar_tokens", {
   syncEnabled: boolean("syncEnabled").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('calendarTokens_userId_idx').on(table.userId),
+}))
 
 export type CalendarToken = typeof calendarTokens.$inferSelect;
 export type InsertCalendarToken = typeof calendarTokens.$inferInsert;
@@ -335,7 +343,9 @@ export const transactionComms = mysqlTable("transaction_comms", {
   status: varchar("commStatus", { length: 32 }).default("sent").notNull(),
   sentAt: timestamp("sentAt").defaultNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('transactionComms_userId_idx').on(table.userId),
+}))
 
 export type TransactionComm = typeof transactionComms.$inferSelect;
 export type InsertTransactionComm = typeof transactionComms.$inferInsert;
@@ -396,7 +406,9 @@ export const referralExchanges = mysqlTable("referral_exchanges", {
   referralDate: timestamp("referralDate").defaultNow().notNull(),
   closedAt: timestamp("closedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('referralExchanges_userId_idx').on(table.userId),
+}))
 
 export type ReferralExchange = typeof referralExchanges.$inferSelect;
 export type InsertReferralExchange = typeof referralExchanges.$inferInsert;
@@ -447,7 +459,9 @@ export const brokerageConfig = mysqlTable("brokerage_config", {
   coachingProgramName: varchar("coachingProgramName", { length: 128 }).default("MAPS Coaching"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('brokerageConfig_userId_idx').on(table.userId),
+}))
 
 export type BrokerageConfig = typeof brokerageConfig.$inferSelect;
 export type InsertBrokerageConfig = typeof brokerageConfig.$inferInsert;
@@ -473,7 +487,9 @@ export const subscriptions = mysqlTable("subscriptions", {
   currentPeriodStart: timestamp("currentPeriodStart"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+}, (table) => ({
+  userIdIdx: index('subscriptions_userId_idx').on(table.userId),
+}))
 
 export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertSubscription = typeof subscriptions.$inferInsert;
@@ -1264,7 +1280,9 @@ export const calendarSettings = mysqlTable("calendarSettings", {
   notifyPulseReminder: boolean("notifyPulseReminder").default(true),
   pulseReminderTime: varchar("pulseReminderTime", { length: 5 }).default("17:00"),
   updatedAt: timestamp("calSettingsUpdatedAt").defaultNow(),
-});
+}, (table) => ({
+  userIdIdx: index('calendarSettings_userId_idx').on(table.userId),
+}))
 export type CalendarSettings = typeof calendarSettings.$inferSelect;
 export type InsertCalendarSettings = typeof calendarSettings.$inferInsert;
 
